@@ -1,0 +1,102 @@
+@*
+    Khung chung của toàn bộ web admin:
+      - Sidebar bên trái (logo, menu, hộp "Cần hỗ trợ?")
+      - Thanh trên cùng (lời chào, chuông, tài khoản, đăng xuất)
+      - Vùng nội dung @RenderBody()
+    Trang đăng nhập đặt ViewBag.Bare = true để ẩn sidebar và thanh trên.
+*@
+@{
+    string menu = ViewBag.Menu as string ?? "";
+    bool bare = ViewBag.Bare == true;
+
+    // Số phản hồi chưa trả lời, hiện thành huy hiệu cam cạnh mục "Phản hồi khách hàng"
+    int unanswered = SampleData.FeedbackItems.Count(f => f.Status != "da_tra_loi");
+
+    // Danh sách menu theo đúng các module trong PDF: (khóa, chữ, controller, action, icon)
+    (string key, string text, string controller, string action, string icon)[] items =
+    [
+        ("home", "Tổng quan", "Home", "Index", "layout-dashboard"),
+        ("account", "Tài khoản & Phân quyền", "Account", "Index", "shield-check"),
+        ("customers", "Quản lý khách hàng", "Customers", "Index", "users"),
+        ("employees", "Quản lý nhân viên", "Employees", "Index", "user"),
+        ("categories", "Quản lý loại sản phẩm", "Products", "Categories", "boxes"),
+        ("products", "Quản lý sản phẩm", "Products", "Index", "package"),
+        ("orders", "Quản lý hóa đơn", "Orders", "Index", "file-text"),
+        ("pos", "Bán hàng tại quầy", "Orders", "Pos", "shopping-cart"),
+        ("promotions", "Khuyến mãi & Marketing", "Promotions", "Index", "badge-percent"),
+        ("feedback", "Phản hồi khách hàng", "Feedback", "Index", "message-square"),
+        ("surveys", "Khảo sát", "Feedback", "Surveys", "clipboard-list"),
+        ("imports", "Quản lý nhập hàng", "Imports", "Index", "layers"),
+        ("reports", "Báo cáo thống kê", "Reports", "Index", "bar-chart"),
+    ];
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "SportShop") - SportShop Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body class="@(bare ? "bare" : "")">
+@if (bare)
+{
+    @RenderBody()
+}
+else
+{
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            @* Nút 3 gạch: ngoài cùng bên trái của logo, bấm để thu gọn / mở sidebar *@
+            <button type="button" class="icon-btn js-nav-toggle" aria-label="Thu gọn / mở menu">@Icons.Svg("menu", 22)</button>
+            <span class="brand-mark">@Icons.Svg("activity", 24)</span>
+            <span class="brand-name">SPORT<b>SHOP</b></span>
+        </div>
+        <nav class="nav">
+            @foreach (var it in items)
+            {
+                <a class="nav-item @(menu == it.key ? "active" : "")" asp-controller="@it.controller" asp-action="@it.action" title="@it.text">
+                    @Icons.Svg(it.icon, 22)
+                    <span class="nav-text">@it.text</span>
+                    @if (it.key == "feedback" && unanswered > 0)
+                    {
+                        <span class="nav-badge">@unanswered</span>
+                    }
+                </a>
+            }
+        </nav>
+        <div class="help">
+            <span class="help-ico">@Icons.Svg("headphones", 22)</span>
+            <div><div class="help-title">Cần hỗ trợ?</div><div class="help-mail">support@sportshop.vn</div></div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            @* Chỉ hiện trên màn hình nhỏ (điện thoại), vì lúc đó sidebar bị ẩn *@
+            <button type="button" class="icon-btn mobile-only js-nav-toggle" aria-label="Mở menu">@Icons.Svg("menu", 22)</button>
+            <div class="hello"><small>Chào mừng trở lại,</small><strong>Quản lý Minh</strong></div>
+            <div class="topbar-right">
+                <div class="user">
+                    <span class="avatar">MH</span>
+                    <div class="user-info"><strong>Minh Hoàng</strong><small>QL000</small></div>
+                    @Icons.Svg("chevron-down", 16)
+                </div>
+                <a class="btn-outline logout" asp-controller="Account" asp-action="Logout">@Icons.Svg("log-out", 18) <span>Đăng xuất</span></a>
+                @* Chuông thông báo: ngoài cùng bên phải thanh trên *@
+                <button type="button" class="bell js-soon" aria-label="Thông báo">@Icons.Svg("bell", 20)<i class="bell-dot"></i></button>
+            </div>
+        </header>
+        <main class="content">
+            @RenderBody()
+        </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+}
+<script src="~/js/admin.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

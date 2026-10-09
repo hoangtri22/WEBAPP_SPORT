@@ -1,0 +1,73 @@
+@*
+    Chi tiết một hóa đơn: thông tin, người nhận, vận chuyển (đơn vị, mã vận đơn, phí ship),
+    cập nhật trạng thái và các dòng sản phẩm (PDF mục 3.1.5).
+*@
+@model Order
+@{
+    ViewData["Title"] = Model.Code;
+    var c = SampleData.Customer(Model.CustomerId);
+    var emp = Model.EmployeeId.HasValue ? SampleData.Employee(Model.EmployeeId.Value).FirstName : "Khách tự đặt online";
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách hóa đơn</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">HÓA ĐƠN</div>
+        <h1 class="page-title">@Model.Code</h1>
+        <p class="page-sub">@Fmt.Cell(Fmt.OrderStatus(Model.Status)) &nbsp;@Fmt.Cell(Fmt.PayStatus(Model.PayStatus))</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline js-soon">@Icons.Svg("printer", 18) In hóa đơn</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin hóa đơn</h3>
+        <dl class="kv">
+            <dt>Khách hàng</dt><dd><a class="code" asp-controller="Customers" asp-action="Detail" asp-route-id="@c.Id">@c.FullName</a></dd>
+            <dt>Ngày lập</dt><dd>@Fmt.DateTimeDot(Model.Date)</dd>
+            <dt>Nhân viên lập</dt><dd>@emp</dd>
+            <dt>Thanh toán</dt><dd>@Model.PayMethod</dd>
+            <dt>Khuyến mãi</dt><dd>@(Model.Voucher ?? "Không áp dụng")</dd>
+            <dt>Người nhận</dt><dd>@c.FullName - @c.Phone</dd>
+            <dt>Địa chỉ giao</dt><dd>@c.Addresses[0].Replace(" (mặc định)", "")</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Vận chuyển</h3>
+        <dl class="kv">
+            <dt>Đơn vị vận chuyển</dt><dd>@Model.Carrier</dd>
+            <dt>Mã vận đơn</dt><dd>@(string.IsNullOrEmpty(Model.TrackingCode) ? "-" : Model.TrackingCode)</dd>
+            <dt>Phí ship</dt><dd>@Fmt.Money(Model.ShipFee)</dd>
+        </dl>
+        <h3 class="card-h" style="margin-top:18px">Cập nhật trạng thái</h3>
+        <div class="inline-form">
+            <select>
+                <option>Chờ xác nhận</option><option>Đang chuẩn bị</option><option>Đang giao</option><option>Hoàn thành</option><option>Đã hủy</option>
+            </select>
+            <button type="button" class="btn-primary js-soon">Cập nhật</button>
+        </div>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Chi tiết hóa đơn</div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Sản phẩm</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
+            <tbody>
+                @foreach (var l in Model.Lines)
+                {
+                    var v = SampleData.Variant(l.VariantId);
+                    <tr><td>@SampleData.VariantName(l.VariantId)</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(v.Price)</td><td class="r"><b>@Fmt.Money(v.Price * l.Qty)</b></td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="sum">
+        <div><span>Tiền hàng</span><span>@Fmt.Money(Model.Subtotal)</span></div>
+        <div><span>Giảm giá</span><span>-@Fmt.Money(Model.Discount)</span></div>
+        <div><span>Phí vận chuyển</span><span>@Fmt.Money(Model.ShipFee)</span></div>
+        <div class="total"><span>Tổng thanh toán</span><span>@Fmt.Money(Model.Total)</span></div>
+    </div>
+</section>

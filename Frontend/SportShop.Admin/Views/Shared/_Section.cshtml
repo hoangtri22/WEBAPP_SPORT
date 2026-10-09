@@ -1,0 +1,90 @@
+@*
+    Một "thẻ bảng" dùng lại ở mọi trang danh sách:
+      thanh công cụ (tìm kiếm / bộ lọc / nút thêm mới) + bảng + dòng phân trang.
+    Việc tìm kiếm, lọc và phân trang do wwwroot/js/admin.js xử lý ở phía trình duyệt.
+    ViewData["id"]   : id duy nhất của thẻ
+    ViewData["hint"] : chữ gợi ý trong ô tìm kiếm
+*@
+@model TableSection
+@{
+    var id = ViewData["id"] as string ?? "tbl";
+    var hint = ViewData["hint"] as string ?? "";
+}
+<section class="card dtable" id="@id" data-pagesize="@Model.PageSize">
+    @if (!string.IsNullOrEmpty(Model.Heading))
+    {
+        <div class="card-title">@Model.Heading</div>
+    }
+
+    @if (Model.Toolbar || Model.AddLabel != null)
+    {
+        <div class="toolbar">
+            @if (Model.Toolbar)
+            {
+                <label class="search">
+                    @Icons.Svg("search", 18)
+                    <input type="search" placeholder="Tìm kiếm trong @hint..." autocomplete="off" />
+                    <kbd>Ctrl K</kbd>
+                </label>
+                <div class="filter">
+                    <button type="button" class="btn-outline js-filter">@Icons.Svg("sliders", 18) <span class="filter-label">Bộ lọc</span> @Icons.Svg("chevron-down", 16)</button>
+                    <div class="filter-menu" hidden></div>
+                </div>
+            }
+            <span class="grow"></span>
+            @if (Model.AddLabel != null)
+            {
+                <button type="button" class="btn-primary js-soon">@Icons.Svg("plus", 18) @Model.AddLabel</button>
+            }
+        </div>
+    }
+
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    @foreach (var c in Model.Columns) { <th>@c</th> }
+                    @if (Model.ShowActions) { <th>Thao tác</th> }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr>
+                        @foreach (var cell in r.Cells) { <td>@Fmt.Cell(cell)</td> }
+                        @if (Model.ShowActions)
+                        {
+                            <td>
+                                <div class="actions">
+                                    @* Con mắt: mở trang chi tiết nếu có, không có thì báo "sẽ hoạt động khi nối CSDL" *@
+                                    @if (r.Url != null)
+                                    {
+                                        <a class="act" href="@r.Url" title="Xem chi tiết">@Icons.Svg("eye", 18)</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="act js-soon" title="Xem chi tiết">@Icons.Svg("eye", 18)</button>
+                                    }
+                                    <button type="button" class="act js-soon" title="Chỉnh sửa">@Icons.Svg("pencil", 18)</button>
+                                    <button type="button" class="act js-soon" title="Xóa">@Icons.Svg("trash", 18)</button>
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="empty">Chưa có dữ liệu</div>
+        }
+    </div>
+
+    @if (Model.Toolbar)
+    {
+        <div class="pager-bar">
+            <span class="count"></span>
+            <div class="pager"></div>
+        </div>
+    }
+</section>

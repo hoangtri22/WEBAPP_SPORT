@@ -1,0 +1,94 @@
+@*
+    Hồ sơ khách hàng: thông tin cá nhân, hạng thành viên, sổ địa chỉ,
+    lịch sử mua hàng và lịch sử chăm sóc (yêu cầu trong PDF mục 3.1.2).
+*@
+@model Customer
+@{
+    ViewData["Title"] = Model.FullName;
+    var orders = SampleData.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Date).ToList();
+    var notes = SampleData.CareNotes.Where(n => n.CustomerId == Model.Id).OrderByDescending(n => n.Date).ToList();
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">KH@(Model.Id.ToString("D3"))</div>
+        <h1 class="page-title">@Model.FullName</h1>
+        <p class="page-sub">Thông tin và lịch sử mua hàng của khách hàng</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline js-soon">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline js-soon">@(Model.Locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin khách hàng</h3>
+        <dl class="kv">
+            <dt>Giới tính</dt><dd>@Model.Gender</dd>
+            <dt>Ngày sinh</dt><dd>@Fmt.Date(Model.Birth) (@Model.Age tuổi)</dd>
+            <dt>Số điện thoại</dt><dd>@Model.Phone</dd>
+            <dt>Email</dt><dd>@Model.Email</dd>
+            <dt>Tài khoản</dt><dd>@Model.Username @Fmt.Cell(Model.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
+            <dt>Sở thích</dt><dd class="tags">@foreach (var i in Model.Interests) { <span>@i</span> }</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Hạng thành viên</h3>
+        <dl class="kv">
+            <dt>Hạng</dt><dd><b>@Model.Tier</b></dd>
+            <dt>Điểm tích lũy</dt><dd>@Model.Points.ToString("N0")</dd>
+            <dt>Tổng chi tiêu</dt><dd><b>@Fmt.Money(Model.TotalSpent)</b></dd>
+            <dt>Số hóa đơn</dt><dd>@orders.Count</dd>
+        </dl>
+        <h3 class="card-h" style="margin-top:18px">Sổ địa chỉ giao hàng</h3>
+        <ul class="ul-plain">
+            @foreach (var a in Model.Addresses) { <li>@a</li> }
+        </ul>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Lịch sử mua hàng</div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Mã HĐ</th><th>Ngày mua</th><th>Sản phẩm</th><th>Tổng thanh toán</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var o in orders)
+                {
+                    <tr>
+                        <td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td>
+                        <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
+                        <td>@string.Join("; ", o.Lines.Select(l => $"{SampleData.VariantName(l.VariantId)} x{l.Qty}"))</td>
+                        <td><b>@Fmt.Money(o.Total)</b></td>
+                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>
+                        <td class="r"><a class="act" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@Icons.Svg("eye", 18)</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (orders.Count == 0) { <div class="empty">Khách chưa có hóa đơn nào</div> }
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-title row-between">Ghi chú &amp; lịch sử chăm sóc <button type="button" class="btn-primary js-soon">@Icons.Svg("plus", 18) Thêm ghi chú</button></div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Thời điểm</th><th>Hình thức</th><th>Nội dung</th><th>Nhân viên</th><th>Hẹn liên hệ lại</th></tr></thead>
+            <tbody>
+                @foreach (var n in notes)
+                {
+                    <tr>
+                        <td class="muted">@Fmt.DateTimeDot(n.Date)</td>
+                        <td>@Fmt.Channel(n.Channel)</td>
+                        <td>@n.Content</td>
+                        <td>@SampleData.Employee(n.EmployeeId).FirstName</td>
+                        <td>@(n.FollowUp.HasValue ? Fmt.Date(n.FollowUp.Value) : "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (notes.Count == 0) { <div class="empty">Chưa có ghi chú chăm sóc</div> }
+    </div>
+</section>

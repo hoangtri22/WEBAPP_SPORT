@@ -1,0 +1,27 @@
+@*
+    Trang danh sách dùng chung (tài khoản, khách hàng, nhân viên, loại SP, hóa đơn,
+    khuyến mãi, khảo sát, nhập hàng). Mỗi controller truyền vào một TablePage.
+*@
+@model TablePage
+@{
+    ViewData["Title"] = Model.Title;
+    int n = 0;
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SPORTSHOP ADMIN</div>
+        <h1 class="page-title">@Model.Title</h1>
+        @if (!string.IsNullOrEmpty(Model.Subtitle)) { <p class="page-sub">@Model.Subtitle</p> }
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Note))
+{
+    <div class="note">@Model.Note</div>
+}
+
+@foreach (var s in Model.Sections)
+{
+    n++;
+    <partial name="_Section" model="s" view-data='new ViewDataDictionary(ViewData) { { "id", "tbl" + n }, { "hint", Model.Title.ToLowerInvariant() } }' />
+}

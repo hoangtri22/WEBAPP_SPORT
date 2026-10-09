@@ -1,0 +1,128 @@
+@*
+    Trang "Tổng quan hệ thống": 6 thẻ thống kê + bảng "Đơn hàng gần đây".
+    Số liệu tính từ dữ liệu mẫu (SampleData). Khi có database sẽ thay bằng truy vấn thật.
+*@
+@{
+    ViewData["Title"] = "Tổng quan";
+    var today = DateTime.Today;
+    var yesterday = today.AddDays(-1);
+
+    // Doanh thu hôm nay = tổng thanh toán của hóa đơn hoàn thành trong ngày
+    decimal Revenue(DateTime d) => SampleData.Orders.Where(o => o.Status == "hoan_thanh" && o.Date.Date == d).Sum(o => o.Total);
+    // Số đơn được lập trong ngày
+    int OrdersOn(DateTime d) => SampleData.Orders.Count(o => o.Date.Date == d);
+
+    var revToday = Revenue(today); var revYesterday = Revenue(yesterday);
+    var ordToday = OrdersOn(today); var ordYesterday = OrdersOn(yesterday);
+
+    // Chuỗi so sánh với hôm qua (nếu hôm qua = 0 thì không tính %)
+    string VsYesterday(decimal cur, decimal prev) =>
+        prev == 0 ? "Hôm qua chưa có dữ liệu" : $"{(cur >= prev ? "+" : "")}{Fmt.Pct(Math.Round((cur - prev) / prev * 100, 1))} so với hôm qua";
+
+    int staffTotal = SampleData.Employees.Count;
+    int staffWorking = SampleData.Employees.Count(e => e.Working);
+    int customers = SampleData.Customers.Count;
+    int customersActive = SampleData.Customers.Count(c => !c.Locked);
+    int unanswered = SampleData.FeedbackItems.Count(f => f.Status != "da_tra_loi");
+    int followToday = SampleData.CareNotes.Count(n => n.FollowUp?.Date == today);
+    var recent = SampleData.Orders.OrderByDescending(o => o.Date).Take(5).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SPORTSHOP ADMIN</div>
+        @* Riêng trang Tổng quan dùng tiêu đề nhỏ hơn (class "sm"), các trang khác giữ nguyên *@
+        <h1 class="page-title sm">Tổng quan hệ thống</h1>
+        <p class="page-sub">Theo dõi hoạt động kinh doanh hôm nay</p>
+    </div>
+    <a class="btn-primary" asp-controller="Reports" asp-action="Index">@Icons.Svg("bar-chart", 20) Xem báo cáo</a>
+</div>
+
+@* ===== 6 thẻ thống kê ===== *@
+<div class="stats">
+    <div class="stat">
+        <span class="stat-ico t-teal">@Icons.Svg("circle-dollar-sign", 28)</span>
+        <div>
+            <div class="stat-label">Doanh thu hôm nay</div>
+            @* Số tiền dài nên dùng cỡ chữ nhỏ hơn (class "sm") *@
+            <div class="stat-num sm">@Fmt.Compact(revToday)</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) @VsYesterday(revToday, revYesterday)</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+    <div class="stat">
+        <span class="stat-ico t-orange">@Icons.Svg("shopping-bag", 28)</span>
+        <div>
+            <div class="stat-label">Đơn hàng mới</div>
+            <div class="stat-num">@ordToday</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) @VsYesterday(ordToday, ordYesterday)</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+    <div class="stat">
+        <span class="stat-ico t-blue">@Icons.Svg("user", 28)</span>
+        <div>
+            <div class="stat-label">Nhân viên</div>
+            <div class="stat-num">@staffTotal</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) @staffWorking đang làm việc</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+    <div class="stat">
+        <span class="stat-ico t-purple">@Icons.Svg("users", 28)</span>
+        <div>
+            <div class="stat-label">Khách hàng</div>
+            <div class="stat-num">@customers.ToString("N0")</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) @customersActive đang hoạt động</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+    <div class="stat">
+        <span class="stat-ico t-pink">@Icons.Svg("message-square", 28)</span>
+        <div>
+            <div class="stat-label">Phản hồi chưa trả lời</div>
+            <div class="stat-num">@unanswered.ToString("00")</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) Cần xử lý sớm</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+    <div class="stat">
+        <span class="stat-ico t-yellow">@Icons.Svg("calendar-clock", 28)</span>
+        <div>
+            <div class="stat-label">Hẹn liên hệ lại hôm nay</div>
+            <div class="stat-num">@followToday</div>
+            <div class="stat-sub up">@Icons.Svg("trending-up", 15) Theo lịch chăm sóc khách hàng</div>
+        </div>
+        <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+    </div>
+</div>
+
+@* ===== Đơn hàng gần đây ===== *@
+<section class="card">
+    <div class="card-head">
+        <div>
+            <h2>Đơn hàng gần đây</h2>
+            <p>Cập nhật theo thời gian thực</p>
+        </div>
+        <a class="link" asp-controller="Orders" asp-action="Index">Xem tất cả @Icons.Svg("chevron-right", 16)</a>
+    </div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Mã HĐ</th><th>Khách hàng</th><th>Ngày lập</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var o in recent)
+                {
+                    var name = SampleData.Customer(o.CustomerId).FullName;
+                    <tr>
+                        <td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td>
+                        <td><div class="cust"><span class="mini-av">@name.Substring(0, 1)</span><b>@name</b></div></td>
+                        <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
+                        <td><b>@Fmt.Money(o.Total)</b></td>
+                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>
+                        <td class="r"><a class="act" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code" title="Xem chi tiết">@Icons.Svg("eye", 18)</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

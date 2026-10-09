@@ -1,0 +1,152 @@
+@*
+    Phản hồi khách hàng: hộp thư 2 cột.
+      - Tab "Chưa trả lời" / "Đã trả lời"
+      - Cột trái: danh sách phản hồi (có tìm kiếm)
+      - Cột phải: nội dung phản hồi + khung trả lời (chưa trả lời) hoặc câu trả lời (đã trả lời)
+    Việc chuyển tab / chọn phản hồi xử lý bằng JavaScript ở cuối file.
+*@
+@model List<FeedbackItem>
+@{
+    ViewData["Title"] = "Phản hồi khách hàng";
+    var pending = Model.Where(f => f.Status != "da_tra_loi").ToList();
+    var answered = Model.Where(f => f.Status == "da_tra_loi").ToList();
+
+    // Chữ viết tắt cho avatar (vd "Nguyễn Minh Anh" -> "NA": chữ đầu họ + chữ đầu tên)
+    string Initials(Customer c) => c.LastName.Substring(0, 1) + c.FirstName.Substring(0, 1);
+    string StatusPill(FeedbackItem f) => f.Status switch { "moi" => "[o]Chưa trả lời", "dang_xu_ly" => "[b]Đang xử lý", _ => "[g]Đã trả lời" };
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SPORTSHOP ADMIN</div>
+        <h1 class="page-title">Phản hồi khách hàng</h1>
+        <p class="page-sub">Lắng nghe và hỗ trợ khách hàng</p>
+    </div>
+</div>
+
+<div class="tabs" id="fbTabs">
+    <button type="button" class="tab active" data-tab="pending">Chưa trả lời <span class="tab-count">@pending.Count</span></button>
+    <button type="button" class="tab" data-tab="answered">Đã trả lời <span class="tab-count gray">@answered.Count</span></button>
+</div>
+
+<div class="inbox card">
+    @* ----- Cột trái: danh sách ----- *@
+    <div class="inbox-list">
+        <label class="search">
+            @Icons.Svg("search", 18)
+            <input type="search" id="fbSearch" placeholder="Tìm phản hồi..." autocomplete="off" />
+            <kbd>Ctrl K</kbd>
+        </label>
+        <div id="fbItems">
+            @foreach (var f in Model)
+            {
+                var c = SampleData.Customer(f.CustomerId);
+                bool isPending = f.Status != "da_tra_loi";
+                <button type="button" class="msg @(f == pending.FirstOrDefault() ? "active" : "")" data-id="@f.Id" data-group="@(isPending ? "pending" : "answered")"
+                        data-text="@(c.FullName + " " + f.Title + " " + f.Body)" @(isPending ? "" : "hidden")>
+                    <span class="avatar sm">@Initials(c)</span>
+                    <span class="msg-main">
+                        <span class="msg-top"><b>@c.FullName</b><small>@Fmt.Ago(f.SentAt)</small></span>
+                        <span class="msg-title">@f.Title</span>
+                        <span class="msg-prev">@f.Body</span>
+                    </span>
+                </button>
+            }
+        </div>
+        <div class="empty" id="fbEmpty" hidden>Không có phản hồi nào</div>
+    </div>
+
+    @* ----- Cột phải: chi tiết từng phản hồi ----- *@
+    <div class="inbox-detail">
+        @foreach (var f in Model)
+        {
+            var c = SampleData.Customer(f.CustomerId);
+            <article class="detail" data-id="@f.Id" @(f == pending.FirstOrDefault() ? "" : "hidden")>
+                <header class="detail-head">
+                    <span class="avatar">@Initials(c)</span>
+                    <div>
+                        <b>@c.FullName</b>
+                        <small>Hạng @c.Tier · #KH@(c.Id.ToString("D4"))</small>
+                    </div>
+                    <span class="grow"></span>
+                    @Fmt.Cell(StatusPill(f))
+                </header>
+                <div class="detail-body">
+                    <div class="eyebrow">NỘI DUNG PHẢN HỒI</div>
+                    <h2>@f.Title</h2>
+                    <div class="detail-tags">
+                        @Fmt.Cell("[x]" + Fmt.FeedbackType(f.Type))
+                        @if (f.Stars.HasValue)
+                        {
+                            <span class="stars">@for (int i = 1; i <= 5; i++) { <span class="@(i <= f.Stars ? "on" : "")">@Icons.Svg("star", 16)</span> }</span>
+                        }
+                        @if (f.Target != null) { <span class="muted">· @f.Target</span> }
+                        @if (!f.Visible) { @Fmt.Cell("[r]Đã ẩn") }
+                    </div>
+                    <p>@f.Body</p>
+                    <small class="muted">Gửi lúc @f.SentAt.ToString("HH:mm, dd/MM/yyyy")</small>
+
+                    @if (f.Reply != null)
+                    {
+                        <div class="reply-box done">
+                            <div class="eyebrow">CÂU TRẢ LỜI</div>
+                            <p>@f.Reply</p>
+                            <small class="muted">@(f.ReplyEmployeeId.HasValue ? SampleData.Employee(f.ReplyEmployeeId.Value).FirstName : "") · @(f.ReplyAt.HasValue ? f.ReplyAt.Value.ToString("HH:mm, dd/MM/yyyy") : "")</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="reply-box">
+                            <div class="eyebrow">TRẢ LỜI PHẢN HỒI</div>
+                            <textarea rows="4" placeholder="Nhập nội dung trả lời khách hàng..."></textarea>
+                            <div class="reply-actions">
+                                <button type="button" class="btn-outline js-soon">Ẩn phản hồi</button>
+                                <button type="button" class="btn-primary js-soon">@Icons.Svg("send", 18) Gửi trả lời</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ----- Hộp thư phản hồi: chuyển tab, chọn phản hồi, tìm kiếm -----
+        (function () {
+            var items = Array.prototype.slice.call(document.querySelectorAll('#fbItems .msg'));
+            var details = Array.prototype.slice.call(document.querySelectorAll('.inbox-detail .detail'));
+            var tab = 'pending';
+
+            // Hiện chi tiết của phản hồi có id tương ứng
+            function select(id) {
+                items.forEach(function (m) { m.classList.toggle('active', m.dataset.id === id); });
+                details.forEach(function (d) { d.hidden = d.dataset.id !== id; });
+            }
+
+            // Lọc danh sách theo tab hiện tại và từ khóa; tự chọn phản hồi đầu tiên còn hiển thị
+            function render() {
+                var q = document.getElementById('fbSearch').value.trim().toLowerCase();
+                var first = null;
+                items.forEach(function (m) {
+                    var ok = m.dataset.group === tab && (!q || m.dataset.text.toLowerCase().indexOf(q) >= 0);
+                    m.hidden = !ok;
+                    if (ok && !first) first = m;
+                });
+                document.getElementById('fbEmpty').hidden = !!first;
+                details.forEach(function (d) { d.hidden = true; });
+                if (first) select(first.dataset.id);
+            }
+
+            items.forEach(function (m) { m.addEventListener('click', function () { select(m.dataset.id); }); });
+            document.querySelectorAll('#fbTabs .tab').forEach(function (t) {
+                t.addEventListener('click', function () {
+                    document.querySelectorAll('#fbTabs .tab').forEach(function (x) { x.classList.toggle('active', x === t); });
+                    tab = t.dataset.tab; render();
+                });
+            });
+            document.getElementById('fbSearch').addEventListener('input', render);
+            render();
+        })();
+    </script>
+}

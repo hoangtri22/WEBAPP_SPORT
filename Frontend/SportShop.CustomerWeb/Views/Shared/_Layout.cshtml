@@ -1,0 +1,102 @@
+﻿@*
+    Khung chung của cửa hàng (trang chủ): dải khuyến mãi, thanh menu, nội dung, chân trang,
+    thanh điều hướng dưới cùng trên điện thoại. Giao diện theo bản thiết kế Figma.
+    Mọi nút cần cơ sở dữ liệu đều có thuộc tính data-needs-db: chưa có CSDL thì bấm chỉ hiện thông báo.
+*@
+@{
+    bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
+    var me = StoreData.Customer;
+    string adminUrl = Config["Links:AdminUrl"] ?? "#";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "SPORTSHOP") - SPORTSHOP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+</head>
+<body class="storefront" data-db="@(Db.IsConnected ? "true" : "false")">
+    <div class="shop-promo">
+        <span>FREESHIP toàn quốc cho đơn từ 500.000₫</span>
+        <button type="button" data-needs-db>Theo dõi đơn hàng</button>
+        @* Chuyển sang web quản trị (không sửa gì bên web quản trị, chỉ trỏ link sang) *@
+        <a href="@adminUrl">Trang quản trị</a>
+    </div>
+
+    <header class="shop-header">
+        <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+        <nav>
+            <a class="active" asp-controller="Home" asp-action="Index">Trang chủ</a>
+            <button type="button" data-needs-db>Sản phẩm</button>
+            <button type="button" class="sale" data-needs-db>Khuyến mãi</button>
+        </nav>
+        <div class="shop-actions">
+            <button type="button" id="searchToggle" aria-label="Tìm kiếm">@Icons.Svg("search", 20)</button>
+            <button type="button" class="hide-sm" data-needs-db aria-label="Yêu thích">@Icons.Svg("heart", 20)</button>
+            <button type="button" class="hide-sm cart-button" data-needs-db aria-label="Giỏ hàng">@Icons.Svg("shopping-bag", 20)</button>
+            @if (loggedIn)
+            {
+                <div class="shop-account">
+                    <button type="button" class="account-btn">
+                        <span class="avatar sm">@me.Initials</span>
+                        <span class="account-name"><strong>@me.FullName.Split(' ')[^2] @me.FullName.Split(' ')[^1]</strong><small>Tài khoản</small></span>
+                        @Icons.Svg("chevron-down", 15)
+                    </button>
+                    <div class="account-menu">
+                        <a asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
+                        <a asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
+                        <a asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
+                        <a asp-controller="Account" asp-action="Logout">Đăng xuất</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="shop-auth-actions">
+                    <a class="link-login" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                    <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Đăng ký</a>
+                </div>
+            }
+        </div>
+    </header>
+
+    @* Thanh tìm kiếm trượt xuống khi bấm kính lúp *@
+    <div class="shop-search" id="shopSearch" hidden>
+        @Icons.Svg("search", 20)
+        <input id="shopSearchInput" placeholder="Bạn đang tìm sản phẩm nào?" autocomplete="off" />
+        <kbd>ESC</kbd>
+    </div>
+
+    <main class="shop-main">
+        @RenderBody()
+    </main>
+
+    <footer class="shop-footer">
+        <div>
+            <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+            <p>Đồng hành cùng bạn trên hành trình sống khỏe và chinh phục mọi giới hạn.</p>
+            <span>@Icons.Svg("map-pin", 15) 128 Nguyễn Trãi, Quận 1, TP.HCM</span>
+        </div>
+        <div><strong>Mua sắm</strong><button type="button" data-needs-db>Giày thể thao</button><button type="button" data-needs-db>Quần áo</button><button type="button" data-needs-db>Dụng cụ</button><button type="button" data-needs-db>Khuyến mãi</button></div>
+        <div><strong>Hỗ trợ</strong><button type="button" data-needs-db>Chính sách đổi trả</button><button type="button" data-needs-db>Giao hàng</button><button type="button" data-needs-db>Hướng dẫn chọn size</button><button type="button" data-needs-db>Liên hệ</button></div>
+        <div><strong>SPORTSHOP</strong><button type="button" data-needs-db>Về chúng tôi</button><button type="button" data-needs-db>Hệ thống cửa hàng</button><button type="button" data-needs-db>Tuyển dụng</button><a href="@adminUrl">Đăng nhập quản trị</a></div>
+    </footer>
+
+    @* Thanh điều hướng dưới cùng, chỉ hiện trên điện thoại *@
+    <nav class="shop-mobile-nav">
+        <a class="active" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
+        <button type="button" id="searchToggleMobile">@Icons.Svg("search", 20)<span>Tìm kiếm</span></button>
+        <button type="button" data-needs-db>@Icons.Svg("heart", 20)<span>Yêu thích</span></button>
+        <button type="button" data-needs-db>@Icons.Svg("shopping-bag", 20)<span>Giỏ hàng</span></button>
+        <a asp-controller="@(loggedIn ? "Customer" : "Account")" asp-action="@(loggedIn ? "Profile" : "Login")">@Icons.Svg("user", 20)<span>Tài khoản</span></a>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="~/js/shop.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

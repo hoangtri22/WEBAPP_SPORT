@@ -1,0 +1,7 @@
+﻿@using SportShop.CustomerWeb
+@using SportShop.CustomerWeb.Models
+@using SportShop.CustomerWeb.Services
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@* Cờ "đã kết nối cơ sở dữ liệu chưa" và cấu hình dùng được ở mọi view *@
+@inject DbStatus Db
+@inject IConfiguration Config

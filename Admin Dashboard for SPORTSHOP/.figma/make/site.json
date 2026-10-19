@@ -1,0 +1,10 @@
+{
+  "description": "Quản lý toàn diện cửa hàng đồ thể thao với dashboard trực quan gồm bán hàng, khách hàng, nhân viên, kho, marketing, và báo cáo thống kê hiệu quả.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

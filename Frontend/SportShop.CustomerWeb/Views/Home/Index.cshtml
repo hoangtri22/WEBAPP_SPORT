@@ -1,0 +1,102 @@
+﻿@*
+    Trang chủ cửa hàng theo thiết kế Figma:
+    giới thiệu, 4 cam kết, danh mục, sản phẩm nổi bật, banner khuyến mãi, đăng ký nhận ưu đãi.
+    Các nút cần dữ liệu (thêm vào giỏ, xem tất cả...) có data-needs-db: chưa có CSDL thì hiện thông báo.
+*@
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+<section class="shop-hero">
+    <div class="hero-copy">
+        <span class="hero-label">@Icons.Svg("sparkles", 15) BỘ SƯU TẬP MỚI 2025</span>
+        <h1>Chuyển động<br /><em>theo cách của bạn.</em></h1>
+        <p>Trang bị tốt hơn cho từng bước chạy. Khám phá những thiết kế mới nhất, tạo ra để bạn vượt qua mọi giới hạn.</p>
+        <div class="hero-buttons">
+            <button type="button" class="btn btn-primary hero-button" data-needs-db>Mua sắm ngay @Icons.Svg("chevron-right", 18)</button>
+            <button type="button" class="hero-link" data-needs-db>Khám phá bộ sưu tập <span>↗</span></button>
+        </div>
+        <div class="hero-stats">
+            <div><strong>10K+</strong><span>Khách hàng tin chọn</span></div>
+            <div><strong>500+</strong><span>Sản phẩm chính hãng</span></div>
+            <div><strong>4.9/5</strong><span>Đánh giá trung bình</span></div>
+        </div>
+    </div>
+    <div class="hero-image">
+        <img src="@StoreData.HeroImage" alt="Giày thể thao mới tại SPORTSHOP" />
+        <div class="hero-price"><span>Sản phẩm nổi bật</span><strong>Nike Pegasus 41</strong><small>từ 3.290.000₫</small></div>
+        <div class="hero-scroll"><span>SCROLL</span><i></i></div>
+    </div>
+</section>
+
+<section class="shop-benefits">
+    <div>@Icons.Svg("truck", 22)<span><strong>Giao hàng miễn phí</strong><small>Đơn hàng từ 500.000₫</small></span></div>
+    <div>@Icons.Svg("shield-check", 22)<span><strong>100% chính hãng</strong><small>Cam kết hoàn tiền</small></span></div>
+    <div>@Icons.Svg("activity", 22)<span><strong>Đổi trả trong 30 ngày</strong><small>Nhanh chóng, dễ dàng</small></span></div>
+    <div>@Icons.Svg("headphones", 22)<span><strong>Hỗ trợ tận tâm</strong><small>Từ 8:00 đến 22:00</small></span></div>
+</section>
+
+<section class="shop-section">
+    <div class="shop-section-heading">
+        <div><span>CHỌN THEO NHU CẦU</span><h2>Tìm đúng đồ, chơi đúng chất</h2></div>
+        <button type="button" data-needs-db>Xem tất cả danh mục @Icons.Svg("chevron-right", 17)</button>
+    </div>
+    <div class="shop-category-grid">
+        @foreach (var c in StoreData.Categories)
+        {
+            <button type="button" class="shop-category @c.Css" data-needs-db>
+                @Icons.Svg(c.Icon, 30)
+                <span><strong>@c.Name</strong><small>@c.Sub</small></span>
+                <i>@Icons.Svg("chevron-right", 18)</i>
+            </button>
+        }
+    </div>
+</section>
+
+<section class="shop-section">
+    <div class="shop-section-heading">
+        <div><span>ĐƯỢC YÊU THÍCH NHẤT</span><h2>Sản phẩm nổi bật</h2></div>
+        <div class="product-tabs" id="productTabs">
+            <button type="button" class="active">Tất cả</button>
+            <button type="button">Giày</button>
+            <button type="button">Quần áo</button>
+            <button type="button">Phụ kiện</button>
+        </div>
+    </div>
+    <div class="shop-products">
+        @foreach (var p in StoreData.Products)
+        {
+            <article class="shop-product-card">
+                <div class="shop-product-image">
+                    <img src="@p.Image" alt="@p.Name" loading="lazy" />
+                    <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span>
+                    @* Nút tim: chỉ đổi màu trên giao diện *@
+                    <button type="button" class="heart" aria-label="Yêu thích">@Icons.Svg("heart", 18)</button>
+                    <button type="button" class="quick-add" data-needs-db>@Icons.Svg("shopping-bag", 16) Thêm vào giỏ</button>
+                </div>
+                <div class="shop-product-info">
+                    <div><span>@p.Type</span><span class="rate">@Icons.Svg("star", 12, "star-fill") 4.9</span></div>
+                    <h3>@p.Name</h3>
+                    <p><strong>@p.Price</strong>@if (!string.IsNullOrEmpty(p.OldPrice)) { <del>@p.OldPrice</del> }</p>
+                    <div class="color-swatches"><i></i><i></i><i></i></div>
+                </div>
+            </article>
+        }
+    </div>
+    <button type="button" class="btn btn-secondary view-products" data-needs-db>Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</button>
+</section>
+
+<section class="shop-campaign">
+    <div>
+        <span>CHỈ TRONG TUẦN NÀY</span>
+        <h2>Chạy xa hơn.<br />Tiết kiệm nhiều hơn.</h2>
+        <p>Giảm đến <strong>40%</strong> các sản phẩm chạy bộ chọn lọc.</p>
+        <button type="button" class="btn btn-orange" data-needs-db>Mua ngay @Icons.Svg("chevron-right", 18)</button>
+    </div>
+    <div class="campaign-card"><span>EXTRA</span><strong>15%</strong><small>Nhập mã</small><b>RUN15</b></div>
+    <div class="campaign-shoe"><img src="@StoreData.CampaignImage" alt="Bộ sưu tập giày chạy bộ khuyến mãi" loading="lazy" /></div>
+</section>
+
+<section class="shop-newsletter">
+    <div>@Icons.Svg("mail", 24)<span><strong>Đăng ký nhận ưu đãi</strong><small>Nhận ngay voucher 100.000₫ cho đơn hàng đầu tiên.</small></span></div>
+    <label><input placeholder="Email của bạn" /><button type="button" class="btn btn-primary" data-needs-db>Đăng ký</button></label>
+</section>

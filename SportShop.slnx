@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Frontend/">
     <Project Path="Frontend/SportShop.Admin/SportShop.Admin.csproj" />
+    <Project Path="Frontend/SportShop.CustomerWeb/SportShop.CustomerWeb.csproj" />
   </Folder>
 </Solution>

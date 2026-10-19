@@ -1,0 +1,47 @@
+@*
+    Khung của khu vực khách hàng đã đăng nhập (chỉnh sửa thông tin, phản hồi, khảo sát):
+    thanh menu riêng + tên khách + nút đăng xuất, chân trang gọn.
+*@
+@{
+    string active = ViewData["Active"] as string ?? "";
+    var me = StoreData.Customer;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "Tài khoản") - SPORTSHOP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+</head>
+<body class="customer-area" data-db="@(Db.IsConnected ? "true" : "false")">
+    <header class="customer-header">
+        <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+        <nav>
+            <a asp-controller="Home" asp-action="Index">Cửa hàng</a>
+            <a class="@(active == "profile" ? "active" : "")" asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
+            <a class="@(active == "feedback" ? "active" : "")" asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
+            <a class="@(active == "surveys" ? "active" : "")" asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
+        </nav>
+        <div class="customer-user">
+            <span class="avatar sm">@me.Initials</span>
+            <span class="customer-user-name"><strong>@me.FullName.Split(' ')[^2] @me.FullName.Split(' ')[^1]</strong><small>Thành viên @me.Tier</small></span>
+            <a class="icon-square" asp-controller="Account" asp-action="Logout" title="Đăng xuất">@Icons.Svg("log-out", 18)</a>
+        </div>
+    </header>
+    <main class="customer-content">
+        @RenderBody()
+    </main>
+    <footer class="customer-mini-footer">
+        <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+        <span>© 2025 SPORTSHOP · Chinh phục giới hạn mỗi ngày.</span>
+        <span>support@sportshop.vn · 1900 6868</span>
+    </footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="~/js/shop.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

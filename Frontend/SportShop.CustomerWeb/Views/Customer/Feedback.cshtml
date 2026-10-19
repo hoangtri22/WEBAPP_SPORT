@@ -1,0 +1,114 @@
+@*
+    Gửi phản hồi về sản phẩm: form (chọn sản phẩm, chấm 1-5 sao, nội dung)
+    và bảng "Phản hồi đã gửi" kèm cửa sổ xem chi tiết.
+    Nút "Gửi phản hồi" có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo.
+*@
+@{
+    Layout = "_CustomerLayout";
+    ViewData["Title"] = "Gửi phản hồi về sản phẩm";
+    string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
+}
+<div class="customer-page-title"><span>LẮNG NGHE &amp; CẢI THIỆN</span><h1>Gửi phản hồi về sản phẩm</h1><p>Chia sẻ trải nghiệm để chúng tôi nâng cao chất lượng sản phẩm và dịch vụ.</p></div>
+
+<section class="card feedback-compose">
+    <div class="feedback-intro">
+        <div>@Icons.Svg("message-square", 25)</div>
+        <h2>Trải nghiệm của bạn thế nào?</h2>
+        <p>Mỗi phản hồi đều được đội ngũ SPORTSHOP đọc và xử lý.</p>
+    </div>
+    <form method="post" novalidate>
+        <label>Chọn sản phẩm
+            <select name="product">
+                <option value="" disabled selected>Chọn sản phẩm đã mua</option>
+                @foreach (var p in StoreData.Products) { <option>@p.Name</option> }
+            </select>
+        </label>
+        <div class="field-like">Đánh giá sản phẩm
+            <div class="rating-input" id="rating">
+                @for (int s = 1; s <= 5; s++) { <button type="button" data-star="@s" aria-label="@s sao">@Icons.Svg("star", 25)</button> }
+                <span id="ratingText">Chọn số sao</span>
+            </div>
+        </div>
+        <label>Nội dung phản hồi<textarea name="content" placeholder="Hãy chia sẻ điều bạn thích hoặc góp ý để sản phẩm tốt hơn..."></textarea></label>
+        <div class="customer-form-actions">
+            <a class="btn btn-secondary" asp-controller="Home" asp-action="Index">Hủy</a>
+            <button type="submit" class="btn btn-primary" data-needs-db>@Icons.Svg("send", 17) Gửi phản hồi</button>
+        </div>
+    </form>
+</section>
+
+<section class="card feedback-history">
+    <div class="form-card-head history-head"><div><h2>Phản hồi đã gửi</h2><p>Theo dõi trạng thái xử lý phản hồi của bạn</p></div><span>@StoreData.Feedbacks.Count.ToString("00") phản hồi</span></div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Mã phản hồi</th><th>Sản phẩm</th><th>Nội dung phản hồi</th><th>Ngày gửi</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var f in StoreData.Feedbacks)
+                {
+                    <tr>
+                        <td><strong class="code">@f.Id</strong></td>
+                        <td><strong>@f.Product</strong></td>
+                        <td class="feedback-text">@f.Text</td>
+                        <td class="muted">@f.Date</td>
+                        <td><span class="pill @Tone(f.Tone)"><i></i>@f.Status</span></td>
+                        <td><button type="button" class="detail-link" data-detail="@f.Id" data-product="@f.Product" data-text="@f.Text" data-date="@f.Date" data-status="@f.Status">Xem chi tiết</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@* Cửa sổ chi tiết phản hồi *@
+<div class="modal-backdrop" id="fbModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head"><div><span id="fbId"></span><h2>Chi tiết phản hồi</h2></div><button type="button" id="fbClose" aria-label="Đóng">@Icons.Svg("x", 19)</button></div>
+        <div class="modal-body">
+            <span class="pill p-g" id="fbStatus"><i></i><b></b></span>
+            <h3 id="fbProduct"></h3>
+            <small id="fbDate"></small>
+            <p id="fbText"></p>
+            <div class="store-reply" id="fbReply">
+                <strong>@Icons.Svg("check-circle", 16) Phản hồi từ SPORTSHOP</strong>
+                <p>Cảm ơn bạn đã tin chọn sản phẩm. Chúc bạn có thêm nhiều buổi chạy thật bứt phá!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ----- Chấm sao (chỉ đổi giao diện) -----
+        (function () {
+            var stars = document.querySelectorAll('#rating button'), text = document.getElementById('ratingText');
+            function paint(n) {
+                stars.forEach(function (b, i) { b.classList.toggle('on', i < n); });
+                text.textContent = n ? n + '/5 · ' + (n >= 4 ? 'Rất hài lòng' : 'Cảm ơn đánh giá của bạn') : 'Chọn số sao';
+            }
+            stars.forEach(function (b) { b.addEventListener('click', function () { paint(parseInt(b.dataset.star, 10)); }); });
+        })();
+
+        // ----- Cửa sổ xem chi tiết phản hồi -----
+        (function () {
+            var modal = document.getElementById('fbModal');
+            function close() { modal.hidden = true; }
+            document.querySelectorAll('.detail-link').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    document.getElementById('fbId').textContent = 'PHẢN HỒI ' + b.dataset.detail;
+                    document.getElementById('fbProduct').textContent = b.dataset.product;
+                    document.getElementById('fbDate').textContent = 'Phản hồi của bạn · ' + b.dataset.date;
+                    document.getElementById('fbText').textContent = b.dataset.text;
+                    var st = document.getElementById('fbStatus');
+                    st.querySelector('b').textContent = b.dataset.status;
+                    st.className = 'pill ' + (b.dataset.status === 'Đã trả lời' ? 'p-g' : b.dataset.status === 'Đang xử lý' ? 'p-o' : 'p-b');
+                    // Chỉ phản hồi đã được trả lời mới có câu trả lời từ cửa hàng
+                    document.getElementById('fbReply').hidden = b.dataset.status !== 'Đã trả lời';
+                    modal.hidden = false;
+                });
+            });
+            document.getElementById('fbClose').addEventListener('click', close);
+            modal.addEventListener('mousedown', function (e) { if (e.target === modal) close(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        })();
+    </script>
+}

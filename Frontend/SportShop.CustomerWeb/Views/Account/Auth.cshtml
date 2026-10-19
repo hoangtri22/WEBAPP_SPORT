@@ -1,0 +1,95 @@
+@*
+    Trang đăng nhập / đăng ký (một view dùng chung), bố cục theo Figma:
+    nửa trái là ảnh, nửa phải là form. Lỗi hiện dưới từng ô.
+    Nút Đăng ký có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo, không gửi form.
+*@
+@model AuthVm
+@{
+    Layout = "_AuthLayout";
+    bool reg = Model.IsRegister;
+    ViewData["Title"] = reg ? "Đăng ký" : "Đăng nhập";
+    string Err(string k) => Model.Errors.TryGetValue(k, out var m) ? m : "";
+}
+<div class="customer-auth">
+    <section class="customer-auth-visual">
+        <img src="@StoreData.AuthImage" alt="Vận động viên đang thi đấu trên đường chạy" />
+        <div class="customer-auth-shade"></div>
+        <div class="customer-auth-story">
+            <a class="auth-back" asp-controller="Home" asp-action="Index">@Icons.Svg("arrow-left", 17) Về cửa hàng</a>
+            <div class="logo logo-white"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></div>
+            <div class="story-copy">
+                <span>SỐNG KHỎE · CHƠI HẾT MÌNH</span>
+                <h2>@(reg ? "Bắt đầu hành trình của riêng bạn." : "Chào mừng bạn trở lại đường đua.")</h2>
+                <p>Đăng nhập để lưu sản phẩm yêu thích, quản lý thông tin và chia sẻ trải nghiệm cùng SPORTSHOP.</p>
+            </div>
+            <small>Ảnh: Ben Iwara · Unsplash</small>
+        </div>
+    </section>
+
+    <section class="customer-auth-form-wrap">
+        <form class="customer-auth-form" method="post" asp-controller="Account" asp-action="@(reg ? "Register" : "Login")" novalidate>
+            <div class="auth-mobile-head">
+                <div class="logo"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></div>
+                <a class="icon-square" asp-controller="Home" asp-action="Index">@Icons.Svg("x", 19)</a>
+            </div>
+            <span class="eyebrow">TÀI KHOẢN SPORTSHOP</span>
+            <h1>@(reg ? "Đăng ký tài khoản khách hàng" : "Đăng nhập")</h1>
+            <p class="lead">@(reg ? "Tạo tài khoản để nhận trải nghiệm mua sắm dành riêng cho bạn." : "Tiếp tục hành trình mua sắm và vận động của bạn.")</p>
+
+            @if (!string.IsNullOrEmpty(Model.Notice))
+            {
+                <div class="customer-notice @(Model.NoticeIsError ? "error" : "success")" role="status">@Icons.Svg(Model.NoticeIsError ? "alert-circle" : "check-circle", 17)@Model.Notice</div>
+            }
+
+            <label class="@(Err("username") != "" ? "has-error" : "")">Tên đăng nhập
+                <div>@Icons.Svg("user", 18)<input name="username" placeholder="Ví dụ: minhanh_98" value="@(Model.Username != "" ? Model.Username : (reg ? "" : "minhanh_98"))" autocomplete="username" /></div>
+                @if (Err("username") != "") { <small>@Err("username")</small> }
+            </label>
+
+            @if (reg)
+            {
+                <label class="@(Err("email") != "" ? "has-error" : "")">Email
+                    <div>@Icons.Svg("mail", 18)<input name="email" type="email" placeholder="ban@email.com" value="@Model.Email" autocomplete="email" /></div>
+                    @if (Err("email") != "") { <small>@Err("email")</small> }
+                </label>
+                <label class="@(Err("phone") != "" ? "has-error" : "")">Số điện thoại
+                    <div>@Icons.Svg("headphones", 18)<input name="phone" inputmode="numeric" placeholder="09xx xxx xxx" value="@Model.Phone" autocomplete="tel" /></div>
+                    @if (Err("phone") != "") { <small>@Err("phone")</small> }
+                </label>
+            }
+
+            <label class="@(Err("password") != "" ? "has-error" : "")">Mật khẩu
+                <div>
+                    @Icons.Svg("lock", 18)
+                    <input name="password" id="pwd" type="password" placeholder="Tối thiểu 6 ký tự" value="@(reg ? "" : "12345678")" autocomplete="@(reg ? "new-password" : "current-password")" />
+                    <button type="button" id="pwdToggle" aria-label="Hiện hoặc ẩn mật khẩu">@Icons.Svg("eye", 18)</button>
+                </div>
+                @if (Err("password") != "") { <small>@Err("password")</small> }
+            </label>
+
+            @if (reg)
+            {
+                <button type="submit" class="btn btn-primary customer-submit" data-needs-db>Đăng ký @Icons.Svg("user-plus", 17)</button>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-primary customer-submit">Đăng nhập @Icons.Svg("chevron-right", 17)</button>
+            }
+
+            <div class="auth-switch">
+                @(reg ? "Đã có tài khoản?" : "Chưa có tài khoản?")
+                <a asp-controller="Account" asp-action="@(reg ? "Login" : "Register")">@(reg ? "Đăng nhập" : "Đăng ký")</a>
+            </div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        // Nút con mắt: hiện / ẩn mật khẩu
+        document.getElementById('pwdToggle').addEventListener('click', function () {
+            var i = document.getElementById('pwd');
+            i.type = i.type === 'password' ? 'text' : 'password';
+        });
+    </script>
+}

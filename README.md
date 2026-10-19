@@ -1,43 +1,72 @@
 # SportShop CRM
 
-Đồ án Hệ thống thông tin doanh nghiệp (nhóm 10, ĐH Sài Gòn): **Hệ thống quản lý khách hàng (CRM) cho doanh nghiệp bán đồ thể thao**.
-Chi tiết phân tích và thiết kế CSDL nằm trong file `Báo cáo đồ án cuối kỳ.pdf`.
+Đồ án môn Hệ thống thông tin doanh nghiệp (nhóm 10, Đại học Sài Gòn):
+**Xây dựng hệ thống quản lý khách hàng (CRM) cho doanh nghiệp bán đồ thể thao.**
+
+Phân tích và thiết kế cơ sở dữ liệu nằm trong file `Báo cáo đồ án cuối kỳ.pdf`.
 
 ## Cấu trúc thư mục
 
 ```
 SportShop/
 ├── Backend/
-│   └── Database/                 # Dành cho cơ sở dữ liệu (chưa làm)
+│   └── Database/                      # Cơ sở dữ liệu MySQL (nhóm thực hiện)
 ├── Frontend/
-│   ├── SportShop.Admin/          # Web admin (ASP.NET Core MVC, .NET 10)
-│   └── SportShop.CustomerApp/    # App khách hàng (.NET MAUI), làm sau
-├── SportShop.slnx
+│   ├── SportShop.Admin/               # Web quản trị (ASP.NET Core MVC, .NET 10)
+│   └── SportShop.CustomerWeb/         # Web mua hàng cho khách hàng (ASP.NET Core Razor)
+├── MobileApp/                         # App điện thoại cho khách hàng (.NET MAUI), chưa làm
+├── Admin Dashboard for SPORTSHOP/     # Mã nguồn thiết kế Figma (React), dùng để tham khảo giao diện
+├── SportShop.slnx                     # Solution mở bằng Visual Studio
 └── Báo cáo đồ án cuối kỳ.pdf
 ```
 
-## Đã làm
+## Hiện trạng
 
-**Web admin** (`Frontend/SportShop.Admin`), giao diện theo thiết kế Figma, dùng dữ liệu mẫu:
+### Web quản trị (`Frontend/SportShop.Admin`)
+Giao diện theo thiết kế Figma, dùng dữ liệu mẫu (chưa nối cơ sở dữ liệu). Gồm các trang:
+tổng quan, tài khoản và phân quyền, khách hàng, nhân viên, loại sản phẩm, sản phẩm,
+hóa đơn, bán hàng tại quầy, khuyến mãi và marketing, phản hồi khách hàng, khảo sát,
+nhập hàng, báo cáo thống kê. Tìm kiếm, bộ lọc và phân trang chạy được trên các bảng.
 
-- Đăng nhập (giao diện mẫu) và khung chung: sidebar, thanh trên, thu gọn menu.
-- Tổng quan: 6 thẻ thống kê và bảng đơn hàng gần đây.
-- Tài khoản & Phân quyền, Quản lý khách hàng (hồ sơ, hạng thành viên, lịch sử mua, chăm sóc), Quản lý nhân viên.
-- Quản lý loại sản phẩm, sản phẩm (dạng lưới/danh sách, biến thể size, màu).
-- Quản lý hóa đơn (chi tiết, vận chuyển) và Bán hàng tại quầy (hóa đơn tạm, tự tính tiền).
-- Khuyến mãi & Marketing, Phản hồi khách hàng (hộp thư), Khảo sát, Quản lý nhập hàng.
-- Báo cáo thống kê: lọc theo khoảng ngày, biểu đồ doanh thu, sản phẩm bán chạy, nhóm khách hàng, hiệu suất nhân viên.
-- Tìm kiếm, bộ lọc và phân trang trên các bảng.
+### Web khách hàng (`Frontend/SportShop.CustomerWeb`)
+Giao diện theo thiết kế Figma, dùng dữ liệu mẫu. Gồm: trang chủ cửa hàng, đăng nhập,
+đăng ký, chỉnh sửa thông tin, gửi phản hồi về sản phẩm, làm khảo sát.
+Nút "Trang quản trị" chuyển sang web quản trị (địa chỉ cấu hình trong
+`appsettings.json`, mục `Links:AdminUrl`).
 
-## Chưa làm
+### Cơ sở dữ liệu
+Dùng MySQL. Khi chưa kết nối cơ sở dữ liệu, các nút cần dữ liệu (thêm, sửa, xóa, gửi phản hồi...)
+hiện thông báo "Chức năng này sẽ hoạt động khi hệ thống được kết nối cơ sở dữ liệu".
+Khi đã kết nối thì các chức năng chạy thật và không hiện thông báo này.
 
-- Cơ sở dữ liệu và API (các nút Thêm/Sửa/Xóa hiện chỉ báo "sẽ hoạt động khi kết nối CSDL").
-- Đăng nhập thật và phân quyền theo vai trò.
-- Tài khoản riêng cho từng cửa hàng.
-- App khách hàng (.NET MAUI).
+### Chưa làm
+- Kết nối MySQL cho web quản trị và web khách hàng (đọc/ghi dữ liệu thật).
+- Đăng nhập thật, mã hóa mật khẩu và phân quyền theo vai trò.
+- Các trang giỏ hàng, chi tiết sản phẩm, thanh toán, lịch sử mua hàng của khách.
+- App điện thoại (`MobileApp`).
 
-## Cách chạy web admin
+## Cách chạy
 
-1. Mở `SportShop.slnx` bằng Visual Studio (cần .NET 10 SDK).
-2. Chọn profile `http` hoặc `https`, bấm **F5**.
-3. Trang đăng nhập mở ra, bấm **Đăng nhập** để vào Tổng quan.
+Yêu cầu: Visual Studio có .NET 10 SDK.
+
+1. Mở `SportShop.slnx` bằng Visual Studio.
+2. Muốn chạy cả hai web cùng lúc: chuột phải vào Solution, chọn **Configure Startup Projects**,
+   chọn **Multiple startup projects**, đặt `SportShop.Admin` và `SportShop.CustomerWeb` là **Start**
+   (Debug Target chọn `http`).
+3. Bấm **F5**.
+
+| Dự án | Địa chỉ (profile http) |
+|---|---|
+| Web quản trị | http://localhost:5188 |
+| Web khách hàng | http://localhost:5003 |
+
+Trang đăng nhập của cả hai web hiện là chế độ xem giao diện: nhập thông tin hợp lệ là vào được.
+
+## Kết nối MySQL
+
+Chuỗi kết nối điền trong `appsettings.json`, mục `ConnectionStrings:Default`
+(mỗi máy tự điền, không đưa mật khẩu lên GitHub). Ví dụ:
+
+```
+Server=localhost;Port=3306;Database=sportshop;User=root;Password=...;
+```

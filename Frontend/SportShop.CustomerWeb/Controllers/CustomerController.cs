@@ -11,7 +11,7 @@ namespace SportShop.CustomerWeb.Controllers;
 /// Đã kết nối MySQL: đọc / ghi dữ liệu thật của khách đang đăng nhập.
 /// Chưa kết nối: hiện dữ liệu mẫu (StoreData), các nút lưu / gửi chỉ hiện thông báo.
 /// </summary>
-public class CustomerController(DbStatus db, CustomerStore store) : Controller
+public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
 
@@ -128,5 +128,31 @@ public class CustomerController(DbStatus db, CustomerStore store) : Controller
         var questions = StoreData.SurveyQuestions.Select(q =>
             new SurveyQ(++qId, q.Title, q.Type, true, q.Options.Select(o => new SurveyOption(++optId, o)).ToList())).ToList();
         return new SurveyPageVm { Items = items, Current = id == 1 ? items[0] : null, Questions = id == 1 ? questions : [] };
+    }
+
+    // ===================== Đơn hàng của tôi =====================
+
+    /// <summary>Danh sách đơn hàng của khách kèm trạng thái do cửa hàng cập nhật (chờ xác nhận → đang chuẩn bị → đang giao → đã giao).</summary>
+    public IActionResult Orders()
+    {
+        ViewData["Active"] = "orders";
+        if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
+        return View(shop.Orders(CustomerId));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult CancelOrder(int id)
+    {
+        var error = db.IsConnected ? shop.CancelOrder(CustomerId, id) : "Chưa kết nối cơ sở dữ liệu.";
+        TempData["Notice"] = error ?? "Đã hủy đơn hàng.";
+        return RedirectToAction(nameof(Orders));
+    }
+
+    /// <summary>Trạng thái hiện tại các đơn của khách (JSON), trang "Đơn hàng của tôi" hỏi định kỳ để biết đơn nào vừa được giao.</summary>
+    [HttpGet]
+    public IActionResult OrderStatuses()
+    {
+        if (!db.IsConnected) return Json(Array.Empty<object>());
+        return Json(shop.Orders(CustomerId).Select(o => new { id = o.Id, code = o.Code, status = o.Status }));
     }
 }

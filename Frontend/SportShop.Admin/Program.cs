@@ -7,8 +7,14 @@ using SportShop.Admin.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.Local.json (nếu có) ghi đè cấu hình từng máy, ví dụ mật khẩu MySQL; file này không đưa lên GitHub
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();   // biến môi trường vẫn được ưu tiên cao nhất
+
 // Đọc dữ liệu từ MySQL (chuỗi kết nối: appsettings.json → ConnectionStrings:Default)
 builder.Services.AddScoped<ShopData>();
+// Ghi dữ liệu (thêm / sửa / xóa) vào MySQL
+builder.Services.AddSingleton<ShopCommands>();
 
 // Đăng nhập bằng cookie: chưa đăng nhập thì mọi trang đều chuyển về màn hình đăng nhập "/"
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -21,6 +27,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddControllersWithViews(o => o.Filters.Add(new AuthorizeFilter()));
 
 var app = builder.Build();
+
+// Dọn dữ liệu cũ: đơn đã hủy nhưng còn hóa đơn thì hoàn tiền lại cho khách (không tính vào tổng chi tiêu)
+app.Services.GetRequiredService<ShopCommands>().ReconcileCancelled();
 
 // Không kết nối được MySQL (hoặc chưa điền chuỗi kết nối) → hiện trang hướng dẫn thay vì lỗi 500 khó hiểu
 app.Use(async (ctx, next) =>
@@ -41,7 +50,7 @@ app.Use(async (ctx, next) =>
             <p>Lỗi: <code>{WebUtility.HtmlEncode(ex.Message)}</code></p>
             <ol>
               <li>Kiểm tra MySQL đã chạy (dịch vụ <b>MySQL80</b> trong Services).</li>
-              <li>Đã chạy script <code>Backend/sports_shop.sql</code> để tạo CSDL.</li>
+              <li>Đã chạy script <code>Backend/Database/sports_shop.sql</code> để tạo CSDL.</li>
               <li>Kiểm tra user / mật khẩu trong <code>ConnectionStrings:Default</code> của <code>appsettings.json</code>.</li>
             </ol></body></html>
             """);

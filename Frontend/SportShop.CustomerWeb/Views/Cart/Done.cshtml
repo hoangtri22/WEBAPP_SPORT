@@ -1,0 +1,22 @@
+@*
+    Đặt hàng thành công: mã đơn, tóm tắt, đường dẫn xem trạng thái đơn.
+*@
+@model MyOrder
+@{
+    ViewData["Title"] = "Đặt hàng thành công";
+}
+<section class="shop-page">
+    <div class="shop-empty done">
+        <span class="done-icon">@Icons.Svg("check-circle", 48)</span>
+        <h1>Đặt hàng thành công!</h1>
+        <p>Mã đơn hàng của bạn là <b>@Model.Code</b>. Cửa hàng sẽ xác nhận và giao hàng cho @Model.Receiver, bạn theo dõi trạng thái trong mục "Đơn hàng của tôi".</p>
+        <div class="card done-box">
+            @foreach (var l in Model.Lines) { <div class="sum-line"><span>@l.Name@(string.IsNullOrEmpty(l.Label) ? "" : " (" + l.Label + ")") × @l.Qty</span><b>@Fmt.Money(l.Amount)</b></div> }
+            <div class="sum-row total"><span>Tổng thanh toán (@Model.PayMethod)</span><b>@Fmt.Money(Model.Total)</b></div>
+        </div>
+        <div class="done-actions">
+            <a class="btn btn-primary" asp-controller="Customer" asp-action="Orders">Xem đơn hàng của tôi</a>
+            <a class="btn btn-secondary" asp-controller="Shop" asp-action="Index">Tiếp tục mua sắm</a>
+        </div>
+    </div>
+</section>

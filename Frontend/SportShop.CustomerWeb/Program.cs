@@ -3,6 +3,10 @@ using SportShop.CustomerWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.Local.json (nếu có) ghi đè cấu hình từng máy, ví dụ mật khẩu MySQL; file này không đưa lên GitHub
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();   // biến môi trường vẫn được ưu tiên cao nhất
+
 builder.Services.AddControllersWithViews();
 
 // Phiên làm việc (session) dùng để nhớ khách đang đăng nhập
@@ -18,6 +22,8 @@ builder.Services.AddSession(o =>
 builder.Services.AddSingleton<DbStatus>();
 // Đọc / ghi dữ liệu khách hàng trong MySQL
 builder.Services.AddScoped<CustomerStore>();
+// Cửa hàng: sản phẩm, giỏ hàng, đặt hàng, đơn hàng của tôi
+builder.Services.AddScoped<ShopStore>();
 
 var app = builder.Build();
 

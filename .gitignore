@@ -9,3 +9,4 @@ obj/
 
 # Khác
 *.log
+appsettings.Local.json

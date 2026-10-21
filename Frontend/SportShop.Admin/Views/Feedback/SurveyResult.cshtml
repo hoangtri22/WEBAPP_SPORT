@@ -1,0 +1,62 @@
+@*
+    Thống kê kết quả một khảo sát (yêu cầu CRM: xem thống kê khảo sát):
+    số khách đã nhận / đã hoàn thành, số lượt chọn từng đáp án, điểm trung bình, câu trả lời văn bản.
+    Nút "Gửi khảo sát" gửi cho tất cả khách hoặc một nhóm khách; nút "Đóng khảo sát" ngừng nhận trả lời.
+*@
+@model SurveyStats
+@{
+    ViewData["Title"] = Model.Title;
+    int percent = Model.Sent == 0 ? 0 : (int)Math.Round(100.0 * Model.Completed / Model.Sent);
+    string status = Model.Status switch { "da_gui" => "[g]Đang thu thập", "da_dong" => "[x]Đã kết thúc", _ => "[x]Nháp" };
+}
+<a class="back" asp-action="Surveys">@Icons.Svg("arrow-left", 16) Danh sách khảo sát</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">KHẢO SÁT KS@(Model.Id.ToString("D3"))</div>
+        <h1 class="page-title">@Model.Title</h1>
+        <p class="page-sub">@Fmt.Cell(status) &nbsp;@Fmt.Date(Model.Start) – @Fmt.Date(Model.End)@(string.IsNullOrEmpty(Model.Description) ? "" : " · " + Model.Description)</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="survey" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        @if (Model.Status != "da_dong")
+        {
+            <button type="button" class="btn-outline" data-act="survey_close" data-id="@Model.Id" data-confirm="Đóng khảo sát này? Khách sẽ không làm được nữa.">Đóng khảo sát</button>
+            <button type="button" class="btn-primary" data-crud="edit" data-entity="survey_send" data-id="@Model.Id">@Icons.Svg("send", 18) Gửi khảo sát</button>
+        }
+    </div>
+</div>
+
+<div class="stats-row">
+    <div class="mini-stat"><small>Khách đã nhận</small><b>@Model.Sent</b></div>
+    <div class="mini-stat"><small>Đã hoàn thành</small><b>@Model.Completed</b></div>
+    <div class="mini-stat"><small>Tỉ lệ hoàn thành</small><b>@percent%</b></div>
+    <div class="mini-stat"><small>Số câu hỏi</small><b>@Model.Questions.Count</b></div>
+</div>
+
+@foreach (var (q, i) in Model.Questions.Select((q, i) => (q, i)))
+{
+    <section class="card pad">
+        <h3 class="card-h">Câu @(i + 1). @q.Text</h3>
+        @if (q.Type == "van_ban")
+        {
+            @if (q.Texts.Count == 0) { <div class="empty">Chưa có câu trả lời</div> }
+            <ul class="text-answers">@foreach (var t in q.Texts) { <li>@t</li> }</ul>
+        }
+        else
+        {
+            @if (q.Average.HasValue) { <p class="muted">Điểm trung bình: <b>@q.Average.Value.ToString("0.0")</b> (@q.Total lượt)</p> }
+            <div class="result-bars">
+                @foreach (var o in q.Options)
+                {
+                    int pct = q.Total == 0 ? 0 : (int)Math.Round(100.0 * o.Count / q.Total);
+                    <div class="rb">
+                        <span class="rb-label">@o.Label</span>
+                        <span class="rb-track"><i style="width:@(pct)%"></i></span>
+                        <span class="rb-val">@o.Count (@pct%)</span>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}
+@if (Model.Questions.Count == 0) { <div class="card pad"><div class="empty">Khảo sát chưa có câu hỏi</div></div> }

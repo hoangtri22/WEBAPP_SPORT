@@ -47,6 +47,8 @@ public class ReportsVm
     public List<Row> ProfitByProduct { get; init; } = [];
     public List<Row> HighStock { get; init; } = [];
     public List<Row> Promos { get; init; } = [];
+    /// <summary>Báo cáo sở thích: số khách theo từng môn thể thao và độ tuổi trung bình của họ.</summary>
+    public List<Row> Interests { get; init; } = [];
 }
 
 public class ReportsController(ShopData db) : Controller
@@ -117,6 +119,11 @@ public class ReportsController(ShopData db) : Controller
             new("Trên 35 tuổi", g3, P(g3), "#d6ebe7"),
         };
 
+        // ----- Báo cáo sở thích: số khách theo từng môn và độ tuổi trung bình (yêu cầu CRM: báo cáo tuổi + sở thích) -----
+        var interests = cust.SelectMany(c => c.Interests.Select(i => (Name: i, c.Age)))
+            .GroupBy(x => x.Name).OrderByDescending(g => g.Count())
+            .Select(g => new Row([g.Key, g.Count().ToString(), g.Any(x => x.Age.HasValue) ? g.Where(x => x.Age.HasValue).Average(x => x.Age!.Value).ToString("0.#") + " tuổi" : "-"])).ToList();
+
         // ----- Hiệu suất nhân viên: số hóa đơn lập + lần chăm sóc + phản hồi đã trả lời -----
         var staffRaw = db.Employees.Where(e => e.Working).Select(e =>
         {
@@ -161,7 +168,7 @@ public class ReportsController(ShopData db) : Controller
             XLabels = pts.Select((p, i) => (p.X, $"{unit} {i + 1}")).ToList(),
             YTicks = Enumerable.Range(0, 5).Select(i => (padT + plotH * (1 - i / 4.0), (max * i / 4).ToString("0.##", Inv))).ToList(),
             Bars = bars, Donut = donut, CustomerTotal = cust.Count, Staff = staff,
-            ProfitByProduct = profit, HighStock = high, Promos = promos,
+            ProfitByProduct = profit, HighStock = high, Promos = promos, Interests = interests,
         });
     }
 

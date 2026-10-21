@@ -1,0 +1,16 @@
+@*
+    Thẻ sản phẩm (dùng ở trang chủ, danh sách và sản phẩm liên quan): bấm vào để xem chi tiết và chọn size / màu.
+*@
+@model ShopProduct
+<article class="shop-product-card">
+    <a class="shop-product-image" asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id">
+        @if (!string.IsNullOrEmpty(Model.Image)) { <img src="@Model.Image" alt="@Model.Name" loading="lazy" onerror="this.style.visibility='hidden'" /> }
+        @if (Model.Stock <= 0) { <span class="badge">Hết hàng</span> }
+        <span class="quick-add">@Icons.Svg("shopping-bag", 16) Chọn mua</span>
+    </a>
+    <div class="shop-product-info">
+        <div><span>@Model.Category</span></div>
+        <h3><a asp-controller="Shop" asp-action="Detail" asp-route-id="@Model.Id">@Model.Name</a></h3>
+        <p><strong>@Model.PriceText</strong></p>
+    </div>
+</article>

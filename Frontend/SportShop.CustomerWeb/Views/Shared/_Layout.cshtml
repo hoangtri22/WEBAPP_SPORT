@@ -8,6 +8,8 @@
     // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
     var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
     string adminUrl = Config["Links:AdminUrl"] ?? "#";
+    // Số sản phẩm trong giỏ (lưu trong session) hiện trên biểu tượng giỏ hàng
+    int cartCount = Db.IsConnected ? ShopStore.CartCount(Context.Session) : 0;
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -19,11 +21,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/shop-store.css" asp-append-version="true" />
 </head>
 <body class="storefront" data-db="@(Db.IsConnected ? "true" : "false")">
     <div class="shop-promo">
         <span>FREESHIP toàn quốc cho đơn từ 500.000₫</span>
-        <button type="button" data-needs-db>Theo dõi đơn hàng</button>
+        <a asp-controller="Customer" asp-action="Orders">Theo dõi đơn hàng</a>
         @* Chuyển sang web quản trị (không sửa gì bên web quản trị, chỉ trỏ link sang) *@
         <a href="@adminUrl">Trang quản trị</a>
     </div>
@@ -32,13 +35,13 @@
         <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
         <nav>
             <a class="active" asp-controller="Home" asp-action="Index">Trang chủ</a>
-            <button type="button" data-needs-db>Sản phẩm</button>
-            <button type="button" class="sale" data-needs-db>Khuyến mãi</button>
+            <a asp-controller="Shop" asp-action="Index">Sản phẩm</a>
+            <a class="sale" asp-controller="Shop" asp-action="Promotions">Khuyến mãi</a>
         </nav>
         <div class="shop-actions">
             <button type="button" id="searchToggle" aria-label="Tìm kiếm">@Icons.Svg("search", 20)</button>
             <button type="button" class="hide-sm" data-needs-db aria-label="Yêu thích">@Icons.Svg("heart", 20)</button>
-            <button type="button" class="hide-sm cart-button" data-needs-db aria-label="Giỏ hàng">@Icons.Svg("shopping-bag", 20)</button>
+            <a class="hide-sm cart-button" asp-controller="Cart" asp-action="Index" aria-label="Giỏ hàng">@Icons.Svg("shopping-bag", 20)@if (cartCount > 0) {<i class="cart-count">@cartCount</i>}</a>
             @if (loggedIn)
             {
                 <div class="shop-account">
@@ -48,6 +51,7 @@
                         @Icons.Svg("chevron-down", 15)
                     </button>
                     <div class="account-menu">
+                        <a asp-controller="Customer" asp-action="Orders">Đơn hàng của tôi</a>
                         <a asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
                         <a asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
                         <a asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
@@ -92,12 +96,14 @@
         <a class="active" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
         <button type="button" id="searchToggleMobile">@Icons.Svg("search", 20)<span>Tìm kiếm</span></button>
         <button type="button" data-needs-db>@Icons.Svg("heart", 20)<span>Yêu thích</span></button>
-        <button type="button" data-needs-db>@Icons.Svg("shopping-bag", 20)<span>Giỏ hàng</span></button>
+        <a asp-controller="Cart" asp-action="Index">@Icons.Svg("shopping-bag", 20)<span>Giỏ hàng@(cartCount > 0 ? " (" + cartCount + ")" : "")</span></a>
         <a asp-controller="@(loggedIn ? "Customer" : "Account")" asp-action="@(loggedIn ? "Profile" : "Login")">@Icons.Svg("user", 20)<span>Tài khoản</span></a>
     </nav>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="~/js/shop.js" asp-append-version="true"></script>
+    @if (TempData["ShopNotice"] is string shopNotice) { <script>showToast(@Json.Serialize(shopNotice));</script> }
+    @if (TempData["ShopError"] is string shopError) { <script>showToast(@Json.Serialize(shopError));</script> }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

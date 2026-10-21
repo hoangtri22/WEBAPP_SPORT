@@ -1,0 +1,59 @@
+@*
+    Giỏ hàng: đổi số lượng, bỏ sản phẩm, xem tạm tính, sang bước thanh toán. Giỏ lưu trong session.
+*@
+@model List<CartLine>
+@{
+    ViewData["Title"] = "Giỏ hàng";
+    decimal subtotal = Model.Sum(l => l.Amount);
+    decimal ship = ShopStore.ShippingFor(subtotal);
+}
+<section class="shop-page">
+    <div class="shop-page-head"><span class="eyebrow">GIỎ HÀNG</span><h1>Giỏ hàng của bạn</h1></div>
+    @if (Model.Count == 0)
+    {
+        <div class="shop-empty">
+            @Icons.Svg("shopping-bag", 40)
+            <h2>Giỏ hàng đang trống</h2>
+            <p>Hãy chọn vài món đồ bạn thích nhé.</p>
+            <a class="btn btn-primary" asp-controller="Shop" asp-action="Index">Tiếp tục mua sắm</a>
+        </div>
+    }
+    else
+    {
+        <div class="cart-layout">
+            <div class="card cart-list">
+                @foreach (var l in Model)
+                {
+                    <div class="cart-row">
+                        <a class="cart-img" asp-controller="Shop" asp-action="Detail" asp-route-id="@l.ProductId">@if (!string.IsNullOrEmpty(l.Image)) { <img src="@l.Image" alt="" onerror="this.style.visibility='hidden'" /> }</a>
+                        <div class="cart-info">
+                            <a asp-controller="Shop" asp-action="Detail" asp-route-id="@l.ProductId"><strong>@l.Name</strong></a>
+                            @if (!string.IsNullOrEmpty(l.Label)) { <small>@l.Label</small> }
+                            <span class="cart-price">@Fmt.Money(l.Price)</span>
+                            @if (!l.Enough) { <span class="cart-warn">Chỉ còn @l.Stock sản phẩm trong kho</span> }
+                        </div>
+                        <form method="post" asp-action="Update" class="cart-qty">
+                            <input type="hidden" name="variantId" value="@l.VariantId" />
+                            <input type="number" name="qty" value="@l.Qty" min="1" max="@l.Stock" onchange="this.form.submit()" aria-label="Số lượng" />
+                        </form>
+                        <div class="cart-amount">@Fmt.Money(l.Amount)</div>
+                        <form method="post" asp-action="Remove">
+                            <input type="hidden" name="variantId" value="@l.VariantId" />
+                            <button class="icon-square" title="Bỏ khỏi giỏ">@Icons.Svg("x", 16)</button>
+                        </form>
+                    </div>
+                }
+            </div>
+            <aside class="card cart-summary">
+                <h3>Tóm tắt đơn hàng</h3>
+                <div class="sum-row"><span>Tạm tính</span><b>@Fmt.Money(subtotal)</b></div>
+                <div class="sum-row"><span>Phí giao hàng</span><b>@(ship == 0 ? "Miễn phí" : Fmt.Money(ship))</b></div>
+                <div class="sum-row total"><span>Tổng cộng</span><b>@Fmt.Money(subtotal + ship)</b></div>
+                <small class="muted">Mã giảm giá được nhập ở bước thanh toán.</small>
+                @if (Model.Any(l => !l.Enough)) { <p class="cart-warn">Vui lòng giảm số lượng các sản phẩm vượt tồn kho.</p> }
+                else { <a class="btn btn-primary" asp-action="Checkout">Tiến hành thanh toán</a> }
+                <a class="btn btn-secondary" asp-controller="Shop" asp-action="Index">Tiếp tục mua sắm</a>
+            </aside>
+        </div>
+    }
+</section>

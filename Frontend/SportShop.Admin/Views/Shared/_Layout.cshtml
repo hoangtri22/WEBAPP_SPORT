@@ -94,8 +94,6 @@ else
                     @Icons.Svg("chevron-down", 16)
                 </div>
                 <a class="btn-outline logout" asp-controller="Account" asp-action="Logout">@Icons.Svg("log-out", 18) <span>Đăng xuất</span></a>
-                @* Chuông thông báo: ngoài cùng bên phải thanh trên *@
-                <button type="button" class="bell js-soon" aria-label="Thông báo">@Icons.Svg("bell", 20)<i class="bell-dot"></i></button>
             </div>
         </header>
         <main class="content">
@@ -103,6 +101,11 @@ else
         </main>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    @* Token chống giả mạo yêu cầu: JavaScript gửi kèm khi thêm / sửa / xóa *@
+    @Html.AntiForgeryToken()
+    @* Ngăn trượt bên phải chứa biểu mẫu thêm / sửa / xem (nội dung tải từ CrudController.Form) *@
+    <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+    <aside class="drawer" id="drawer" hidden aria-label="Biểu mẫu"></aside>
 }
 <script src="~/js/admin.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)

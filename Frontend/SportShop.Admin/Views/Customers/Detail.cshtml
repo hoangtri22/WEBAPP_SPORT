@@ -16,8 +16,8 @@
         <p class="page-sub">Thông tin và lịch sử mua hàng của khách hàng</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline js-soon">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
-        <button type="button" class="btn-outline js-soon">@(Model.Locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-act="lock_customer" data-id="@Model.Id" data-confirm="@(Model.Locked ? "Mở khóa tài khoản của khách hàng này?" : "Khóa tài khoản của khách hàng này? Khách sẽ không đăng nhập được nhưng dữ liệu vẫn được giữ.")">@(Model.Locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
     </div>
 </div>
 
@@ -30,6 +30,15 @@
             <dt>Số điện thoại</dt><dd>@Model.Phone</dd>
             <dt>Email</dt><dd>@Model.Email</dd>
             <dt>Tài khoản</dt><dd>@(string.IsNullOrEmpty(Model.Username) ? "Chưa có tài khoản" : Model.Username) @Fmt.Cell(Model.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
+            <dt>Mật khẩu</dt><dd>
+                @if (string.IsNullOrEmpty(Model.Username)) { <text>-</text> }
+                else if (User.IsInRole("Quản lý"))
+                {
+                    <span id="pwText" data-pw="@Model.Password">••••••••</span>
+                    <button type="button" class="btn-outline" style="height:30px;padding:0 12px;margin-left:8px" onclick="var s=document.getElementById('pwText'),h=this.dataset.shown==='1';s.textContent=h?'••••••••':s.dataset.pw;this.dataset.shown=h?'0':'1';this.textContent=h?'Hiện':'Ẩn'">Hiện</button>
+                }
+                else { <span class="muted">Chỉ tài khoản Quản lý xem được</span> }
+            </dd>
             <dt>Nhóm khách hàng</dt><dd class="tags">@foreach (var g in Model.Groups) { <span>@g</span> }</dd>
             <dt>Sở thích</dt><dd class="tags">@foreach (var i in Model.Interests) { <span>@i</span> }</dd>
         </dl>
@@ -74,7 +83,7 @@
 </section>
 
 <section class="card">
-    <div class="card-title row-between">Ghi chú &amp; lịch sử chăm sóc <button type="button" class="btn-primary js-soon">@Icons.Svg("plus", 18) Thêm ghi chú</button></div>
+    <div class="card-title row-between">Ghi chú &amp; lịch sử chăm sóc <button type="button" class="btn-primary" data-crud="create" data-entity="care" data-parent="@Model.Id">@Icons.Svg("plus", 18) Thêm ghi chú</button></div>
     <div class="table-wrap">
         <table class="tbl">
             <thead><tr><th>Thời điểm</th><th>Hình thức</th><th>Nội dung</th><th>Nhân viên</th><th>Hẹn liên hệ lại</th></tr></thead>

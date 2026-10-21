@@ -12,8 +12,8 @@
         <h1>Chuyển động<br /><em>theo cách của bạn.</em></h1>
         <p>Trang bị tốt hơn cho từng bước chạy. Khám phá những thiết kế mới nhất, tạo ra để bạn vượt qua mọi giới hạn.</p>
         <div class="hero-buttons">
-            <button type="button" class="btn btn-primary hero-button" data-needs-db>Mua sắm ngay @Icons.Svg("chevron-right", 18)</button>
-            <button type="button" class="hero-link" data-needs-db>Khám phá bộ sưu tập <span>↗</span></button>
+            <a class="btn btn-primary hero-button" asp-controller="Shop" asp-action="Index">Mua sắm ngay @Icons.Svg("chevron-right", 18)</a>
+            <a class="hero-link" asp-controller="Shop" asp-action="Promotions">Khám phá ưu đãi <span>↗</span></a>
         </div>
         <div class="hero-stats">
             <div><strong>10K+</strong><span>Khách hàng tin chọn</span></div>
@@ -38,16 +38,16 @@
 <section class="shop-section">
     <div class="shop-section-heading">
         <div><span>CHỌN THEO NHU CẦU</span><h2>Tìm đúng đồ, chơi đúng chất</h2></div>
-        <button type="button" data-needs-db>Xem tất cả danh mục @Icons.Svg("chevron-right", 17)</button>
+        <a class="heading-link" asp-controller="Shop" asp-action="Index">Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</a>
     </div>
     <div class="shop-category-grid">
         @foreach (var c in StoreData.Categories)
         {
-            <button type="button" class="shop-category @c.Css" data-needs-db>
+            <a class="shop-category @c.Css" asp-controller="Shop" asp-action="Index" asp-route-q="@(c.Css switch { "running" => "Giày", "men" => "Áo", "women" => "Quần", _ => "Vợt" })">
                 @Icons.Svg(c.Icon, 30)
                 <span><strong>@c.Name</strong><small>@c.Sub</small></span>
                 <i>@Icons.Svg("chevron-right", 18)</i>
-            </button>
+            </a>
         }
     </div>
 </section>
@@ -72,18 +72,18 @@
                     @if (!string.IsNullOrEmpty(p.Badge)) { <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span> }
                     @* Nút tim: chỉ đổi màu trên giao diện *@
                     <button type="button" class="heart" aria-label="Yêu thích">@Icons.Svg("heart", 18)</button>
-                    <button type="button" class="quick-add" data-needs-db>@Icons.Svg("shopping-bag", 16) Thêm vào giỏ</button>
+                    <a class="quick-add" asp-controller="Shop" asp-action="Detail" asp-route-id="@p.Id">@Icons.Svg("shopping-bag", 16) Chọn mua</a>
                 </div>
                 <div class="shop-product-info">
                     <div><span>@p.Type</span><span class="rate">@Icons.Svg("star", 12, "star-fill") 4.9</span></div>
-                    <h3>@p.Name</h3>
+                    <h3><a asp-controller="Shop" asp-action="Detail" asp-route-id="@p.Id">@p.Name</a></h3>
                     <p><strong>@p.Price</strong>@if (!string.IsNullOrEmpty(p.OldPrice)) { <del>@p.OldPrice</del> }</p>
                     <div class="color-swatches"><i></i><i></i><i></i></div>
                 </div>
             </article>
         }
     </div>
-    <button type="button" class="btn btn-secondary view-products" data-needs-db>Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</button>
+    <a class="btn btn-secondary view-products" asp-controller="Shop" asp-action="Index">Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</a>
 </section>
 
 <section class="shop-campaign">
@@ -91,7 +91,7 @@
         <span>CHỈ TRONG TUẦN NÀY</span>
         <h2>Chạy xa hơn.<br />Tiết kiệm nhiều hơn.</h2>
         <p>Giảm đến <strong>40%</strong> các sản phẩm chạy bộ chọn lọc.</p>
-        <button type="button" class="btn btn-orange" data-needs-db>Mua ngay @Icons.Svg("chevron-right", 18)</button>
+        <a class="btn btn-orange" asp-controller="Shop" asp-action="Promotions">Mua ngay @Icons.Svg("chevron-right", 18)</a>
     </div>
     <div class="campaign-card"><span>EXTRA</span><strong>15%</strong><small>Nhập mã</small><b>RUN15</b></div>
     <div class="campaign-shoe"><img src="@StoreData.CampaignImage" alt="Bộ sưu tập giày chạy bộ khuyến mãi" loading="lazy" /></div>
@@ -99,5 +99,5 @@
 
 <section class="shop-newsletter">
     <div>@Icons.Svg("mail", 24)<span><strong>Đăng ký nhận ưu đãi</strong><small>Nhận ngay voucher 100.000₫ cho đơn hàng đầu tiên.</small></span></div>
-    <label><input placeholder="Email của bạn" /><button type="button" class="btn btn-primary" data-needs-db>Đăng ký</button></label>
+    <label><input placeholder="Email của bạn" /><button type="button" class="btn btn-primary" onclick="showToast('Cảm ơn bạn đã đăng ký nhận ưu đãi!')">Đăng ký</button></label>
 </section>

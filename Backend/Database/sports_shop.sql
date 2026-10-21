@@ -1,6 +1,14 @@
+-- Script tạo lại toàn bộ CSDL từ đầu: xóa CSDL cũ (nếu có) rồi tạo mới kèm dữ liệu mẫu.
+-- Chạy nhiều lần được, mỗi lần chạy sẽ đưa CSDL về đúng dữ liệu mẫu ban đầu.
+DROP DATABASE IF EXISTS sports_shop;
 CREATE DATABASE sports_shop CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 USE sports_shop;
+
+-- Các lệnh UPDATE ở cuối script (tính lại tổng tiền phiếu nhập, tồn kho, lượt dùng khuyến mãi, điểm tích lũy)
+-- không có WHERE theo khóa nên MySQL Workbench (mặc định bật "Safe Updates") sẽ chặn với lỗi 1175,
+-- làm các giá trị tính toán bị 0. Tắt chế độ này trong phiên chạy script.
+SET SQL_SAFE_UPDATES = 0;
 
 -- 1. Quản lý tài khoản và phân quyền
 CREATE TABLE VAI_TRO (

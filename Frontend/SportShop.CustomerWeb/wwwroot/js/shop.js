@@ -50,7 +50,10 @@ document.addEventListener('click', function (e) {
     });
     // Enter trong ô tìm kiếm: tìm sản phẩm cần cơ sở dữ liệu
     input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && document.body.dataset.db !== 'true') showToast();
+        if (e.key !== 'Enter') return;
+        // Đã kết nối: chuyển sang trang cửa hàng với từ khóa; chưa kết nối: báo cần cơ sở dữ liệu
+        if (document.body.dataset.db === 'true') { if (input.value.trim()) location.href = '/Shop?q=' + encodeURIComponent(input.value.trim()); }
+        else showToast();
     });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') toggle(false);

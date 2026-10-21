@@ -1,0 +1,58 @@
+@*
+    Thanh toán: thông tin nhận hàng (điền sẵn từ sổ địa chỉ), phương thức thanh toán (giả lập), mã giảm giá.
+    Bấm "Áp dụng" để xem mức giảm, bấm "Đặt hàng" để tạo đơn.
+*@
+@using SportShop.CustomerWeb.Controllers
+@model CheckoutVm
+@{
+    ViewData["Title"] = "Thanh toán";
+}
+<section class="shop-page">
+    <div class="shop-page-head"><span class="eyebrow">THANH TOÁN</span><h1>Đặt hàng</h1></div>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="form-alert">@Model.Error</div> }
+    <form method="post" asp-action="Checkout" class="cart-layout">
+        <div class="checkout-main">
+            <div class="card pad">
+                <h3>Thông tin nhận hàng</h3>
+                <div class="form-grid">
+                    <label>Họ và tên<input name="name" value="@Model.To.Name" required /></label>
+                    <label>Số điện thoại<input name="phone" value="@Model.To.Phone" required placeholder="10 chữ số" /></label>
+                    <label class="wide">Địa chỉ giao hàng<input name="address" value="@Model.To.Address" required placeholder="Số nhà, đường, phường, quận, thành phố" /></label>
+                </div>
+            </div>
+            <div class="card pad">
+                <h3>Phương thức thanh toán</h3>
+                <p class="muted">Thanh toán được giả lập, bạn không cần nhập thông tin thẻ. Đơn được ghi nhận đã thanh toán khi cửa hàng giao hàng thành công.</p>
+                <div class="pay-list">
+                    @foreach (var m in Model.Methods)
+                    {
+                        <label class="pay"><input type="radio" name="payMethod" value="@m.Id" checked="@(Model.PayMethod == m.Id || (Model.PayMethod == 0 && m == Model.Methods[0]))" /> <span>@m.Name</span></label>
+                    }
+                </div>
+            </div>
+            <div class="card pad">
+                <h3>Mã giảm giá</h3>
+                <div class="voucher-row">
+                    <input name="voucher" value="@Model.Voucher" placeholder="Nhập mã, ví dụ WELCOME10" />
+                    <button type="submit" name="apply" value="1" class="btn btn-secondary">Áp dụng</button>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.VoucherError)) { <small class="field-error">@Model.VoucherError</small> }
+                else if (Model.Discount > 0) { <small class="field-ok">Đã áp dụng mã, giảm @Fmt.Money(Model.Discount).</small> }
+                <small class="muted"><a asp-controller="Shop" asp-action="Promotions">Xem các mã đang có</a></small>
+            </div>
+        </div>
+        <aside class="card cart-summary">
+            <h3>Đơn hàng (@Model.Lines.Sum(l => l.Qty) sản phẩm)</h3>
+            @foreach (var l in Model.Lines)
+            {
+                <div class="sum-line"><span>@l.Name@(string.IsNullOrEmpty(l.Label) ? "" : " (" + l.Label + ")") × @l.Qty</span><b>@Fmt.Money(l.Amount)</b></div>
+            }
+            <div class="sum-row"><span>Tạm tính</span><b>@Fmt.Money(Model.Subtotal)</b></div>
+            <div class="sum-row"><span>Giảm giá</span><b>-@Fmt.Money(Model.Discount)</b></div>
+            <div class="sum-row"><span>Phí giao hàng</span><b>@(Model.Ship == 0 ? "Miễn phí" : Fmt.Money(Model.Ship))</b></div>
+            <div class="sum-row total"><span>Tổng thanh toán</span><b>@Fmt.Money(Model.Total)</b></div>
+            <button type="submit" class="btn btn-primary">Đặt hàng</button>
+            <a class="btn btn-secondary" asp-action="Index">Quay lại giỏ hàng</a>
+        </aside>
+    </form>
+</section>

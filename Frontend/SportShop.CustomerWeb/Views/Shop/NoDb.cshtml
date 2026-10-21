@@ -1,0 +1,14 @@
+@*
+    Hiện khi web chưa kết nối được MySQL: cửa hàng, giỏ hàng và đơn hàng cần cơ sở dữ liệu.
+*@
+@{
+    ViewData["Title"] = "Chưa kết nối cơ sở dữ liệu";
+}
+<section class="shop-page">
+    <div class="shop-empty">
+        @Icons.Svg("alert-circle", 40)
+        <h1>Chưa kết nối cơ sở dữ liệu</h1>
+        <p>Chức năng này sẽ hoạt động khi hệ thống được kết nối cơ sở dữ liệu MySQL. Vui lòng kiểm tra chuỗi kết nối rồi thử lại.</p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Về trang chủ</a>
+    </div>
+</section>

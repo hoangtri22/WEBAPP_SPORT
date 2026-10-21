@@ -12,7 +12,8 @@
     var answered = Model.Where(f => f.Status == "da_tra_loi").ToList();
 
     // Chữ viết tắt cho avatar (vd "Nguyễn Minh Anh" -> "NA": chữ đầu họ + chữ đầu tên)
-    string Initials(Customer c) => c.LastName.Substring(0, 1) + c.FirstName.Substring(0, 1);
+    // Chữ viết tắt cho avatar; khách đăng ký qua web có thể thiếu họ lót hoặc tên nên lấy chữ cái đầu của phần nào có
+    string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
     string StatusPill(FeedbackItem f) => f.Status switch { "moi" => "[o]Chưa trả lời", "dang_xu_ly" => "[b]Đang xử lý", _ => "[g]Đã trả lời" };
 }
 <div class="page-head">
@@ -99,8 +100,8 @@
                             <div class="eyebrow">TRẢ LỜI PHẢN HỒI</div>
                             <textarea rows="4" placeholder="Nhập nội dung trả lời khách hàng..."></textarea>
                             <div class="reply-actions">
-                                <button type="button" class="btn-outline js-soon">Ẩn phản hồi</button>
-                                <button type="button" class="btn-primary js-soon">@Icons.Svg("send", 18) Gửi trả lời</button>
+                                <button type="button" class="btn-outline" data-act="feedback_toggle" data-id="@f.Id">@(f.Visible ? "Ẩn phản hồi" : "Hiện phản hồi")</button>
+                                <button type="button" class="btn-primary" data-act="feedback_reply" data-id="@f.Id">@Icons.Svg("send", 18) Gửi trả lời</button>
                             </div>
                         </div>
                     }

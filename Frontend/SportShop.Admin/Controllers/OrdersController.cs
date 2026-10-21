@@ -12,14 +12,14 @@ public class OrdersController(ShopData db) : Controller
         ViewBag.Menu = "orders";
         var rows = db.Orders.OrderByDescending(o => o.Date).Select(o => new Row(
             [o.Code, db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total), Fmt.OrderStatus(o.Status)],
-            Url.Action(nameof(Detail), new { id = o.Code }))).ToList();
+            Url.Action(nameof(Detail), new { id = o.Code }), o.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Quản lý hóa đơn",
             Subtitle = "Tra cứu và xử lý đơn hàng",
             Note = "Trạng thái hóa đơn: chờ xác nhận → đang chuẩn bị → đang giao → đã giao, hoặc đã hủy (kèm lý do, hàng được hoàn lại tồn kho). Mã HĐ là số hóa đơn khi đơn đã thanh toán, đơn chưa thanh toán hiện mã đơn DHxxxxx.",
-            Sections = [new() { Columns = ["Mã HĐ", "Khách hàng", "Ngày lập", "Tổng tiền", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true }]
+            Sections = [new() { Columns = ["Mã HĐ", "Khách hàng", "Ngày lập", "Tổng tiền", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
         });
     }
 

@@ -21,7 +21,7 @@
         <h1 class="page-title">Báo cáo thống kê</h1>
         <p class="page-sub">Phân tích hiệu quả kinh doanh</p>
     </div>
-    <button type="button" class="btn-outline js-soon">@Icons.Svg("download", 18) Xuất báo cáo</button>
+    <button type="button" class="btn-outline" onclick="window.print()">@Icons.Svg("download", 18) Xuất báo cáo</button>
 </div>
 
 @* ===== Bộ lọc khoảng thời gian ===== *@
@@ -108,7 +108,7 @@
     <section class="card pad chart-side">
         <div class="chart-head">
             <div><h3>Sản phẩm bán chạy</h3><p>Theo số lượng đã bán</p></div>
-            <button type="button" class="dots js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
+            <button type="button" class="dots" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
         </div>
         @if (Model.Bars.Count == 0)
         {
@@ -208,6 +208,13 @@
             <tbody>@foreach (var r in Model.Promos) { <tr><td>@r.Cells[0]</td><td>@r.Cells[1]</td><td>@r.Cells[2]</td><td>@r.Cells[3]</td></tr> }</tbody></table></div>
     </section>
 </div>
+
+<section class="card">
+    <div class="card-title">Sở thích của khách hàng</div>
+    <div class="table-wrap"><table class="tbl"><thead><tr><th>Sở thích</th><th>Số khách</th><th>Độ tuổi trung bình</th></tr></thead>
+        <tbody>@foreach (var r in Model.Interests) { <tr><td>@r.Cells[0]</td><td><b>@r.Cells[1]</b></td><td>@r.Cells[2]</td></tr> }</tbody></table>
+        @if (Model.Interests.Count == 0) { <div class="empty">Chưa có khách nào chọn sở thích</div> }</div>
+</section>
 
 @section Scripts {
     <script>

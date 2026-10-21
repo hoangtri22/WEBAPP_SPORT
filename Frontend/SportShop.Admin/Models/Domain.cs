@@ -49,7 +49,7 @@ public record Order(
 public record Employee(int Id, string LastName, string FirstName, string Gender, DateTime? Birth, string Position, decimal BaseSalary, bool Working, string Username, string Phone, string Email, string Role);
 
 /// <summary>Tài khoản đăng nhập (TAI_KHOAN + VAI_TRO). Status: hoat_dong / bi_khoa / da_xoa.</summary>
-public record Account(string Username, string Role, string Email, string Phone, string Status);
+public record Account(string Username, string Role, string Email, string Phone, string Status, int Id = 0);
 
 /// <summary>Nhóm khách hàng (NHOM_KHACH_HANG) và số khách thuộc nhóm (KHACH_HANG_NHOM_KH).</summary>
 public record CustomerGroup(int Id, string Name, string Criterion, string Value, int Count);
@@ -64,7 +64,7 @@ public record ImportSlip(int Id, string Supplier, DateTime Date, int Quantity, s
 public record Promotion(int Id, string Name, string Type, DateTime Start, DateTime End, string Discount, string Status, int Uses);
 
 /// <summary>Chiến dịch thông báo (CHIEN_DICH_THONG_BAO).</summary>
-public record Campaign(string Title, string Channel, string Group, string Promotion, string Creator, bool Sent);
+public record Campaign(string Title, string Channel, string Group, string Promotion, string Creator, bool Sent, int Id = 0);
 
 /// <summary>Khảo sát (KHAO_SAT) và số khách đã gửi / đã hoàn thành.</summary>
 public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status);
@@ -89,6 +89,8 @@ public class Customer
     public string Email { get; init; } = "";
     /// <summary>Rỗng nếu khách mua tại quầy chưa có tài khoản.</summary>
     public string Username { get; init; } = "";
+    /// <summary>Mật khẩu đăng nhập (lưu dạng văn bản trong TAI_KHOAN); chỉ tài khoản Quản lý được xem ở trang chi tiết khách hàng.</summary>
+    public string Password { get; init; } = "";
     public bool Locked { get; init; }
     public string[] Interests { get; init; } = [];
     public string[] Addresses { get; init; } = [];
@@ -168,3 +170,15 @@ public static class Fmt
     /// <summary>Hình thức chăm sóc → chữ tiếng Việt.</summary>
     public static string Channel(string c) => c switch { "goi_dien" => "Gọi điện", "email" => "Email", "tin_nhan" => "Tin nhắn", "gap_truc_tiep" => "Gặp trực tiếp", _ => c };
 }
+
+/// <summary>Kết quả một câu hỏi khảo sát: Options = (đáp án, số lượt chọn); Texts = các câu trả lời văn bản.</summary>
+public record QuestionStat(string Text, string Type, List<(string Label, int Count)> Options, List<string> Texts)
+{
+    public int Total => Options.Sum(o => o.Count);
+    /// <summary>Điểm trung bình (chỉ với câu thang điểm có đáp án là số).</summary>
+    public double? Average => Type == "thang_diem" && Total > 0
+        ? Options.Where(o => int.TryParse(o.Label, out _)).Sum(o => int.Parse(o.Label) * o.Count) / (double)Total : null;
+}
+
+/// <summary>Thống kê một khảo sát (trang xem kết quả).</summary>
+public record SurveyStats(int Id, string Title, string? Description, DateTime Start, DateTime End, string Status, int Sent, int Completed, List<QuestionStat> Questions);

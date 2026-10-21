@@ -1,0 +1,90 @@
+@*
+    Chi tiết sản phẩm: ảnh, giá, chọn biến thể (size / màu), số lượng, "Thêm vào giỏ" hoặc "Mua ngay".
+*@
+@model (ShopProduct Product, List<ShopVariant> Variants)
+@{
+    var p = Model.Product;
+    ViewData["Title"] = p.Name;
+    var related = (List<ShopProduct>)ViewBag.Related;
+    var first = Model.Variants.FirstOrDefault(v => v.Stock > 0);
+}
+<section class="shop-page">
+    <a class="back-link" asp-action="Index">@Icons.Svg("arrow-left", 16) Tất cả sản phẩm</a>
+    <div class="detail-layout">
+        <div class="detail-image">
+            @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" onerror="this.style.visibility='hidden'" /> }
+        </div>
+        <div class="detail-info">
+            <span class="eyebrow">@p.Category.ToUpper()</span>
+            <h1>@p.Name</h1>
+            <div class="detail-price" id="detailPrice">@(first != null ? Fmt.Money(first.Price) : p.PriceText)</div>
+            @if (!string.IsNullOrWhiteSpace(p.Description)) { <p class="detail-desc">@p.Description</p> }
+
+            @if (Model.Variants.Count == 0 || p.Stock <= 0)
+            {
+                <div class="detail-soldout">Sản phẩm tạm hết hàng.</div>
+            }
+            else
+            {
+                <form method="post" asp-controller="Cart" asp-action="Add" class="detail-form">
+                    <input type="hidden" name="back" value="@Url.Action("Detail", new { id = p.Id })" />
+                    <div class="detail-label">Chọn phiên bản (size / màu)</div>
+                    <div class="variant-list">
+                        @foreach (var v in Model.Variants)
+                        {
+                            <label class="variant @(v.Stock <= 0 ? "off" : "")">
+                                <input type="radio" name="variantId" value="@v.Id" data-price="@Fmt.Money(v.Price)" data-stock="@v.Stock" disabled="@(v.Stock <= 0)" checked="@(v == first)" />
+                                <span>@(string.IsNullOrEmpty(v.Label) ? "Mặc định" : v.Label)</span>
+                                <small>@(v.Stock <= 0 ? "Hết hàng" : Fmt.Money(v.Price))</small>
+                            </label>
+                        }
+                    </div>
+                    <div class="detail-label">Số lượng</div>
+                    <div class="qty-box">
+                        <button type="button" class="qty-btn" data-step="-1">−</button>
+                        <input type="number" name="qty" id="qty" value="1" min="1" max="@(first?.Stock ?? 1)" />
+                        <button type="button" class="qty-btn" data-step="1">+</button>
+                        <span class="muted" id="stockText">Còn @(first?.Stock ?? 0) sản phẩm</span>
+                    </div>
+                    <div class="detail-buttons">
+                        <button type="submit" class="btn btn-secondary">@Icons.Svg("shopping-bag", 18) Thêm vào giỏ</button>
+                        <button type="submit" name="buyNow" value="true" class="btn btn-primary">Mua ngay</button>
+                    </div>
+                </form>
+            }
+            <ul class="detail-perks">
+                <li>@Icons.Svg("truck", 18) Miễn phí giao hàng cho đơn từ 500.000₫</li>
+                <li>@Icons.Svg("shield-check", 18) 100% chính hãng, đổi trả trong 30 ngày</li>
+            </ul>
+        </div>
+    </div>
+
+    @if (related.Count > 0)
+    {
+        <div class="shop-section-heading related-head"><div><span>CÓ THỂ BẠN THÍCH</span><h2>Sản phẩm cùng loại</h2></div></div>
+        <div class="shop-products">@foreach (var r in related) { <partial name="_Card" model="r" /> }</div>
+    }
+</section>
+
+@section Scripts {
+    <script>
+        // Đổi phiên bản thì cập nhật giá và số lượng tối đa; nút +/- chỉnh số lượng
+        (function () {
+            var qty = document.getElementById('qty'); if (!qty) return;
+            function sync() {
+                var r = document.querySelector('.variant input:checked'); if (!r) return;
+                document.getElementById('detailPrice').textContent = r.dataset.price;
+                qty.max = r.dataset.stock;
+                if (+qty.value > +r.dataset.stock) qty.value = r.dataset.stock;
+                document.getElementById('stockText').textContent = 'Còn ' + r.dataset.stock + ' sản phẩm';
+            }
+            document.querySelectorAll('.variant input').forEach(function (r) { r.addEventListener('change', sync); });
+            document.querySelectorAll('.qty-btn').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var v = (+qty.value || 1) + (+b.dataset.step);
+                    qty.value = Math.max(1, Math.min(+qty.max || 1, v));
+                });
+            });
+        })();
+    </script>
+}

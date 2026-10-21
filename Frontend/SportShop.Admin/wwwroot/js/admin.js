@@ -1,8 +1,9 @@
 /* =====================================================================
-   SportShop Admin - JavaScript giao diện (chưa gọi server/database)
+   SportShop Admin - JavaScript giao diện
    Các khối:
      1. Thu gọn / mở sidebar
-     2. Thông báo nhỏ (toast) cho nút chưa có chức năng
+     2. Thông báo nhỏ (toast)
+     2b. Thêm / sửa / xem / xóa qua ngăn trượt bên phải (gọi CrudController)
      3. Bảng dữ liệu: tìm kiếm + bộ lọc + phân trang (.dtable)
      4. Phím tắt Ctrl+K
    ===================================================================== */
@@ -21,20 +22,232 @@ document.addEventListener('click', function (e) {
         document.body.classList.remove('nav-open');
 });
 
-/* ---------- 2. Toast cho các nút chưa nối cơ sở dữ liệu ---------- */
+/* ---------- 2. Thông báo nhỏ (toast) ---------- */
 var toastTimer;
-function showToast(msg) {
+function showToast(msg, isError) {
     var t = document.getElementById('toast');
     if (!t) return;
     t.textContent = msg;
+    t.classList.toggle('error', !!isError);
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, isError ? 6000 : 3200);
 }
+// Sau khi thao tác xong trang được tải lại, thông báo kết quả được giữ qua sessionStorage
+try {
+    var flash = sessionStorage.getItem('flash');
+    if (flash) { sessionStorage.removeItem('flash'); setTimeout(function () { showToast(flash); }, 150); }
+} catch (e) { }
+
+/* ---------- 2b. Thêm / sửa / xem / xóa (ngăn trượt + gọi server) ---------- */
+function antiToken() {
+    var t = document.querySelector('input[name="__RequestVerificationToken"]');
+    return t ? t.value : '';
+}
+// Gửi dữ liệu dạng form lên server, nhận JSON { ok, message }
+function postForm(url, data) {
+    if (!data.has('__RequestVerificationToken')) data.append('__RequestVerificationToken', antiToken());
+    return fetch(url, { method: 'POST', body: data, credentials: 'same-origin' })
+        .then(function (r) {
+            if (r.redirected || r.status === 401) { location.reload(); throw new Error('login'); }
+            return r.json();
+        })
+        .catch(function (e) {
+            if (e.message === 'login') throw e;
+            return { ok: false, message: 'Không kết nối được máy chủ, vui lòng thử lại.' };
+        });
+}
+// Thành công thì tải lại trang để thấy dữ liệu mới; thất bại thì báo lỗi
+function handleResult(res, onFail) {
+    if (res.ok) {
+        try { sessionStorage.setItem('flash', res.message); } catch (e) { }
+        location.reload();
+    } else if (onFail) onFail(res.message);
+    else showToast(res.message, true);
+}
+var money = function (n) { return (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ'; };
+
+var drawer = document.getElementById('drawer'), backdrop = document.getElementById('drawerBackdrop');
+function closeDrawer() {
+    if (!drawer) return;
+    drawer.classList.remove('open'); backdrop.classList.remove('open');
+    setTimeout(function () {
+        if (drawer.classList.contains('open')) return;
+        drawer.hidden = true; backdrop.hidden = true; drawer.innerHTML = '';
+    }, 200);
+}
+function openDrawer(entity, id, parent, mode) {
+    if (!drawer) return;
+    var q = 'entity=' + encodeURIComponent(entity) + '&id=' + (id || 0) + '&parent=' + (parent || 0) + '&mode=' + (mode || 'create');
+    fetch('/Crud/Form?' + q, { credentials: 'same-origin' })
+        .then(function (r) { return r.text().then(function (t) { return { html: t, type: r.headers.get('Content-Type') || '' }; }); })
+        .then(function (r) {
+            if (r.type.indexOf('text/plain') === 0) { showToast(r.html, true); return; }
+            drawer.innerHTML = r.html;
+            drawer.hidden = false; backdrop.hidden = false;
+            setTimeout(function () { drawer.classList.add('open'); backdrop.classList.add('open'); }, 20);
+            initForm(drawer.querySelector('form'));
+        })
+        .catch(function () { showToast('Không mở được biểu mẫu, vui lòng thử lại.', true); });
+}
+if (backdrop) backdrop.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+
+// Nút trên trang: thêm / xem / sửa / xóa và các thao tác nhanh
 document.addEventListener('click', function (e) {
-    var b = e.target.closest('.js-soon');
-    if (b) showToast('Chức năng này sẽ hoạt động khi hệ thống được kết nối cơ sở dữ liệu.');
+    if (e.target.closest('.js-drawer-close')) { closeDrawer(); return; }
+
+    var crud = e.target.closest('[data-crud]');
+    if (crud) {
+        var d = crud.dataset;
+        if (d.crud === 'delete') {
+            if (!confirm('Bạn chắc chắn muốn xóa "' + (d.name || 'mục này') + '"?')) return;
+            var fd = new FormData(); fd.append('entity', d.entity); fd.append('id', d.id);
+            postForm('/Crud/Delete', fd).then(handleResult);
+        } else {
+            openDrawer(d.entity, parseInt(d.id || '0', 10), parseInt(d.parent || '0', 10), d.crud === 'view' ? 'view' : (d.id ? 'edit' : 'create'));
+        }
+        return;
+    }
+
+    var act = e.target.closest('[data-act]');
+    if (act) {
+        if (act.dataset.confirm && !confirm(act.dataset.confirm)) return;
+        var f = new FormData(); f.append('action', act.dataset.act); f.append('id', act.dataset.id);
+        // Trả lời phản hồi: lấy nội dung trong khung trả lời gần nhất
+        if (act.dataset.act === 'feedback_reply') {
+            var box = act.closest('.reply-box'), ta = box && box.querySelector('textarea');
+            f.append('noi_dung', ta ? ta.value : '');
+        }
+        postForm('/Crud/Act', f).then(handleResult);
+        return;
+    }
+
+    // Đổi nhanh một trường (ví dụ trạng thái đơn hàng ở trang chi tiết)
+    var quick = e.target.closest('[data-quick]');
+    if (quick) {
+        var q = new FormData();
+        q.append(quick.dataset.field, document.querySelector(quick.dataset.from).value);
+        postForm('/Crud/Save?entity=' + quick.dataset.quick + '&id=' + quick.dataset.id, q).then(handleResult);
+    }
 });
+
+// Dựng hành vi cho biểu mẫu vừa tải: hiện/ẩn ô theo điều kiện, dòng hàng, câu hỏi khảo sát, gửi form
+function initForm(form) {
+    if (!form) return;
+    var err = form.querySelector('.form-error');
+
+    // Ô chỉ hiện khi ô khác có giá trị nhất định (data-showwhen="tên=giá_trị1|giá_trị2")
+    function applyShowWhen() {
+        form.querySelectorAll('[data-showwhen]:not([data-showwhen=""])').forEach(function (w) {
+            var p = w.dataset.showwhen.split('='), src = form.elements[p[0]];
+            var show = !!src && p[1].split('|').indexOf(src.value) >= 0;
+            w.hidden = !show;
+            w.querySelectorAll('input,select,textarea').forEach(function (i) { i.disabled = !show; });
+        });
+    }
+    form.addEventListener('change', applyShowWhen);
+    applyShowWhen();
+
+    // Khối nhiều dòng hàng: đơn hàng (giá bán, tồn) và phiếu nhập (đơn giá nhập)
+    form.querySelectorAll('.lines').forEach(function (box) {
+        var kind = box.dataset.kind, body = box.querySelector('.lines-body'),
+            tpl = box.querySelector('.line-tpl'), totalEl = box.querySelector('.js-lines-total');
+        // Thông tin biến thể đang chọn: "giá bán|tồn kho|giá vốn"
+        function info(line) {
+            var o = line.querySelector('.js-variant').selectedOptions[0], p = ((o && o.dataset.info) || '').split('|');
+            return { price: parseFloat(p[0]) || 0, stock: parseInt(p[1], 10) || 0, cost: parseFloat(p[2]) || 0 };
+        }
+        function recalc() {
+            var total = 0;
+            body.querySelectorAll('.line').forEach(function (line) {
+                var qty = parseInt(line.querySelector('.js-qty').value, 10) || 0, amount;
+                if (kind === 'order') {
+                    amount = info(line).price * qty;
+                    line.querySelector('.line-amount').textContent = money(amount);
+                } else amount = qty * (parseFloat(line.querySelector('.js-cost').value) || 0);
+                total += amount;
+            });
+            totalEl.textContent = money(total);
+        }
+        function add() {
+            body.appendChild(tpl.content.cloneNode(true));
+            var line = body.lastElementChild;
+            line.querySelector('.js-variant').addEventListener('change', function () {
+                if (kind === 'import') line.querySelector('.js-cost').value = info(line).cost || '';
+                if (kind === 'order') line.querySelector('.js-qty').max = info(line).stock || '';
+                recalc();
+            });
+            line.addEventListener('input', recalc);
+            line.querySelector('.js-remove-line').addEventListener('click', function () {
+                if (body.children.length > 1) line.remove();
+                else { line.querySelector('select').value = ''; line.querySelectorAll('input').forEach(function (i) { i.value = ''; }); }
+                recalc();
+            });
+        }
+        box.querySelector('.js-add-line').addEventListener('click', add);
+        add();
+    });
+
+    // Đơn hàng: chưa thanh toán thì chỉ được ở "Chờ xác nhận"; chọn "Đã thanh toán" xong mới mở các trạng thái còn lại
+    var stSel = form.elements['trang_thai_don_hang'], paySel = form.elements['trang_thai_thanh_toan'];
+    if (form.dataset.entity === 'order' && stSel && paySel) {
+        function syncStatus() {
+            var unpaid = paySel.value !== 'da_thanh_toan';
+            Array.prototype.forEach.call(stSel.options, function (o) { o.disabled = unpaid && o.value !== 'cho_xac_nhan'; });
+            if (unpaid) stSel.value = 'cho_xac_nhan';
+            if (stSel.value && stSel.selectedOptions[0] && stSel.selectedOptions[0].disabled) stSel.value = 'cho_xac_nhan';
+            applyShowWhen();
+        }
+        paySel.addEventListener('change', syncStatus);
+        syncStatus();
+    }
+
+    // Chọn khách hàng thì tự điền thông tin người nhận (tên | số điện thoại | địa chỉ mặc định)
+    var cust = form.elements['ma_khach_hang'];
+    if (cust && form.dataset.entity === 'order') cust.addEventListener('change', function () {
+        var p = ((cust.selectedOptions[0] && cust.selectedOptions[0].dataset.info) || '').split('|');
+        ['ten_nguoi_nhan', 'sdt_nguoi_nhan', 'dia_chi_giao_hang'].forEach(function (n, i) {
+            if (form.elements[n]) form.elements[n].value = p[i] || '';
+        });
+    });
+
+    // Câu hỏi khảo sát: thêm / bỏ câu hỏi
+    form.querySelectorAll('.questions').forEach(function (qs) {
+        var body = qs.querySelector('.q-body'), tpl = qs.querySelector('.q-tpl'), addBtn = qs.querySelector('.js-add-q');
+        function bind(row) {
+            row.querySelector('.js-remove-q').addEventListener('click', function () { row.remove(); });
+        }
+        body.querySelectorAll('.qrow').forEach(bind);
+        // Khảo sát đã có người trả lời: khóa phần câu hỏi
+        if (qs.dataset.locked === '1') {
+            qs.querySelectorAll('input,select,textarea,button').forEach(function (i) { i.disabled = true; });
+            return;
+        }
+        if (addBtn) addBtn.addEventListener('click', function () {
+            body.appendChild(tpl.content.cloneNode(true));
+            bind(body.lastElementChild);
+        });
+        if (!body.children.length && addBtn) addBtn.click();
+    });
+
+    // Gửi biểu mẫu
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (form.dataset.mode === 'view') return;
+        // Ô "Bắt buộc" của câu hỏi: giá trị = số thứ tự câu hỏi
+        form.querySelectorAll('.qrow').forEach(function (row, i) {
+            var c = row.querySelector('input[type=checkbox]');
+            if (c) c.value = i;
+        });
+        var btn = form.querySelector('button[type=submit]');
+        btn.disabled = true; err.hidden = true;
+        postForm('/Crud/Save?entity=' + form.dataset.entity + '&id=' + form.dataset.id, new FormData(form)).then(function (res) {
+            btn.disabled = false;
+            handleResult(res, function (m) { err.textContent = m; err.hidden = false; err.scrollIntoView({ block: 'nearest' }); });
+        });
+    });
+}
 
 /* ---------- 3. Bảng dữ liệu: tìm kiếm + lọc + phân trang ---------- */
 document.querySelectorAll('.dtable').forEach(function (card) {
@@ -116,4 +329,3 @@ document.addEventListener('keydown', function (e) {
         if (s) { e.preventDefault(); s.focus(); }
     }
 });
-

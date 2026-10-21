@@ -34,7 +34,7 @@
             <span class="grow"></span>
             @if (Model.AddLabel != null)
             {
-                <button type="button" class="btn-primary js-soon">@Icons.Svg("plus", 18) @Model.AddLabel</button>
+                <button type="button" class="btn-primary" data-crud="create" data-entity="@Model.Entity">@Icons.Svg("plus", 18) @Model.AddLabel</button>
             }
         </div>
     }
@@ -56,17 +56,23 @@
                         {
                             <td>
                                 <div class="actions">
-                                    @* Con mắt: mở trang chi tiết nếu có, không có thì báo "sẽ hoạt động khi nối CSDL" *@
+                                    @* Con mắt: mở trang chi tiết nếu có, không thì xem nhanh trong ngăn bên phải *@
                                     @if (r.Url != null)
                                     {
                                         <a class="act" href="@r.Url" title="Xem chi tiết">@Icons.Svg("eye", 18)</a>
                                     }
                                     else
                                     {
-                                        <button type="button" class="act js-soon" title="Xem chi tiết">@Icons.Svg("eye", 18)</button>
+                                        <button type="button" class="act" data-crud="view" data-entity="@Model.Entity" data-id="@r.Id" title="Xem chi tiết">@Icons.Svg("eye", 18)</button>
                                     }
-                                    <button type="button" class="act js-soon" title="Chỉnh sửa">@Icons.Svg("pencil", 18)</button>
-                                    <button type="button" class="act js-soon" title="Xóa">@Icons.Svg("trash", 18)</button>
+                                    @if (Model.CanEdit)
+                                    {
+                                        <button type="button" class="act" data-crud="edit" data-entity="@Model.Entity" data-id="@r.Id" title="Chỉnh sửa">@Icons.Svg("pencil", 18)</button>
+                                    }
+                                    @if (Model.CanDelete)
+                                    {
+                                        <button type="button" class="act" data-crud="delete" data-entity="@Model.Entity" data-id="@r.Id" data-name="@r.Cells[0]" title="Xóa">@Icons.Svg("trash", 18)</button>
+                                    }
                                 </div>
                             </td>
                         }

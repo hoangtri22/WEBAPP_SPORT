@@ -24,14 +24,23 @@ public class FeedbackController(ShopData db) : Controller
         [
             s.Title, $"{s.Questions} câu hỏi", $"{s.Completed} / {s.Sent} khách hoàn thành", Fmt.Date(s.End),
             s.Status switch { "da_gui" => "[g]Đang thu thập", "da_dong" => "[x]Đã kết thúc", _ => "[x]Nháp" }
-        ])).ToList();
+        ], Url.Action(nameof(SurveyResult), new { id = s.Id }), s.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Khảo sát",
             Subtitle = "Thu thập ý kiến và xem thống kê kết quả",
             Note = "Dạng câu hỏi: một lựa chọn, nhiều lựa chọn, thang điểm, văn bản. Mỗi khách chỉ có một lượt trả lời cho mỗi khảo sát.",
-            Sections = [new() { Columns = ["Tên khảo sát", "Câu hỏi", "Lượt phản hồi", "Ngày kết thúc", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true }]
+            Sections = [new() { Columns = ["Tên khảo sát", "Câu hỏi", "Lượt phản hồi", "Ngày kết thúc", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "survey" }]
         });
+    }
+
+    /// <summary>Thống kê kết quả một khảo sát (số khách hoàn thành, số lượt chọn từng đáp án) + nút gửi / đóng khảo sát.</summary>
+    public IActionResult SurveyResult(int id)
+    {
+        ViewBag.Menu = "surveys";
+        var s = db.SurveyStat(id);
+        if (s == null) return NotFound();
+        return View(s);
     }
 }

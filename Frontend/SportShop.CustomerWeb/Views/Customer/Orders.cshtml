@@ -1,0 +1,85 @@
+@*
+    Đơn hàng của tôi: trạng thái đơn (do admin duyệt và cập nhật), tiến trình giao hàng, chi tiết, hủy đơn khi còn chờ xác nhận.
+*@
+@model List<MyOrder>
+@{
+    Layout = "_CustomerLayout";
+    ViewData["Title"] = "Đơn hàng của tôi";
+    string[] steps = ["Chờ xác nhận", "Đang chuẩn bị", "Đang giao", "Đã giao"];
+}
+<div class="customer-page-title"><span>TÀI KHOẢN CỦA TÔI</span><h1>Đơn hàng của tôi</h1><p>Theo dõi trạng thái đơn hàng, cửa hàng cập nhật mỗi khi xử lý.</p></div>
+
+@if (Model.Count == 0)
+{
+    <div class="card pad shop-empty"><h2>Bạn chưa có đơn hàng nào</h2><a class="btn btn-primary" asp-controller="Shop" asp-action="Index">Mua sắm ngay</a></div>
+}
+@foreach (var o in Model)
+{
+    <div class="card order-card">
+        <div class="order-head">
+            <div><b>@o.Code</b> <small class="muted">· @Fmt.Stamp(o.Date)</small></div>
+            <div>
+                <span class="pill @o.StatusTone"><i></i>@o.StatusText</span>
+                <span class="pill @(o.PayStatus == "da_thanh_toan" ? "p-g" : "p-o")"><i></i>@o.PayText</span>
+            </div>
+        </div>
+        @if (o.Step >= 0)
+        {
+            <div class="progress-steps">
+                @for (int i = 0; i < steps.Length; i++)
+                {
+                    <div class="step @(i <= o.Step ? "done" : "")"><i>@(i <= o.Step ? "✓" : (i + 1).ToString())</i><span>@steps[i]</span></div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="form-alert">Đơn đã hủy@(string.IsNullOrEmpty(o.CancelReason) ? "" : ": " + o.CancelReason)</div>
+        }
+        <div class="order-lines">
+            @foreach (var l in o.Lines)
+            {
+                <div class="order-line">
+                    <span class="cart-img sm">@if (!string.IsNullOrEmpty(l.Image)) { <img src="@l.Image" alt="" onerror="this.style.visibility='hidden'" /> }</span>
+                    <span class="grow"><b>@l.Name</b>@if (!string.IsNullOrEmpty(l.Label)) { <small> · @l.Label</small> }<br /><small class="muted">@Fmt.Money(l.Price) × @l.Qty</small></span>
+                    <b>@Fmt.Money(l.Amount)</b>
+                </div>
+            }
+        </div>
+        <div class="order-foot">
+            <div class="order-ship">
+                <small class="muted">Giao đến: @o.Receiver · @o.Phone · @o.Address</small>
+                @if (!string.IsNullOrEmpty(o.Carrier) && (o.Status == "dang_giao" || o.Status == "da_giao")) { <small class="muted">Vận chuyển: @o.Carrier@(string.IsNullOrEmpty(o.Tracking) ? "" : " · Mã vận đơn " + o.Tracking)</small> }
+                @if (!string.IsNullOrEmpty(o.Invoice)) { <small class="muted">Hóa đơn: @o.Invoice</small> }
+            </div>
+            <div class="order-total">
+                <small class="muted">Giảm @Fmt.Money(o.Discount) · Ship @Fmt.Money(o.Ship) · @o.PayMethod</small>
+                <b>Tổng: @Fmt.Money(o.Total)</b>
+                @if (o.CanCancel)
+                {
+                    <form method="post" asp-action="CancelOrder" asp-route-id="@o.Id" onsubmit="return confirm('Hủy đơn hàng @o.Code?')"><button class="btn btn-secondary">Hủy đơn</button></form>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Khi một đơn đang theo dõi vừa chuyển sang "Đã giao": báo cho khách rồi quay về trang chủ cửa hàng
+        (function () {
+            var known = @Json.Serialize(Model.ToDictionary(o => o.Id.ToString(), o => o.Status));
+            setInterval(function () {
+                fetch('/Customer/OrderStatuses', { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (list) {
+                        var delivered = list.filter(function (o) { return o.status === 'da_giao' && known[o.id] && known[o.id] !== 'da_giao'; })[0];
+                        if (!delivered) return;
+                        showToast('Đơn hàng ' + delivered.code + ' đã được giao. Cảm ơn bạn đã mua sắm tại SPORTSHOP!');
+                        setTimeout(function () { location.href = '/'; }, 2500);
+                    })
+                    .catch(function () { });
+            }, 8000);
+        })();
+    </script>
+}

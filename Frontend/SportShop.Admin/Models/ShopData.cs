@@ -4,7 +4,7 @@ using MySqlConnector;
 namespace SportShop.Admin.Models;
 
 /// <summary>
-/// Đọc dữ liệu từ CSDL MySQL <c>sports_shop</c> (script: Backend/sports_shop.sql).
+/// Đọc dữ liệu từ CSDL MySQL <c>sports_shop</c> (script: Backend/Database/sports_shop.sql).
 /// Chuỗi kết nối: appsettings.json → ConnectionStrings:Default.
 /// Mỗi request có một đối tượng ShopData (đăng ký Scoped trong Program.cs);
 /// mỗi danh sách chỉ được truy vấn khi được dùng lần đầu trong request đó.
@@ -173,7 +173,7 @@ public class ShopData
             """).ToLookup(r => I(r, "ma_khach_hang"), r => S(r, "ten_nhom"));
 
         return Query("""
-            SELECT kh.*, tk.ten_dang_nhap, tk.email, tk.so_dien_thoai AS tk_sdt, tk.trang_thai AS tk_trang_thai
+            SELECT kh.*, tk.ten_dang_nhap, tk.mat_khau, tk.email, tk.so_dien_thoai AS tk_sdt, tk.trang_thai AS tk_trang_thai
             FROM KHACH_HANG kh LEFT JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan
             ORDER BY kh.ma_khach_hang
             """).Select(r =>
@@ -189,6 +189,7 @@ public class ShopData
                 Phone = NS(r, "so_dien_thoai") ?? S(r, "tk_sdt"),
                 Email = S(r, "email"),
                 Username = S(r, "ten_dang_nhap"),
+                Password = S(r, "mat_khau"),
                 // Trạng thái khóa nằm ở tài khoản (TAI_KHOAN.trang_thai); khách mua tại quầy chưa có tài khoản thì không bị khóa
                 Locked = S(r, "tk_trang_thai") is "bi_khoa" or "da_xoa",
                 Interests = interests[id].ToArray(),
@@ -299,10 +300,10 @@ public class ShopData
 
     List<Account> LoadAccounts() =>
         Query("""
-            SELECT tk.ten_dang_nhap, vt.ten_vai_tro, tk.email, tk.so_dien_thoai, tk.trang_thai
+            SELECT tk.ma_tai_khoan, tk.ten_dang_nhap, vt.ten_vai_tro, tk.email, tk.so_dien_thoai, tk.trang_thai
             FROM TAI_KHOAN tk JOIN VAI_TRO vt ON vt.ma_vai_tro = tk.ma_vai_tro
             ORDER BY tk.ma_vai_tro, tk.ma_tai_khoan
-            """).Select(r => new Account(S(r, "ten_dang_nhap"), S(r, "ten_vai_tro"), S(r, "email"), S(r, "so_dien_thoai"), S(r, "trang_thai"))).ToList();
+            """).Select(r => new Account(S(r, "ten_dang_nhap"), S(r, "ten_vai_tro"), S(r, "email"), S(r, "so_dien_thoai"), S(r, "trang_thai"), I(r, "ma_tai_khoan"))).ToList();
 
     List<Supplier> LoadSuppliers() =>
         Query("SELECT * FROM NHA_CUNG_CAP ORDER BY ma_ncc")
@@ -352,7 +353,7 @@ public class ShopData
 
     List<Campaign> LoadCampaigns() =>
         Query("""
-            SELECT cd.tieu_de, cd.kenh_gui, cd.trang_thai, n.ten_nhom, km.ten_ctkm, CONCAT(nv.ho_lot, ' ', nv.ten) AS nv_ten
+            SELECT cd.ma_chien_dich, cd.tieu_de, cd.kenh_gui, cd.trang_thai, n.ten_nhom, km.ten_ctkm, CONCAT(nv.ho_lot, ' ', nv.ten) AS nv_ten
             FROM CHIEN_DICH_THONG_BAO cd
             LEFT JOIN NHOM_KHACH_HANG n ON n.ma_nhom_kh = cd.ma_nhom_kh
             LEFT JOIN CTKM km ON km.ma_ctkm = cd.ma_ctkm
@@ -360,7 +361,7 @@ public class ShopData
             ORDER BY cd.ma_chien_dich DESC
             """).Select(r => new Campaign(S(r, "tieu_de"),
                 S(r, "kenh_gui") switch { "email" => "Email", "sms" => "SMS", "app" => "App", var k => k },
-                NS(r, "ten_nhom") ?? "Tất cả khách", NS(r, "ten_ctkm") ?? "-", S(r, "nv_ten"), S(r, "trang_thai") == "da_gui")).ToList();
+                NS(r, "ten_nhom") ?? "Tất cả khách", NS(r, "ten_ctkm") ?? "-", S(r, "nv_ten"), S(r, "trang_thai") == "da_gui", I(r, "ma_chien_dich"))).ToList();
 
     List<Survey> LoadSurveys() =>
         Query("""
@@ -371,6 +372,32 @@ public class ShopData
             FROM KHAO_SAT ks ORDER BY ks.ngay_tao DESC
             """).Select(r => new Survey(I(r, "ma_khao_sat"), S(r, "tieu_de"), I(r, "so_cau"), I(r, "da_gui"), I(r, "hoan_thanh"),
                 T(r, "ngay_ket_thuc"), S(r, "trang_thai"))).ToList();
+
+
+    /// <summary>
+    /// Thống kê kết quả một khảo sát: số khách đã gửi / hoàn thành, và với mỗi câu hỏi
+    /// số lượt chọn từng đáp án (hoặc danh sách câu trả lời văn bản).
+    /// </summary>
+    public SurveyStats? SurveyStat(int id)
+    {
+        var info = Query("SELECT ma_khao_sat, tieu_de, mo_ta, ngay_bat_dau, ngay_ket_thuc, trang_thai FROM KHAO_SAT WHERE ma_khao_sat=@id", new { id }).FirstOrDefault();
+        if (info == null) return null;
+        var counts = Query("SELECT COUNT(*) AS gui, SUM(trang_thai = 'hoan_thanh') AS xong FROM KHAO_SAT_KHACH_HANG WHERE ma_khao_sat=@id", new { id })[0];
+        var questions = new List<QuestionStat>();
+        foreach (var q in Query("SELECT ma_cau_hoi, noi_dung, loai_cau_hoi FROM CAU_HOI_KHAO_SAT WHERE ma_khao_sat=@id ORDER BY thu_tu, ma_cau_hoi", new { id }))
+        {
+            int qid = I(q, "ma_cau_hoi");
+            var options = Query("""
+                SELECT lc.noi_dung, (SELECT COUNT(*) FROM TRA_LOI_KHAO_SAT t WHERE t.ma_lua_chon = lc.ma_lua_chon) AS so_luot
+                FROM LUA_CHON_CAU_HOI lc WHERE lc.ma_cau_hoi=@qid ORDER BY lc.ma_lua_chon
+                """, new { qid }).Select(r => (S(r, "noi_dung"), I(r, "so_luot"))).ToList();
+            var texts = Query("SELECT noi_dung_tra_loi FROM TRA_LOI_KHAO_SAT WHERE ma_cau_hoi=@qid AND noi_dung_tra_loi IS NOT NULL ORDER BY ma_tra_loi", new { qid })
+                .Select(r => S(r, "noi_dung_tra_loi")).ToList();
+            questions.Add(new QuestionStat(S(q, "noi_dung"), S(q, "loai_cau_hoi"), options, texts));
+        }
+        return new SurveyStats(I(info, "ma_khao_sat"), S(info, "tieu_de"), NS(info, "mo_ta"), T(info, "ngay_bat_dau"), T(info, "ngay_ket_thuc"), S(info, "trang_thai"),
+            I(counts, "gui"), counts["xong"] is null or DBNull ? 0 : Convert.ToInt32(counts["xong"]), questions);
+    }
 
     // ================= Hàm tiện ích =================
 

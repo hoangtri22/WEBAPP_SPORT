@@ -5,7 +5,7 @@ using SportShop.CustomerWeb.Models;
 namespace SportShop.CustomerWeb.Services;
 
 /// <summary>
-/// Đọc / ghi dữ liệu của khách hàng trong MySQL (CSDL sports_shop, script Backend/sports_shop.sql):
+/// Đọc / ghi dữ liệu của khách hàng trong MySQL (CSDL sports_shop, script Backend/Database/sports_shop.sql):
 /// đăng nhập, đăng ký, chỉnh sửa thông tin, gửi phản hồi, làm khảo sát.
 /// Chuỗi kết nối: appsettings.json → ConnectionStrings:Default.
 /// Mật khẩu lưu dạng văn bản (theo thiết kế của nhóm), so sánh trực tiếp khi đăng nhập.

@@ -65,14 +65,14 @@ h1, h2, h3, p { margin: 0; }
 .toast.show { opacity: 1; transform: none; }
 
 /* ---------- 2. Cửa hàng ---------- */
-.shop-promo { height: 38px; padding: 0 max(4vw, 24px); background: var(--teal-dark); color: #d6efec; display: flex; align-items: center; justify-content: flex-end; gap: 26px; font-size: 12.5px; }
+.shop-promo { height: 42px; padding: 0 max(4vw, 24px); background: var(--teal-dark); color: #d6efec; display: flex; align-items: center; justify-content: flex-end; gap: 26px; font-size: 14.5px; }
 .shop-promo span { margin-right: auto; }
-.shop-promo button, .shop-promo a { border: 0; background: transparent; color: inherit; font-size: 12.5px; opacity: .85; padding: 0; }
+.shop-promo button, .shop-promo a { border: 0; background: transparent; color: inherit; font-size: 14.5px; opacity: .85; padding: 0; }
 .shop-promo button:hover, .shop-promo a:hover { opacity: 1; color: #fff; }
 
 .shop-header { height: 78px; padding: 0 max(4vw, 24px); display: flex; align-items: center; gap: 40px; border-bottom: 1px solid #e9efee; position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, .96); backdrop-filter: blur(15px); }
 .shop-header > nav { margin: auto; display: flex; align-items: center; gap: 30px; height: 100%; }
-.shop-header > nav a, .shop-header > nav button { height: 100%; display: inline-flex; align-items: center; border: 0; background: transparent; color: #475569; font-size: 15px; font-weight: 600; position: relative; padding: 0; }
+.shop-header > nav a, .shop-header > nav button { height: 100%; display: inline-flex; align-items: center; border: 0; background: transparent; color: #475569; font-size: 17px; font-weight: 600; position: relative; padding: 0; }
 .shop-header > nav a:hover, .shop-header > nav button:hover, .shop-header > nav a.active { color: var(--teal); }
 .shop-header > nav a.active::after { content: ""; height: 2px; background: var(--teal); position: absolute; bottom: 0; left: 0; right: 0; }
 .shop-header > nav .sale { color: var(--orange); }
@@ -80,15 +80,15 @@ h1, h2, h3, p { margin: 0; }
 .shop-actions > button { width: 42px; height: 42px; border: 0; border-radius: 10px; background: transparent; color: #334155; display: grid; place-items: center; position: relative; }
 .shop-actions > button:hover { background: #f1f8f7; color: var(--teal); }
 .shop-auth-actions { display: flex; align-items: center; gap: 10px; margin-left: 6px; }
-.link-login { color: var(--teal); font-size: 14px; font-weight: 700; padding: 0 8px; }
+.link-login { color: var(--teal); font-size: 16px; font-weight: 700; padding: 0 8px; }
 .shop-auth-actions .btn { height: 40px; }
 
 .shop-account { position: relative; margin-left: 6px; }
 .account-btn { border: 1px solid var(--line); background: #fff; border-radius: 11px; padding: 4px 10px 4px 5px; display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .account-name { text-align: left; }
 .account-name strong, .account-name small { display: block; }
-.account-name strong { color: var(--ink); font-size: 13px; }
-.account-name small { font-size: 11px; margin-top: 2px; }
+.account-name strong { color: var(--ink); font-size: 15px; }
+.account-name small { font-size: 12.5px; margin-top: 2px; }
 .account-menu { display: none; position: absolute; right: 0; top: 50px; width: 250px; padding: 7px; border: 1px solid var(--line); background: #fff; border-radius: 12px; box-shadow: 0 15px 35px rgba(15, 23, 42, .12); flex-direction: column; }
 .shop-account:hover .account-menu, .shop-account:focus-within .account-menu { display: flex; }
 .account-menu a { border-radius: 8px; padding: 11px 12px; color: #475569; font-size: 13.5px; }

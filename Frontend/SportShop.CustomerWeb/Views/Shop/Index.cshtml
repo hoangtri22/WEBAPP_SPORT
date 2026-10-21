@@ -1,0 +1,48 @@
+@*
+    Danh sách sản phẩm: lọc theo loại, tìm theo tên, sắp xếp theo mới nhất / giá / tên.
+    Dữ liệu từ MySQL (SAN_PHAM, LOAI_SP, BIEN_THE_SP).
+*@
+@model List<ShopProduct>
+@{
+    ViewData["Title"] = "Sản phẩm";
+    var cats = (List<ShopCategory>)ViewBag.Categories;
+    int? cat = ViewBag.Cat; string q = ViewBag.Q ?? ""; string sort = ViewBag.Sort ?? "new";
+}
+<section class="shop-page">
+    <div class="shop-page-head">
+        <span class="eyebrow">CỬA HÀNG</span>
+        <h1>@(string.IsNullOrEmpty(q) ? "Tất cả sản phẩm" : "Kết quả cho \"" + q + "\"")</h1>
+        <p>@Model.Count sản phẩm</p>
+    </div>
+
+    <form class="shop-filter" method="get" asp-action="Index">
+        <div class="chip-row">
+            <a class="chip-link @(cat == null ? "active" : "")" asp-action="Index" asp-route-q="@q" asp-route-sort="@sort">Tất cả</a>
+            @foreach (var c in cats)
+            {
+                <a class="chip-link @(cat == c.Id ? "active" : "")" asp-action="Index" asp-route-cat="@c.Id" asp-route-q="@q" asp-route-sort="@sort">@c.Name <small>@c.Count</small></a>
+            }
+        </div>
+        <div class="filter-right">
+            <input type="hidden" name="cat" value="@cat" />
+            <label class="filter-search">@Icons.Svg("search", 17)<input type="search" name="q" value="@q" placeholder="Tìm sản phẩm..." /></label>
+            <select name="sort" onchange="this.form.submit()">
+                <option value="new" selected="@(sort == "new")">Mới nhất</option>
+                <option value="price_asc" selected="@(sort == "price_asc")">Giá tăng dần</option>
+                <option value="price_desc" selected="@(sort == "price_desc")">Giá giảm dần</option>
+                <option value="name" selected="@(sort == "name")">Tên A–Z</option>
+            </select>
+        </div>
+    </form>
+
+    @if (Model.Count == 0)
+    {
+        <div class="shop-empty"><h2>Không tìm thấy sản phẩm phù hợp</h2><a class="btn btn-secondary" asp-action="Index">Xem tất cả sản phẩm</a></div>
+    }
+    else
+    {
+        <div class="shop-products">
+            @foreach (var p in Model) { <partial name="_Card" model="p" /> }
+        </div>
+    }
+</section>

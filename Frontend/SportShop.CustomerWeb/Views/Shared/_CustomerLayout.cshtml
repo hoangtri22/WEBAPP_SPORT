@@ -17,12 +17,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/shop-store.css" asp-append-version="true" />
 </head>
 <body class="customer-area" data-db="@(Db.IsConnected ? "true" : "false")">
     <header class="customer-header">
         <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
         <nav>
             <a asp-controller="Home" asp-action="Index">Cửa hàng</a>
+            <a class="@(active == "orders" ? "active" : "")" asp-controller="Customer" asp-action="Orders">Đơn hàng của tôi</a>
             <a class="@(active == "profile" ? "active" : "")" asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
             <a class="@(active == "feedback" ? "active" : "")" asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
             <a class="@(active == "surveys" ? "active" : "")" asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>

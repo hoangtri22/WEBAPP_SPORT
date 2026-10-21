@@ -1,0 +1,207 @@
+@*
+    Biểu mẫu thêm / sửa / xem hiện trong ngăn trượt bên phải (tải bằng Fetch từ CrudController.Form).
+    Các ô được dựng tự động từ định nghĩa trong Models/CrudDefs.cs.
+    Việc hiện / ẩn ô theo điều kiện (ShowWhen), thêm bớt dòng hàng và gửi biểu mẫu do wwwroot/js/admin.js xử lý.
+*@
+@using SportShop.Admin.Controllers
+@model FormModel
+@{
+    var def = Model.Def;
+    bool creating = Model.Id == 0;
+    string verb = Model.ReadOnly ? "Xem" : creating ? "Thêm" : "Sửa";
+    string title = def.Key switch
+    {
+        "survey_send" => "Gửi khảo sát cho khách hàng",
+        "care" => "Thêm ghi chú chăm sóc",
+        _ => verb + " " + def.Title
+    };
+    string submit = def.Key == "survey_send" ? "Gửi khảo sát" : "Lưu";
+    // Ô nào hiện ở chế độ nào: Show = both / create / edit
+    bool Visible(Field f) => f.Show == "both" || (creating ? f.Show == "create" : f.Show == "edit");
+    string[] questionTypes = ["mot_lua_chon|Một lựa chọn", "nhieu_lua_chon|Nhiều lựa chọn", "thang_diem|Thang điểm", "van_ban|Văn bản"];
+}
+<form class="crud-form" method="post" data-entity="@def.Key" data-id="@Model.Id" data-mode="@Model.Mode" novalidate>
+    <div class="drawer-head">
+        <h2>@title</h2>
+        <button type="button" class="icon-btn js-drawer-close" aria-label="Đóng">@Icons.Svg("x", 20)</button>
+    </div>
+
+    <div class="drawer-body">
+        <input type="hidden" name="parent" value="@Model.Parent" />
+        <fieldset class="form-grid" disabled="@Model.ReadOnly">
+            @foreach (var f in def.Fields.Where(Visible))
+            {
+                string val = Model.Val(f.Name);
+                bool wide = f.Wide || f.Type is "textarea" or "interests" or "orderlines" or "importlines" or "questions" or "promodetail";
+                <div class="fld @(wide ? "wide" : "")" data-field="@f.Name" data-showwhen="@f.ShowWhen">
+                    @switch (f.Type)
+                    {
+                        case "interests":
+                            var chosen = Model.Id > 0 ? Model.Cmd.CustomerInterests(Model.Id) : [];
+                            <label>@f.Label</label>
+                            <div class="chips">
+                                @foreach (var o in Model.Cmd.Options("lookup:sothich").Where(o => o.Value != ""))
+                                {
+                                    <label class="chip"><input type="checkbox" name="so_thich" value="@o.Value" checked="@chosen.Contains(o.Value)" /> <span>@o.Label</span></label>
+                                }
+                            </div>
+                            break;
+
+                        case "orderlines":
+                            <label>@f.Label <span class="req">*</span></label>
+                            <div class="lines" data-kind="order">
+                                <div class="lines-body"></div>
+                                <button type="button" class="btn-outline js-add-line">@Icons.Svg("plus", 16) Thêm sản phẩm</button>
+                                <div class="lines-total">Tạm tính: <b class="js-lines-total">0đ</b></div>
+                                <template class="line-tpl">
+                                    <div class="line">
+                                        <select name="dong_bien_the" class="js-variant">
+                                            <option value="">-- Chọn sản phẩm --</option>
+                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
+                                        </select>
+                                        <input type="number" name="dong_so_luong" class="js-qty" min="1" value="1" aria-label="Số lượng" />
+                                        <span class="line-amount">0đ</span>
+                                        <button type="button" class="act js-remove-line" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
+                                    </div>
+                                </template>
+                            </div>
+                            break;
+
+                        case "importlines" when !creating:
+                            <label>@f.Label</label>
+                            <table class="tbl mini">
+                                <thead><tr><th>Mặt hàng</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
+                                <tbody>
+                                    @foreach (var l in Model.Cmd.ImportLines(Model.Id))
+                                    {
+                                        <tr><td>@l.Name</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r">@Fmt.Money(l.Amount)</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                            break;
+
+                        case "importlines":
+                            <label>@f.Label <span class="req">*</span></label>
+                            <div class="lines" data-kind="import">
+                                <div class="lines-body"></div>
+                                <button type="button" class="btn-outline js-add-line">@Icons.Svg("plus", 16) Thêm dòng</button>
+                                <div class="lines-total">Tổng giá trị: <b class="js-lines-total">0đ</b></div>
+                                <template class="line-tpl">
+                                    <div class="line">
+                                        <select name="dong_bien_the" class="js-variant">
+                                            <option value="">-- Chọn sản phẩm --</option>
+                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
+                                        </select>
+                                        <input type="number" name="dong_so_luong" class="js-qty" min="1" value="10" aria-label="Số lượng" />
+                                        <input type="number" name="dong_don_gia" class="js-cost" min="0" step="1000" placeholder="Đơn giá nhập" aria-label="Đơn giá nhập" />
+                                        <button type="button" class="act js-remove-line" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
+                                    </div>
+                                </template>
+                            </div>
+                            break;
+
+                        case "questions":
+                            var qs = creating ? [] : Model.Cmd.SurveyQuestions(Model.Id);
+                            bool locked = !creating && Model.Cmd.SurveyHasAnswers(Model.Id);
+                            <label>@f.Label <span class="req">*</span></label>
+                            @if (locked) { <p class="hint">Khảo sát đã có khách trả lời nên giữ nguyên câu hỏi.</p> }
+                            <div class="questions" data-locked="@(locked ? "1" : "0")">
+                                <div class="q-body">
+                                    @for (int i = 0; i < qs.Count; i++)
+                                    {
+                                        var q = qs[i];
+                                        <div class="qrow">
+                                            <input type="text" name="q_noi_dung" value="@q.Text" placeholder="Nội dung câu hỏi" />
+                                            <select name="q_loai">
+                                                @foreach (var t in questionTypes)
+                                                {
+                                                    var p = t.Split('|');
+                                                    <option value="@p[0]" selected="@(q.Type == p[0])">@p[1]</option>
+                                                }
+                                            </select>
+                                            <label class="chip"><input type="checkbox" name="q_bat_buoc" value="@i" checked="@q.Required" /> <span>Bắt buộc</span></label>
+                                            <textarea name="q_lua_chon" rows="3" placeholder="Mỗi lựa chọn một dòng (thang điểm để trống = 1–5)">@q.Options</textarea>
+                                            <button type="button" class="act js-remove-q" title="Bỏ câu hỏi">@Icons.Svg("trash", 16)</button>
+                                        </div>
+                                    }
+                                </div>
+                                @if (!locked) { <button type="button" class="btn-outline js-add-q">@Icons.Svg("plus", 16) Thêm câu hỏi</button> }
+                                <template class="q-tpl">
+                                    <div class="qrow">
+                                        <input type="text" name="q_noi_dung" placeholder="Nội dung câu hỏi" />
+                                        <select name="q_loai">
+                                            @foreach (var t in questionTypes) { var p = t.Split('|'); <option value="@p[0]">@p[1]</option> }
+                                        </select>
+                                        <label class="chip"><input type="checkbox" name="q_bat_buoc" value="" /> <span>Bắt buộc</span></label>
+                                        <textarea name="q_lua_chon" rows="3" placeholder="Mỗi lựa chọn một dòng (thang điểm để trống = 1–5)"></textarea>
+                                        <button type="button" class="act js-remove-q" title="Bỏ câu hỏi">@Icons.Svg("trash", 16)</button>
+                                    </div>
+                                </template>
+                            </div>
+                            break;
+
+                        case "promodetail":
+                            <label>@f.Label <span class="req">*</span></label>
+                            <div class="form-grid inner">
+                                <div class="fld" data-showwhen="loai_khuyen_mai=theo_san_pham">
+                                    <label>Sản phẩm được giảm</label>
+                                    <select name="d_san_pham">
+                                        @foreach (var o in Model.Cmd.Options("lookup:sanpham")) { <option value="@o.Value" selected="@(Model.Val("d_san_pham") == o.Value)">@o.Label</option> }
+                                    </select>
+                                </div>
+                                <div class="fld" data-showwhen="loai_khuyen_mai=theo_don_hang">
+                                    <label>Đơn hàng từ (đ)</label>
+                                    <input type="number" name="d_muc_tien" min="0" value="@Model.Val("d_muc_tien")" />
+                                </div>
+                                <div class="fld" data-showwhen="loai_khuyen_mai=theo_voucher">
+                                    <label>Mã voucher</label>
+                                    <input type="text" name="d_voucher" value="@Model.Val("d_voucher")" placeholder="ví dụ: SPORT10" />
+                                </div>
+                                <div class="fld">
+                                    <label>Giảm (%)</label>
+                                    <input type="number" name="d_phan_tram" min="1" max="100" step="0.5" value="@Model.Val("d_phan_tram")" />
+                                </div>
+                            </div>
+                            break;
+
+                        case "select":
+                            <label for="f_@f.Name">@f.Label@if (f.Required) { <span class="req"> *</span> }</label>
+                            <select id="f_@f.Name" name="@f.Name">
+                                @if (creating && f.Required) { <option value="">-- Chọn --</option> }
+                                @foreach (var o in Model.Cmd.Options(f.Options))
+                                {
+                                    <option value="@o.Value" data-info="@o.Data" selected="@(val == o.Value)">@o.Label</option>
+                                }
+                            </select>
+                            break;
+
+                        case "textarea":
+                            <label for="f_@f.Name">@f.Label@if (f.Required) { <span class="req"> *</span> }</label>
+                            <textarea id="f_@f.Name" name="@f.Name" rows="4">@val</textarea>
+                            break;
+
+                        default:
+                            string type = f.Type == "datetime" ? "datetime-local" : f.Type;
+                            if (creating && val == "" && f.Type == "datetime")
+                            {
+                                val = (f.Name == "ngay_ket_thuc" ? DateTime.Now.AddDays(30) : DateTime.Now).ToString("yyyy-MM-ddTHH:mm");
+                            }
+                            <label for="f_@f.Name">@f.Label@if (f.Required) { <span class="req"> *</span> }</label>
+                            <input id="f_@f.Name" type="@type" name="@f.Name" value="@val" placeholder="@f.Placeholder" autocomplete="off" step="@(f.Type == "number" ? "any" : null)" />
+                            break;
+                    }
+                    @if (!string.IsNullOrEmpty(f.Hint) && f.Type is not ("questions" or "promodetail"))
+                    {
+                        <p class="hint">@f.Hint</p>
+                    }
+                </div>
+            }
+        </fieldset>
+        <div class="form-error" hidden></div>
+    </div>
+
+    <div class="drawer-foot">
+        <button type="button" class="btn-outline js-drawer-close">@(Model.ReadOnly ? "Đóng" : "Hủy")</button>
+        @if (!Model.ReadOnly) { <button type="submit" class="btn-primary">@submit</button> }
+    </div>
+</form>

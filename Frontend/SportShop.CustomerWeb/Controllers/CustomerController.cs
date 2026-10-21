@@ -1,20 +1,132 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using SportShop.CustomerWeb.Models;
+using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-/// <summary>Khu vực của khách hàng đã đăng nhập: chỉnh sửa thông tin, gửi phản hồi, làm khảo sát.</summary>
-public class CustomerController : Controller
+/// <summary>
+/// Khu vực của khách hàng đã đăng nhập: chỉnh sửa thông tin, gửi phản hồi, làm khảo sát.
+/// Đã kết nối MySQL: đọc / ghi dữ liệu thật của khách đang đăng nhập.
+/// Chưa kết nối: hiện dữ liệu mẫu (StoreData), các nút lưu / gửi chỉ hiện thông báo.
+/// </summary>
+public class CustomerController(DbStatus db, CustomerStore store) : Controller
 {
+    int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
+
     /// <summary>Chưa đăng nhập thì chuyển về trang đăng nhập.</summary>
     public override void OnActionExecuting(ActionExecutingContext context)
     {
-        if (string.IsNullOrEmpty(HttpContext.Session.GetString("customer")))
-            context.Result = RedirectToAction("Login", "Account");
+        bool loggedIn = !string.IsNullOrEmpty(HttpContext.Session.GetString("customer"));
+        // Đã có CSDL nhưng phiên đăng nhập cũ không có mã khách hàng (đăng nhập lúc chưa có CSDL) → đăng nhập lại
+        if (loggedIn && db.IsConnected && CustomerId == 0)
+        {
+            HttpContext.Session.Remove("customer");
+            loggedIn = false;
+        }
+        if (!loggedIn) context.Result = RedirectToAction("Login", "Account");
         base.OnActionExecuting(context);
     }
 
+    // ===================== Chỉnh sửa thông tin =====================
+
     public IActionResult Profile() { ViewData["Active"] = "profile"; return View(); }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult Profile(string fullName, string email, string phone, DateTime? birth, string gender, string[] interests)
+    {
+        if (!db.IsConnected) return RedirectToAction(nameof(Profile));
+        fullName = (fullName ?? "").Trim(); email = (email ?? "").Trim(); phone = (phone ?? "").Trim();
+
+        string? error =
+            fullName.Length == 0 ? "Vui lòng nhập họ và tên." :
+            !Regex.IsMatch(email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$") ? "Email chưa đúng định dạng." :
+            !Regex.IsMatch(phone, @"^0\d{9}$") ? "Số điện thoại cần gồm 10 chữ số." :
+            gender is not ("Nam" or "Nữ" or "Khác") ? "Giới tính không hợp lệ." :
+            birth > DateTime.Today ? "Ngày sinh không hợp lệ." : null;
+        error ??= store.UpdateProfile(CustomerId, fullName, email, phone, birth, gender, interests ?? []);
+
+        TempData["Notice"] = error ?? "Đã lưu thông tin cá nhân.";
+        return RedirectToAction(nameof(Profile));
+    }
+
+    // ===================== Phản hồi về sản phẩm =====================
+
     public IActionResult Feedback() { ViewData["Active"] = "feedback"; return View(); }
-    public IActionResult Surveys() { ViewData["Active"] = "surveys"; return View(); }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult Feedback(int product, int stars, string content)
+    {
+        if (!db.IsConnected) return RedirectToAction(nameof(Feedback));
+        content = (content ?? "").Trim();
+        string? error =
+            !store.Products().Any(p => p.Id == product) ? "Vui lòng chọn sản phẩm." :
+            stars is < 1 or > 5 ? "Vui lòng chọn số sao đánh giá." :
+            content.Length == 0 ? "Vui lòng nhập nội dung phản hồi." :
+            content.Length > 1000 ? "Nội dung phản hồi tối đa 1000 ký tự." : null;
+        if (error == null) store.SendFeedback(CustomerId, product, stars, content);
+
+        TempData["Notice"] = error ?? "Cảm ơn bạn! Phản hồi đã được gửi đến SPORTSHOP.";
+        return RedirectToAction(nameof(Feedback));
+    }
+
+    // ===================== Khảo sát =====================
+
+    /// <summary>Danh sách khảo sát; có id thì mở khảo sát đó để làm; done=true hiện màn cảm ơn.</summary>
+    public IActionResult Surveys(int? id, bool done = false)
+    {
+        ViewData["Active"] = "surveys";
+        if (!db.IsConnected) return View(SampleSurveys(id));
+
+        var items = store.Surveys(CustomerId);
+        var current = id == null ? null : items.FirstOrDefault(s => s.Id == id && !s.Done && s.IsOpen);
+        return View(new SurveyPageVm
+        {
+            Items = items,
+            Current = current,
+            Questions = current == null ? [] : store.Questions(current.Id),
+            JustDone = done,
+            Error = TempData["Notice"] as string,
+        });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult Surveys(int id)
+    {
+        if (!db.IsConnected) return RedirectToAction(nameof(Surveys));
+
+        // Mỗi câu hỏi gửi lên dưới tên "q{mã câu hỏi}": mã lựa chọn (radio / checkbox) hoặc nội dung văn bản
+        var answers = new Dictionary<int, (List<int>, string?)>();
+        foreach (var q in store.Questions(id))
+        {
+            var values = Request.Form[$"q{q.Id}"].Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v!).ToList();
+            if (q.Type == "text") answers[q.Id] = ([], values.FirstOrDefault());
+            else answers[q.Id] = (values.Select(v => int.TryParse(v, out var n) ? n : 0).Where(n => n > 0).ToList(), null);
+        }
+
+        var error = store.SubmitSurvey(id, CustomerId, answers);
+        if (error != null)
+        {
+            TempData["Notice"] = error;
+            return RedirectToAction(nameof(Surveys), new { id });
+        }
+        return RedirectToAction(nameof(Surveys), new { id = (int?)null, done = true });
+    }
+
+    /// <summary>Dữ liệu mẫu cho chế độ xem giao diện (chưa có CSDL).</summary>
+    static SurveyPageVm SampleSurveys(int? id)
+    {
+        var items = new List<SurveyItem>
+        {
+            new() { Id = 1, Title = "Khảo sát trải nghiệm mua sắm 2025", Description = "Chia sẻ cảm nhận về sản phẩm, dịch vụ và trải nghiệm của bạn tại SPORTSHOP.",
+                    Deadline = new DateTime(2025, 5, 31), Status = "chua_lam", IsOpenFlag = 1, QuestionCount = StoreData.SurveyQuestions.Count },
+            new() { Id = 2, Title = "Thói quen vận động của bạn", Description = "Cảm ơn bạn đã chia sẻ thói quen và mục tiêu luyện tập.",
+                    Deadline = new DateTime(2025, 4, 30), Status = "hoan_thanh", CompletedAt = new DateTime(2025, 4, 15), QuestionCount = 3 },
+        };
+        int optId = 0, qId = 0;
+        var questions = StoreData.SurveyQuestions.Select(q =>
+            new SurveyQ(++qId, q.Title, q.Type, true, q.Options.Select(o => new SurveyOption(++optId, o)).ToList())).ToList();
+        return new SurveyPageVm { Items = items, Current = id == 1 ? items[0] : null, Questions = id == 1 ? questions : [] };
+    }
 }

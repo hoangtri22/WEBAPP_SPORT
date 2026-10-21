@@ -8,8 +8,8 @@
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
     // Dữ liệu biến thể → bảng ở cuối trang (dùng lại partial _Section)
-    var variants = SampleData.Variants.Select(v => new Row(
-        [$"BT{v.Id:D3}", SampleData.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()])).ToList();
+    var variants = Data.Variants.Select(v => new Row(
+        [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()])).ToList();
     var variantSection = new TableSection
     {
         Heading = "Biến thể sản phẩm (size, màu, giá bán, giá vốn, tồn)",
@@ -36,7 +36,7 @@
             @Icons.Svg("sliders", 18)
             <select id="prodCat">
                 <option value="">Loại sản phẩm</option>
-                @foreach (var c in SampleData.Categories) { <option>@c</option> }
+                @foreach (var c in Data.Categories) { <option>@c</option> }
             </select>
         </div>
         <span class="grow"></span>
@@ -49,13 +49,15 @@
 
     @* ----- Dạng lưới ----- *@
     <div class="prod-grid" id="prodGrid">
-        @foreach (var p in SampleData.Products)
+        @foreach (var p in Data.Products)
         {
-            var vs = SampleData.Variants.Where(v => v.ProductId == p.Id).ToList();
-            var price = vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
+            var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+            var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
             <article class="prod" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
                     <span>@p.Name.Substring(0, 1)</span>
+                    @* Ảnh sản phẩm (SAN_PHAM.hinh_anh); không tải được ảnh thì hiện chữ cái đầu phía sau *@
+                    @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.remove()" /> }
                     <button type="button" class="dots light js-soon" aria-label="Tùy chọn">@Icons.Svg("more", 18)</button>
                 </div>
                 <div class="prod-body">
@@ -73,12 +75,12 @@
         <table class="tbl">
             <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Loại</th><th>ĐVT</th><th>Giá bán</th><th>Tồn</th><th>Hiển thị</th><th>Thao tác</th></tr></thead>
             <tbody>
-                @foreach (var p in SampleData.Products)
+                @foreach (var p in Data.Products)
                 {
-                    var vs = SampleData.Variants.Where(v => v.ProductId == p.Id).ToList();
-                    var price = vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
+                    var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+                    var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
                     <tr data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
-                        <td>SP@(p.Id.ToString("D3"))</td><td>@p.Name</td><td>@p.Category</td><td>@p.Unit</td><td>@price</td><td>@vs.Sum(v => v.Stock)</td>
+                        <td>SP@(p.Id.ToString("D3"))</td><td><div class="prod-name">@if (!string.IsNullOrEmpty(p.Image)) { <img class="prod-thumb" src="@p.Image" alt="" loading="lazy" onerror="this.remove()" /> }@p.Name</div></td><td>@p.Category</td><td>@p.Unit</td><td>@price</td><td>@vs.Sum(v => v.Stock)</td>
                         <td>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</td>
                         <td><div class="actions">
                             <button type="button" class="act js-soon">@Icons.Svg("eye", 18)</button>

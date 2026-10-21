@@ -49,14 +49,14 @@ public class ReportsVm
     public List<Row> Promos { get; init; } = [];
 }
 
-public class ReportsController : Controller
+public class ReportsController(ShopData db) : Controller
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     static string F(double v) => v.ToString("0.##", Inv);   // số thực → chuỗi cho SVG
 
     /// <summary>
     /// Báo cáo theo khoảng thời gian tùy chọn (from → to). Mặc định 30 ngày gần nhất.
-    /// Doanh thu / lợi nhuận chỉ tính từ hóa đơn đã hoàn thành (PDF mục 3.1.9).
+    /// Doanh thu / lợi nhuận chỉ tính từ các đơn đã có hóa đơn (đã thanh toán), theo mục 3.1.9.
     /// </summary>
     public IActionResult Index(DateTime? from, DateTime? to)
     {
@@ -70,9 +70,9 @@ public class ReportsController : Controller
         var prevEnd = start.AddDays(-1);
         var prevStart = prevEnd.AddDays(-(days - 1));
 
-        // Hóa đơn hoàn thành trong một khoảng ngày
-        List<Order> Done(DateTime a, DateTime b) => SampleData.Orders
-            .Where(o => o.Status == "hoan_thanh" && o.Date.Date >= a && o.Date.Date <= b).ToList();
+        // Các đơn đã lập hóa đơn trong một khoảng ngày
+        List<Order> Done(DateTime a, DateTime b) => db.Orders
+            .Where(o => o.Invoiced && o.Date.Date >= a && o.Date.Date <= b).ToList();
         // Doanh thu thuần của hóa đơn = tiền hàng sau giảm giá (chưa tính phí ship)
         decimal Rev(Order o) => o.Subtotal - o.Discount;
 
@@ -100,14 +100,14 @@ public class ReportsController : Controller
 
         // ----- Biểu đồ cột: sản phẩm bán chạy theo số lượng đã bán -----
         var qty = cur.SelectMany(o => o.Lines)
-            .GroupBy(l => SampleData.Variant(l.VariantId).ProductId)
-            .Select(g => (Name: SampleData.Product(g.Key).Name, Qty: g.Sum(l => l.Qty)))
+            .GroupBy(l => db.Variant(l.VariantId).ProductId)
+            .Select(g => (Name: db.Product(g.Key).Name, Qty: g.Sum(l => l.Qty)))
             .OrderByDescending(x => x.Qty).Take(7).ToList();
         int maxQty = qty.Count == 0 ? 1 : qty.Max(x => x.Qty);
         var bars = qty.Select(x => new BarCol(x.Name, x.Qty, Math.Max(6, x.Qty * 100 / maxQty), x.Qty == maxQty)).ToList();
 
         // ----- Biểu đồ tròn: nhóm khách hàng theo độ tuổi (tính từ ngày sinh) -----
-        var cust = SampleData.Customers;
+        var cust = db.Customers;
         int g1 = cust.Count(c => c.Age <= 25), g2 = cust.Count(c => c.Age is >= 26 and <= 35), g3 = cust.Count(c => c.Age > 35);
         decimal P(int x) => cust.Count == 0 ? 0 : Math.Round(x * 100m / cust.Count, 0);
         var donut = new List<DonutPart>
@@ -118,39 +118,35 @@ public class ReportsController : Controller
         };
 
         // ----- Hiệu suất nhân viên: số hóa đơn lập + lần chăm sóc + phản hồi đã trả lời -----
-        var staffRaw = SampleData.Employees.Where(e => e.Working).Select(e =>
+        var staffRaw = db.Employees.Where(e => e.Working).Select(e =>
         {
-            int inv = SampleData.Orders.Count(o => o.EmployeeId == e.Id && o.Status == "hoan_thanh");
-            int care = SampleData.CareNotes.Count(c => c.EmployeeId == e.Id);
-            int rep = SampleData.FeedbackItems.Count(f => f.ReplyEmployeeId == e.Id);
+            int inv = db.Orders.Count(o => o.EmployeeId == e.Id && o.Invoiced);
+            int care = db.CareNotes.Count(c => c.EmployeeId == e.Id);
+            int rep = db.FeedbackItems.Count(f => f.ReplyEmployeeId == e.Id);
             return (E: e, Inv: inv, Care: care, Rep: rep, Total: inv + care + rep);
         }).OrderByDescending(x => x.Total).Take(5).ToList();
-        int topTotal = Math.Max(1, staffRaw.Max(x => x.Total));
+        int topTotal = Math.Max(1, staffRaw.Select(x => x.Total).DefaultIfEmpty(0).Max());
         var staff = staffRaw.Select(x => new StaffRow(
             Initials(x.E.FirstName, x.E.LastName), $"{x.E.LastName} {x.E.FirstName}",
             $"{x.Inv} hóa đơn · {x.Care} lần chăm sóc · {x.Rep} phản hồi", x.Total * 100 / topTotal)).ToList();
 
-        // ----- Lợi nhuận theo sản phẩm = (giá bán - giá vốn) x số lượng -----
+        // ----- Lợi nhuận theo sản phẩm = thành tiền (sau giảm giá dòng) - giá vốn -----
         var profit = cur.SelectMany(o => o.Lines)
-            .GroupBy(l => SampleData.Variant(l.VariantId).ProductId)
+            .GroupBy(l => db.Variant(l.VariantId).ProductId)
             .Select(g =>
             {
-                decimal rev = g.Sum(l => SampleData.Variant(l.VariantId).Price * l.Qty);
-                decimal cost = g.Sum(l => SampleData.Variant(l.VariantId).Cost * l.Qty);
-                return new Row([SampleData.Product(g.Key).Name, g.Sum(l => l.Qty).ToString(), Fmt.Money(rev), Fmt.Money(cost), Fmt.Money(rev - cost)]);
+                decimal rev = g.Sum(l => l.Amount);          // doanh thu sau giảm giá của dòng
+                decimal cost = g.Sum(l => l.Cost * l.Qty);   // giá vốn tại thời điểm bán
+                return new Row([db.Product(g.Key).Name, g.Sum(l => l.Qty).ToString(), Fmt.Money(rev), Fmt.Money(cost), Fmt.Money(rev - cost)]);
             }).ToList();
 
         // Sản phẩm tồn kho nhiều (báo cáo "sản phẩm tồn kho" trong PDF)
-        var high = SampleData.Variants.OrderByDescending(v => v.Stock).Take(5)
-            .Select(v => new Row([SampleData.VariantName(v.Id), v.Stock.ToString()])).ToList();
+        var high = db.Variants.OrderByDescending(v => v.Stock).Take(5)
+            .Select(v => new Row([db.VariantName(v.Id), v.Stock.ToString()])).ToList();
 
-        // Hiệu quả khuyến mãi (số liệu mẫu)
-        var promos = new List<Row>
-        {
-            new(["Chào hè năng động", "27", Fmt.Money(2_150_000), Fmt.Money(41_800_000)]),
-            new(["SPORTNEW", "12", Fmt.Money(1_200_000), Fmt.Money(18_400_000)]),
-            new(["VIP10", "5", Fmt.Money(3_160_000), Fmt.Money(36_300_000)]),
-        };
+        // Hiệu quả khuyến mãi trong kỳ: số lượt dùng, tổng tiền giảm, doanh thu các hóa đơn áp dụng
+        var promos = db.PromoStats(start, end)
+            .Select(p => new Row([p.Name, p.Uses.ToString(), Fmt.Money(p.Discount), Fmt.Money(p.Revenue)])).ToList();
 
         return View(new ReportsVm
         {

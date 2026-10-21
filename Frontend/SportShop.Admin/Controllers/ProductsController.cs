@@ -4,14 +4,14 @@ using SportShop.Admin.Models;
 namespace SportShop.Admin.Controllers;
 
 /// <summary>Quản lý loại sản phẩm và quản lý sản phẩm (kèm biến thể size, màu).</summary>
-public class ProductsController : Controller
+public class ProductsController(ShopData db) : Controller
 {
     /// <summary>Loại sản phẩm (bảng LOAI_SP): quần áo, giày, vợt cầu lông, phụ kiện.</summary>
     public IActionResult Categories()
     {
         ViewBag.Menu = "categories";
-        var rows = SampleData.Categories.Select((c, i) => new Row(
-            [$"LSP{i + 1:D3}", c, $"{SampleData.Products.Count(p => p.Category == c)} sản phẩm"])).ToList();
+        var rows = db.CategoryList.Select(c => new Row(
+            [$"LSP{c.Id:D3}", c.Name, $"{db.Products.Count(p => p.Category == c.Name)} sản phẩm"])).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {

@@ -5,7 +5,8 @@
 *@
 @{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
-    var me = StoreData.Customer;
+    // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
+    var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
     string adminUrl = Config["Links:AdminUrl"] ?? "#";
 }
 <!DOCTYPE html>
@@ -43,7 +44,7 @@
                 <div class="shop-account">
                     <button type="button" class="account-btn">
                         <span class="avatar sm">@me.Initials</span>
-                        <span class="account-name"><strong>@me.FullName.Split(' ')[^2] @me.FullName.Split(' ')[^1]</strong><small>Tài khoản</small></span>
+                        <span class="account-name"><strong>@me.ShortName</strong><small>Tài khoản</small></span>
                         @Icons.Svg("chevron-down", 15)
                     </button>
                     <div class="account-menu">

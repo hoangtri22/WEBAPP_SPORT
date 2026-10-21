@@ -1,51 +1,92 @@
 @*
     Khảo sát khách hàng: danh sách khảo sát -> làm từng câu (có thanh tiến độ) -> màn cảm ơn.
-    4 dạng câu hỏi theo PDF: một lựa chọn, nhiều lựa chọn, thang điểm, văn bản.
-    Việc chuyển câu chạy trên giao diện; nút "Gửi khảo sát" có cần cơ sở dữ liệu
-    (chưa có CSDL thì hiện thông báo, có CSDL thì sang màn cảm ơn).
+    4 dạng câu hỏi: một lựa chọn, nhiều lựa chọn, thang điểm, văn bản.
+    Đã kết nối MySQL: danh sách lấy từ KHAO_SAT_KHACH_HANG (khảo sát gửi đến tài khoản khách),
+    câu trả lời lưu vào TRA_LOI_KHAO_SAT. Chưa kết nối: dữ liệu mẫu, nút "Gửi khảo sát" chỉ hiện thông báo.
 *@
+@model SurveyPageVm
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Khảo sát khách hàng";
-    var qs = StoreData.SurveyQuestions;
+    var cur = Model.Current;
+    var qs = Model.Questions;
+    var pending = Model.Items.Where(s => !s.Done && s.IsOpen).ToList();
+    int doneCount = Model.Items.Count(s => s.Done);
 }
 
-@* ===== Màn 1: danh sách khảo sát ===== *@
-<div id="viewList">
+@if (Model.JustDone)
+{
+    @* ===== Màn cảm ơn (sau khi gửi khảo sát thành công) ===== *@
+    <div class="card survey-thanks">
+        <div>@Icons.Svg("check-circle", 34)</div>
+        <span>HOÀN TẤT KHẢO SÁT</span>
+        <h1>Cảm ơn bạn đã hoàn thành khảo sát!</h1>
+        <p>Ý kiến của bạn là dữ liệu quý giá để SPORTSHOP tạo nên trải nghiệm tốt hơn mỗi ngày.</p>
+        <a class="btn btn-primary" asp-action="Surveys">@Icons.Svg("arrow-left", 17) Quay lại danh sách khảo sát</a>
+    </div>
+}
+else if (cur == null)
+{
+    @* ===== Danh sách khảo sát ===== *@
     <div class="customer-page-title"><span>TIẾNG NÓI KHÁCH HÀNG</span><h1>Khảo sát khách hàng</h1><p>Các khảo sát được SPORTSHOP gửi riêng đến tài khoản của bạn.</p></div>
     <div class="survey-summary">
-        <div>@Icons.Svg("clipboard-check", 21)<span><strong>01 khảo sát đang chờ</strong><small>Mất khoảng 3–5 phút để hoàn thành</small></span></div>
-        <span>Đã hoàn thành <b>3</b> khảo sát</span>
+        <div>@Icons.Svg("clipboard-check", 21)<span><strong>@pending.Count.ToString("00") khảo sát đang chờ</strong><small>Mất khoảng 3–5 phút để hoàn thành</small></span></div>
+        <span>Đã hoàn thành <b>@doneCount</b> khảo sát</span>
     </div>
     <div class="survey-list">
-        <article class="survey-card featured">
-            <div class="survey-card-icon">@Icons.Svg("clipboard-list", 25)</div>
-            <div class="survey-card-copy">
-                <div><span class="state">ĐANG DIỄN RA</span><small>@Icons.Svg("calendar-clock", 14) Hạn: 31/05/2025</small></div>
-                <h2>Khảo sát trải nghiệm mua sắm 2025</h2>
-                <p>Chia sẻ cảm nhận về sản phẩm, dịch vụ và trải nghiệm của bạn tại SPORTSHOP.</p>
-                <div class="survey-meta"><span>@qs.Count câu hỏi</span><span>Khoảng 3 phút</span><span>+100 điểm thành viên</span></div>
-            </div>
-            <button type="button" class="btn btn-primary" id="startSurvey">Thực hiện khảo sát @Icons.Svg("chevron-right", 17)</button>
-        </article>
-        <article class="survey-card completed">
-            <div class="survey-card-icon">@Icons.Svg("check-circle", 25)</div>
-            <div class="survey-card-copy">
-                <div><span class="state">ĐÃ HOÀN THÀNH</span><small>15/04/2025</small></div>
-                <h2>Thói quen vận động của bạn</h2>
-                <p>Cảm ơn bạn đã chia sẻ thói quen và mục tiêu luyện tập.</p>
-            </div>
-            <span class="pill p-g"><i></i>Đã gửi</span>
-        </article>
+        @foreach (var s in Model.Items)
+        {
+            if (s.Done)
+            {
+                <article class="survey-card completed">
+                    <div class="survey-card-icon">@Icons.Svg("check-circle", 25)</div>
+                    <div class="survey-card-copy">
+                        <div><span class="state">ĐÃ HOÀN THÀNH</span><small>@s.CompletedAt?.ToString("dd/MM/yyyy")</small></div>
+                        <h2>@s.Title</h2>
+                        <p>@s.Description</p>
+                    </div>
+                    <span class="pill p-g"><i></i>Đã gửi</span>
+                </article>
+            }
+            else if (s.IsOpen)
+            {
+                <article class="survey-card featured">
+                    <div class="survey-card-icon">@Icons.Svg("clipboard-list", 25)</div>
+                    <div class="survey-card-copy">
+                        <div><span class="state">ĐANG DIỄN RA</span><small>@Icons.Svg("calendar-clock", 14) Hạn: @s.Deadline.ToString("dd/MM/yyyy")</small></div>
+                        <h2>@s.Title</h2>
+                        <p>@s.Description</p>
+                        <div class="survey-meta"><span>@s.QuestionCount câu hỏi</span><span>Khoảng @Math.Max(1, s.QuestionCount) phút</span></div>
+                    </div>
+                    <a class="btn btn-primary" asp-action="Surveys" asp-route-id="@s.Id">Thực hiện khảo sát @Icons.Svg("chevron-right", 17)</a>
+                </article>
+            }
+            else
+            {
+                <article class="survey-card completed">
+                    <div class="survey-card-icon">@Icons.Svg("calendar-clock", 25)</div>
+                    <div class="survey-card-copy">
+                        <div><span class="state">ĐÃ HẾT HẠN</span><small>@s.Deadline.ToString("dd/MM/yyyy")</small></div>
+                        <h2>@s.Title</h2>
+                        <p>@s.Description</p>
+                    </div>
+                    <span class="pill p-b"><i></i>Hết hạn</span>
+                </article>
+            }
+        }
+        @if (Model.Items.Count == 0)
+        {
+            <div class="empty">Hiện chưa có khảo sát nào được gửi đến tài khoản của bạn.</div>
+        }
     </div>
-</div>
-
-@* ===== Màn 2: làm khảo sát từng câu ===== *@
-<div id="viewDoing" hidden>
-    <button type="button" class="back-link" id="backToList">@Icons.Svg("arrow-left", 17) Danh sách khảo sát</button>
-    <div class="card survey-form">
+}
+else
+{
+    @* ===== Làm khảo sát từng câu ===== *@
+    <a class="back-link" asp-action="Surveys">@Icons.Svg("arrow-left", 17) Danh sách khảo sát</a>
+    <form class="card survey-form" method="post" asp-action="Surveys" asp-route-id="@cur.Id" id="surveyForm">
         <div class="survey-progress-head">
-            <div><span>KHẢO SÁT TRẢI NGHIỆM MUA SẮM 2025</span><h1>Hiểu bạn hơn, phục vụ tốt hơn</h1></div>
+            <div><span>@cur.Title.ToUpper()</span><h1>Hiểu bạn hơn, phục vụ tốt hơn</h1></div>
             <b id="stepNo">1/@qs.Count</b>
         </div>
         <div class="progress-track"><i id="progress"></i></div>
@@ -53,20 +94,20 @@
         @for (int i = 0; i < qs.Count; i++)
         {
             var q = qs[i];
-            <div class="survey-question" data-step="@i" hidden>
-                <span>CÂU HỎI @((i + 1).ToString("00")) · BẮT BUỘC</span>
+            <div class="survey-question" data-step="@i" data-required="@(q.Required ? "true" : "false")" hidden>
+                <span>CÂU HỎI @((i + 1).ToString("00"))@(q.Required ? " · BẮT BUỘC" : "")</span>
                 <h2>@q.Title</h2>
-                <p>Chọn phương án phù hợp nhất với bạn.</p>
+                <p>@(q.Type switch { "many" => "Có thể chọn nhiều phương án.", "text" => "Nhập câu trả lời của bạn.", "scale" => "Chọn mức điểm từ thấp đến cao.", _ => "Chọn phương án phù hợp nhất với bạn." })</p>
                 @if (q.Type == "text")
                 {
-                    <textarea placeholder="Nhập câu trả lời của bạn..."></textarea>
+                    <textarea name="q@(q.Id)" maxlength="500" placeholder="Nhập câu trả lời của bạn..."></textarea>
                 }
                 else
                 {
                     <div class="survey-options @(q.Type == "scale" ? "scale" : "")">
                         @foreach (var o in q.Options)
                         {
-                            <label><input type="@(q.Type == "many" ? "checkbox" : "radio")" name="q@(i)" /><span>@o</span></label>
+                            <label><input type="@(q.Type == "many" ? "checkbox" : "radio")" name="q@(q.Id)" value="@o.Id" /><span>@o.Text</span></label>
                         }
                     </div>
                 }
@@ -76,30 +117,20 @@
 
         <div class="survey-actions">
             <button type="button" class="btn btn-secondary" id="prevQ">@Icons.Svg("chevron-left", 17) Câu trước</button>
-            <span>Câu hỏi bắt buộc được đánh dấu *</span>
+            <span>Câu hỏi bắt buộc được ghi "BẮT BUỘC"</span>
             <button type="button" class="btn btn-primary" id="nextQ"><b>Câu tiếp theo</b> @Icons.Svg("chevron-right", 17)</button>
         </div>
-    </div>
-</div>
-
-@* ===== Màn 3: cảm ơn (chỉ hiện khi gửi thành công, tức là đã có cơ sở dữ liệu) ===== *@
-<div id="viewDone" hidden>
-    <div class="card survey-thanks">
-        <div>@Icons.Svg("check-circle", 34)</div>
-        <span>HOÀN TẤT KHẢO SÁT</span>
-        <h1>Cảm ơn bạn đã hoàn thành khảo sát!</h1>
-        <p>Ý kiến của bạn là dữ liệu quý giá để SPORTSHOP tạo nên trải nghiệm tốt hơn mỗi ngày.</p>
-        <button type="button" class="btn btn-primary" id="backAfterDone">@Icons.Svg("arrow-left", 17) Quay lại danh sách khảo sát</button>
-    </div>
-</div>
+    </form>
+}
 
 @section Scripts {
     <script>
-        // ----- Làm khảo sát từng câu -----
+        // ----- Làm khảo sát từng câu; câu cuối bấm "Gửi khảo sát" thì gửi form lên server -----
         (function () {
-            var total = @qs.Count, step = 0;
-            var vList = document.getElementById('viewList'), vDoing = document.getElementById('viewDoing'), vDone = document.getElementById('viewDone');
-            var steps = document.querySelectorAll('.survey-question');
+            var form = document.getElementById('surveyForm');
+            if (!form) return;
+            var steps = form.querySelectorAll('.survey-question'), total = steps.length, step = 0;
+            if (total === 0) return;
             var next = document.getElementById('nextQ'), prev = document.getElementById('prevQ');
 
             // Một câu được xem là đã trả lời khi có ô được chọn hoặc ô văn bản có chữ
@@ -116,21 +147,16 @@
                 next.querySelector('b').textContent = n === total - 1 ? 'Gửi khảo sát' : 'Câu tiếp theo';
                 steps[n].querySelector('.survey-hint').hidden = true;
             }
-            function open(view) { vList.hidden = vDoing.hidden = vDone.hidden = true; view.hidden = false; }
-
-            document.getElementById('startSurvey').addEventListener('click', function () { open(vDoing); show(0); });
-            document.getElementById('backToList').addEventListener('click', function () { open(vList); });
-            document.getElementById('backAfterDone').addEventListener('click', function () { open(vList); });
             prev.addEventListener('click', function () { if (step > 0) show(step - 1); });
-
             next.addEventListener('click', function () {
-                if (!answered(step)) { steps[step].querySelector('.survey-hint').hidden = false; return; }
+                if (steps[step].dataset.required === 'true' && !answered(step)) { steps[step].querySelector('.survey-hint').hidden = false; return; }
                 if (step < total - 1) { show(step + 1); return; }
                 // Câu cuối: gửi khảo sát cần cơ sở dữ liệu
                 if (document.body.dataset.db !== 'true') { showToast(); return; }
-                // TODO (khi nối MySQL): gửi câu trả lời lên server rồi mới hiện màn cảm ơn
-                open(vDone);
+                next.disabled = true;
+                form.submit();
             });
+            show(0);
         })();
     </script>
 }

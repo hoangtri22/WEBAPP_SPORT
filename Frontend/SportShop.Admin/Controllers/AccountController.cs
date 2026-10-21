@@ -1,46 +1,73 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
 /// <summary>
-/// Đăng nhập / đăng xuất (giao diện mẫu, chưa xác thực thật)
+/// Đăng nhập / đăng xuất (kiểm tra tài khoản trong bảng TAI_KHOAN)
 /// và trang "Tài khoản &amp; Phân quyền".
 /// </summary>
-public class AccountController : Controller
+public class AccountController(ShopData db) : Controller
 {
     // GET /  : màn hình đăng nhập (không có sidebar)
-    [HttpGet]
-    public IActionResult Login()
+    [HttpGet, AllowAnonymous]
+    public IActionResult Login(string? returnUrl)
     {
+        if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Index", "Home");
         ViewBag.Bare = true;
+        ViewBag.ReturnUrl = returnUrl;
         return View();
     }
 
-    // POST: chưa kiểm tra tài khoản, chuyển thẳng vào Tổng quan
-    [HttpPost]
-    public IActionResult Login(string username, string password) => RedirectToAction("Index", "Home");
+    // POST: chỉ tài khoản quản lý / nhân viên đang hoạt động mới vào được trang quản trị
+    [HttpPost, AllowAnonymous, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(string username, string password, string? returnUrl)
+    {
+        var r = db.CheckLogin(username ?? "", password ?? "");
+        if (!r.Ok)
+        {
+            ViewBag.Bare = true;
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.Error = r.Error;
+            ViewBag.Username = username;
+            return View();
+        }
 
-    // Đăng xuất: quay về màn hình đăng nhập
-    public IActionResult Logout() => RedirectToAction(nameof(Login));
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, r.FullName),
+            new(ClaimTypes.GivenName, r.FirstName),
+            new(ClaimTypes.Role, r.Role),
+            new("username", r.Username),
+            new("position", r.Position),
+            new("employee_id", r.EmployeeId.ToString()),
+        };
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
+
+        return Url.IsLocalUrl(returnUrl) ? Redirect(returnUrl) : RedirectToAction("Index", "Home");
+    }
+
+    // Đăng xuất: xóa cookie đăng nhập, quay về màn hình đăng nhập
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction(nameof(Login));
+    }
 
     /// <summary>
-    /// Danh sách tài khoản của nhân viên và khách hàng (bảng TAI_KHOAN).
+    /// Danh sách tài khoản (bảng TAI_KHOAN).
     /// Vai trò: Quản lý / Nhân viên / Khách hàng. Trạng thái: hoạt động / bị khóa / đã xóa.
     /// </summary>
     public IActionResult Index()
     {
         ViewBag.Menu = "account";
-        var rows = new List<Row>();
-
-        // Tài khoản nhân viên (nhân viên nghỉ việc → tài khoản bị khóa)
-        foreach (var e in SampleData.Employees)
-            rows.Add(new([e.Username, e.Position == "Quản lý" ? "Quản lý" : "Nhân viên", $"{e.Username}@sportshop.vn", e.Phone,
-                e.Working ? "[g]Đang hoạt động" : "[x]Đã khóa"]));
-
-        // Tài khoản khách hàng
-        foreach (var c in SampleData.Customers)
-            rows.Add(new([c.Username, "Khách hàng", c.Email, c.Phone, c.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động"]));
+        var rows = db.Accounts.Select(a => new Row([a.Username, a.Role, a.Email, a.Phone,
+            a.Status switch { "hoat_dong" => "[g]Đang hoạt động", "bi_khoa" => "[x]Đã khóa", _ => "[r]Đã xóa" }])).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {

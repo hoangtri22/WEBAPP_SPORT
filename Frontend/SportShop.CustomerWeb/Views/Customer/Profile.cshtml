@@ -1,12 +1,30 @@
 @*
     Chỉnh sửa thông tin cá nhân: thẻ tóm tắt bên trái, form bên phải
     (họ tên, tên đăng nhập, email, SĐT, ngày sinh, giới tính, sở thích thể thao).
-    Nút "Lưu thay đổi" có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo.
+    Đã kết nối MySQL: đọc và lưu thông tin thật của khách (KHACH_HANG, TAI_KHOAN, KHACH_HANG_SO_THICH).
+    Chưa kết nối: hiện dữ liệu mẫu, nút "Lưu thay đổi" (data-needs-db) chỉ hiện thông báo.
 *@
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Chỉnh sửa thông tin";
-    var me = StoreData.Customer;
+    bool live = Db.IsConnected;
+    var me = (live ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
+
+    // Sở thích: đã kết nối thì lấy từ bảng SO_THICH, chưa kết nối thì dùng danh sách mẫu (3 mục đầu được chọn)
+    List<string> allInterests; HashSet<string> chosen;
+    if (live)
+    {
+        var x = Store.Interests(Context.Session.GetInt32("customer_id") ?? 0);
+        allInterests = x.All; chosen = x.Selected;
+    }
+    else
+    {
+        allInterests = StoreData.Interests.ToList(); chosen = StoreData.Interests.Take(3).ToHashSet();
+    }
+
+    // Mức hoàn thiện hồ sơ: số mục đã điền trong 6 mục
+    int filled = new[] { me.FullName, me.Email, me.Phone, me.Birth, me.Gender }.Count(s => !string.IsNullOrWhiteSpace(s)) + (chosen.Count > 0 ? 1 : 0);
+    int complete = filled * 100 / 6;
 }
 <div class="customer-page-title"><span>TÀI KHOẢN CỦA TÔI</span><h1>Chỉnh sửa thông tin</h1><p>Thông tin chính xác giúp SPORTSHOP phục vụ bạn tốt hơn.</p></div>
 
@@ -14,38 +32,39 @@
     <aside class="card profile-summary">
         <div class="profile-avatar">@me.Initials</div>
         <h2>@me.FullName</h2>
-        <p>Khách hàng từ tháng 08/2023</p>
+        <p>Thành viên hạng @me.Tier</p>
         <div class="profile-stats">
             <span>@Icons.Svg("shopping-bag", 18)<b>@me.Orders</b><small>Đơn hàng</small></span>
             <span>@Icons.Svg("star", 18)<b>@me.Points.ToString("N0")</b><small>Điểm thưởng</small></span>
         </div>
-        <small>Hồ sơ đã hoàn thiện 85%</small>
-        <i class="progress"><b></b></i>
+        <small>Hồ sơ đã hoàn thiện @complete%</small>
+        <i class="progress"><b style="width:@complete%"></b></i>
     </aside>
 
-    <form class="card customer-form" method="post" novalidate>
+    <form class="card customer-form" method="post" asp-controller="Customer" asp-action="Profile" id="profileForm" novalidate>
         <div class="form-card-head">
-            <div><h2>Thông tin cá nhân</h2><p>Cập nhật lần cuối: 20/05/2025</p></div>
+            <div><h2>Thông tin cá nhân</h2><p>Thông tin được dùng để SPORTSHOP chăm sóc và gửi ưu đãi phù hợp cho bạn.</p></div>
             @Icons.Svg("shield-check", 22)
         </div>
         <div class="form-grid">
-            <label>Họ và tên<input name="fullName" value="@me.FullName" /></label>
+            <label>Họ và tên<input name="fullName" value="@me.FullName" required /></label>
             <label>Tên đăng nhập<input value="@me.Username" readonly /><small>Tên đăng nhập không thể thay đổi</small></label>
-            <label>Email<input name="email" type="email" value="@me.Email" /></label>
-            <label>Số điện thoại<input name="phone" value="@me.Phone" /></label>
-            <label>Ngày sinh<input name="birth" type="date" value="@me.Birth" /></label>
+            <label>Email<input name="email" type="email" value="@me.Email" required /></label>
+            <label>Số điện thoại<input name="phone" value="@me.Phone.Replace(" ", "")" inputmode="numeric" required /></label>
+            <label>Ngày sinh<input name="birth" type="date" value="@me.Birth" max="@DateTime.Today.ToString("yyyy-MM-dd")" /></label>
             <label>Giới tính
                 <select name="gender">
-                    <option selected="@(me.Gender == "Nữ")">Nữ</option>
-                    <option selected="@(me.Gender == "Nam")">Nam</option>
-                    <option>Khác</option>
+                    @foreach (var g in new[] { "Nam", "Nữ", "Khác" })
+                    {
+                        <option selected="@(me.Gender == g)">@g</option>
+                    }
                 </select>
             </label>
             <div class="full-field field-like">Sở thích thể thao
                 <div class="interest-options" id="interests">
-                    @for (int i = 0; i < StoreData.Interests.Length; i++)
+                    @foreach (var i in allInterests)
                     {
-                        <button type="button" class="@(i < 3 ? "selected" : "")">@StoreData.Interests[i]</button>
+                        <button type="button" class="@(chosen.Contains(i) ? "selected" : "")" data-value="@i">@i</button>
                     }
                 </div>
             </div>
@@ -59,9 +78,19 @@
 
 @section Scripts {
     <script>
-        // Chọn / bỏ chọn sở thích (chỉ đổi giao diện, việc lưu cần cơ sở dữ liệu)
+        // Chọn / bỏ chọn sở thích
         document.querySelectorAll('#interests button').forEach(function (b) {
             b.addEventListener('click', function () { b.classList.toggle('selected'); });
+        });
+        // Khi lưu: thêm các sở thích đang chọn vào form (mỗi sở thích một ô ẩn tên "interests")
+        document.getElementById('profileForm').addEventListener('submit', function () {
+            var form = this;
+            form.querySelectorAll('input[name="interests"]').forEach(function (i) { i.remove(); });
+            document.querySelectorAll('#interests button.selected').forEach(function (b) {
+                var i = document.createElement('input');
+                i.type = 'hidden'; i.name = 'interests'; i.value = b.dataset.value;
+                form.appendChild(i);
+            });
         });
     </script>
 }

@@ -5,38 +5,69 @@ using Microsoft.AspNetCore.Html;
 namespace SportShop.Admin.Models;
 
 // ============================================================
-//  Các lớp dữ liệu mẫu (tương ứng các bảng trong PDF, chương 4)
-//  Sau này khi có database sẽ thay bằng entity thật.
+//  Các lớp dữ liệu, tương ứng các bảng trong chương 4 của báo cáo.
+//  Dữ liệu được đọc từ MySQL bởi lớp ShopData.
 // ============================================================
+
+/// <summary>Loại sản phẩm (LOAI_SP).</summary>
+public record Category(int Id, string Name);
 
 /// <summary>Biến thể sản phẩm (BIEN_THE_SP): size, màu, giá bán, giá vốn, tồn.</summary>
 public record Variant(int Id, int ProductId, string? Size, string? Color, decimal Price, decimal Cost, int Stock);
 
-/// <summary>Sản phẩm (SAN_PHAM). Visible = trạng thái hiện/ẩn.</summary>
-public record Product(int Id, string Category, string Name, string Unit, bool Visible, string Description);
+/// <summary>Sản phẩm (SAN_PHAM). Visible = trạng thái hiện/ẩn. Image = đường dẫn ảnh, ví dụ "/images/ao-drifit.jpg".</summary>
+public record Product(int Id, string Category, string Name, string Unit, bool Visible, string Description, string? Image = null);
 
-/// <summary>Một dòng chi tiết hóa đơn (CHI_TIET_HOA_DON).</summary>
-public record OrderLine(int VariantId, int Qty);
+/// <summary>Một dòng chi tiết đơn hàng: giá bán, giảm giá lưu tại thời điểm đặt, giá vốn tại thời điểm bán.</summary>
+public record OrderLine(int VariantId, int Qty, decimal Price, decimal Discount, decimal Cost)
+{
+    /// <summary>Thành tiền = số lượng x đơn giá - giảm giá của dòng.</summary>
+    public decimal Amount => Qty * Price - Discount;
+}
 
-/// <summary>Hóa đơn (HOA_DON) kèm thông tin vận chuyển (VAN_CHUYEN).</summary>
+/// <summary>
+/// Đơn hàng (DON_HANG) kèm hóa đơn (HOA_DON) nếu đã thanh toán và vận chuyển (VAN_CHUYEN).
+/// Code = số hóa đơn nếu đã lập hóa đơn, ngược lại là mã đơn "DHxxxxx".
+/// </summary>
 public record Order(
-    string Code, int CustomerId, int? EmployeeId, DateTime Date,
+    int Id, string Code, int CustomerId, int? EmployeeId, DateTime Date,
     string Status, string PayStatus, string PayMethod,
     string Carrier, string TrackingCode, decimal ShipFee, decimal Discount,
-    string? Voucher, List<OrderLine> Lines)
+    string? Voucher, decimal Total, bool Invoiced,
+    string Receiver, string ReceiverPhone, string Address, string? CancelReason,
+    List<OrderLine> Lines)
 {
     /// <summary>Tổng tiền hàng (chưa giảm giá).</summary>
-    public decimal Subtotal => Lines.Sum(l => SampleData.Variant(l.VariantId).Price * l.Qty);
-    /// <summary>Tổng giá vốn của các mặt hàng trong hóa đơn.</summary>
-    public decimal Cost => Lines.Sum(l => SampleData.Variant(l.VariantId).Cost * l.Qty);
-    /// <summary>Tổng thanh toán = tiền hàng - giảm giá + phí ship.</summary>
-    public decimal Total => Subtotal - Discount + ShipFee;
-    /// <summary>Số lượng sản phẩm trong hóa đơn.</summary>
+    public decimal Subtotal => Lines.Sum(l => l.Price * l.Qty);
+    /// <summary>Tổng giá vốn của các mặt hàng trong đơn.</summary>
+    public decimal Cost => Lines.Sum(l => l.Cost * l.Qty);
+    /// <summary>Số lượng sản phẩm trong đơn.</summary>
     public int Quantity => Lines.Sum(l => l.Qty);
 }
 
-/// <summary>Nhân viên (NHAN_VIEN) + số điện thoại lấy từ tài khoản.</summary>
-public record Employee(int Id, string LastName, string FirstName, string Gender, DateTime Birth, string Position, decimal BaseSalary, bool Working, string Username, string Phone);
+/// <summary>Nhân viên (NHAN_VIEN) + tên đăng nhập, số điện thoại, email, vai trò lấy từ tài khoản.</summary>
+public record Employee(int Id, string LastName, string FirstName, string Gender, DateTime? Birth, string Position, decimal BaseSalary, bool Working, string Username, string Phone, string Email, string Role);
+
+/// <summary>Tài khoản đăng nhập (TAI_KHOAN + VAI_TRO). Status: hoat_dong / bi_khoa / da_xoa.</summary>
+public record Account(string Username, string Role, string Email, string Phone, string Status);
+
+/// <summary>Nhóm khách hàng (NHOM_KHACH_HANG) và số khách thuộc nhóm (KHACH_HANG_NHOM_KH).</summary>
+public record CustomerGroup(int Id, string Name, string Criterion, string Value, int Count);
+
+/// <summary>Nhà cung cấp (NHA_CUNG_CAP).</summary>
+public record Supplier(int Id, string Name, string Phone, string Email, string Address, bool Active);
+
+/// <summary>Phiếu nhập hàng (PHIEU_NHAP_HANG) và tổng số lượng nhập.</summary>
+public record ImportSlip(int Id, string Supplier, DateTime Date, int Quantity, string Employee, decimal Total);
+
+/// <summary>Chương trình khuyến mãi (CTKM) kèm mô tả mức giảm.</summary>
+public record Promotion(int Id, string Name, string Type, DateTime Start, DateTime End, string Discount, string Status, int Uses);
+
+/// <summary>Chiến dịch thông báo (CHIEN_DICH_THONG_BAO).</summary>
+public record Campaign(string Title, string Channel, string Group, string Promotion, string Creator, bool Sent);
+
+/// <summary>Khảo sát (KHAO_SAT) và số khách đã gửi / đã hoàn thành.</summary>
+public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status);
 
 /// <summary>Một lần chăm sóc khách hàng (LICH_SU_CHAM_SOC).</summary>
 public record CareNote(int CustomerId, int EmployeeId, string Channel, string Content, DateTime Date, DateTime? FollowUp);
@@ -46,29 +77,30 @@ public record FeedbackItem(
     int Id, int CustomerId, string Type, int? Stars, string Title, string Body, DateTime SentAt,
     string? Target, string Status, bool Visible, string? Reply, DateTime? ReplyAt, int? ReplyEmployeeId);
 
-/// <summary>Khách hàng (KHACH_HANG). Hạng và điểm được tính từ tổng chi tiêu.</summary>
+/// <summary>Khách hàng (KHACH_HANG) kèm tài khoản, sở thích, sổ địa chỉ và các nhóm khách hàng.</summary>
 public class Customer
 {
     public int Id { get; init; }
     public string LastName { get; init; } = "";
     public string FirstName { get; init; } = "";
     public string Gender { get; init; } = "";
-    public DateTime Birth { get; init; }
+    public DateTime? Birth { get; init; }
     public string Phone { get; init; } = "";
     public string Email { get; init; } = "";
+    /// <summary>Rỗng nếu khách mua tại quầy chưa có tài khoản.</summary>
     public string Username { get; init; } = "";
     public bool Locked { get; init; }
     public string[] Interests { get; init; } = [];
     public string[] Addresses { get; init; } = [];
+    public string[] Groups { get; init; } = [];
+    /// <summary>Tổng chi tiêu, điểm tích lũy, hạng thành viên lấy từ bảng KHACH_HANG.</summary>
+    public decimal TotalSpent { get; init; }
+    public int Points { get; init; }
+    public string Tier { get; init; } = "";
 
-    public string FullName => $"{LastName} {FirstName}";
-    public int Age => DateTime.Today.Year - Birth.Year;
-    /// <summary>Tổng chi tiêu = tổng thanh toán của các hóa đơn đã hoàn thành.</summary>
-    public decimal TotalSpent => SampleData.Orders.Where(o => o.CustomerId == Id && o.Status == "hoan_thanh").Sum(o => o.Total);
-    /// <summary>Điểm tích lũy: cứ 10.000đ được 1 điểm (quy tắc tạm, PDF chưa nêu cụ thể).</summary>
-    public int Points => (int)(TotalSpent / 10000);
-    /// <summary>Hạng thành viên theo mốc chi tiêu (mốc tạm, PDF chưa nêu cụ thể).</summary>
-    public string Tier => TotalSpent switch { >= 10_000_000 => "VIP", >= 5_000_000 => "Vàng", >= 2_000_000 => "Bạc", _ => "Thường" };
+    public string FullName => $"{LastName} {FirstName}".Trim();
+    /// <summary>Tuổi tính theo ngày sinh; null nếu chưa có ngày sinh.</summary>
+    public int? Age => Birth is DateTime b ? DateTime.Today.Year - b.Year - (DateTime.Today.DayOfYear < b.DayOfYear ? 1 : 0) : null;
 }
 
 /// <summary>Các hàm định dạng dùng chung cho view.</summary>
@@ -117,13 +149,13 @@ public static class Fmt
         return new HtmlString(WebUtility.HtmlEncode(s));
     }
 
-    /// <summary>Trạng thái hóa đơn (theo PDF) → pill màu.</summary>
+    /// <summary>Trạng thái đơn hàng (DON_HANG.trang_thai_don_hang) → pill màu.</summary>
     public static string OrderStatus(string s) => s switch
     {
         "cho_xac_nhan" => "[o]Chờ xác nhận",
         "dang_chuan_bi" => "[b]Đang chuẩn bị",
         "dang_giao" => "[p]Đang giao",
-        "hoan_thanh" => "[g]Hoàn thành",
+        "da_giao" => "[g]Đã giao",
         "da_huy" => "[r]Đã hủy",
         _ => s
     };

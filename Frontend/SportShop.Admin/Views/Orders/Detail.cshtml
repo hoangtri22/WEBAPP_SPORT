@@ -5,13 +5,15 @@
 @model Order
 @{
     ViewData["Title"] = Model.Code;
-    var c = SampleData.Customer(Model.CustomerId);
-    var emp = Model.EmployeeId.HasValue ? SampleData.Employee(Model.EmployeeId.Value).FirstName : "Khách tự đặt online";
+    var c = Data.Customer(Model.CustomerId);
+    var emp = Model.EmployeeId.HasValue ? Data.Employee(Model.EmployeeId.Value).FirstName : "Khách tự đặt online";
+    // Các trạng thái đơn hàng (DON_HANG.trang_thai_don_hang)
+    var statuses = new[] { ("cho_xac_nhan", "Chờ xác nhận"), ("dang_chuan_bi", "Đang chuẩn bị"), ("dang_giao", "Đang giao"), ("da_giao", "Đã giao"), ("da_huy", "Đã hủy") };
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách hóa đơn</a>
 <div class="page-head">
     <div>
-        <div class="eyebrow">HÓA ĐƠN</div>
+        <div class="eyebrow">@(Model.Invoiced ? "HÓA ĐƠN" : "ĐƠN HÀNG (CHƯA LẬP HÓA ĐƠN)")</div>
         <h1 class="page-title">@Model.Code</h1>
         <p class="page-sub">@Fmt.Cell(Fmt.OrderStatus(Model.Status)) &nbsp;@Fmt.Cell(Fmt.PayStatus(Model.PayStatus))</p>
     </div>
@@ -22,15 +24,16 @@
 
 <div class="grid2">
     <section class="card pad">
-        <h3 class="card-h">Thông tin hóa đơn</h3>
+        <h3 class="card-h">Thông tin đơn hàng</h3>
         <dl class="kv">
             <dt>Khách hàng</dt><dd><a class="code" asp-controller="Customers" asp-action="Detail" asp-route-id="@c.Id">@c.FullName</a></dd>
             <dt>Ngày lập</dt><dd>@Fmt.DateTimeDot(Model.Date)</dd>
             <dt>Nhân viên lập</dt><dd>@emp</dd>
             <dt>Thanh toán</dt><dd>@Model.PayMethod</dd>
             <dt>Khuyến mãi</dt><dd>@(Model.Voucher ?? "Không áp dụng")</dd>
-            <dt>Người nhận</dt><dd>@c.FullName - @c.Phone</dd>
-            <dt>Địa chỉ giao</dt><dd>@c.Addresses[0].Replace(" (mặc định)", "")</dd>
+            <dt>Người nhận</dt><dd>@Model.Receiver - @Model.ReceiverPhone</dd>
+            <dt>Địa chỉ giao</dt><dd>@Model.Address</dd>
+            @if (Model.CancelReason != null) { <dt>Lý do hủy</dt><dd>@Model.CancelReason</dd> }
         </dl>
     </section>
     <section class="card pad">
@@ -43,7 +46,10 @@
         <h3 class="card-h" style="margin-top:18px">Cập nhật trạng thái</h3>
         <div class="inline-form">
             <select>
-                <option>Chờ xác nhận</option><option>Đang chuẩn bị</option><option>Đang giao</option><option>Hoàn thành</option><option>Đã hủy</option>
+                @foreach (var (value, text) in statuses)
+                {
+                    <option value="@value" selected="@(value == Model.Status)">@text</option>
+                }
             </select>
             <button type="button" class="btn-primary js-soon">Cập nhật</button>
         </div>
@@ -51,15 +57,14 @@
 </div>
 
 <section class="card">
-    <div class="card-title">Chi tiết hóa đơn</div>
+    <div class="card-title">Chi tiết đơn hàng</div>
     <div class="table-wrap">
         <table class="tbl">
-            <thead><tr><th>Sản phẩm</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
+            <thead><tr><th>Sản phẩm</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Giảm giá</th><th class="r">Thành tiền</th></tr></thead>
             <tbody>
                 @foreach (var l in Model.Lines)
                 {
-                    var v = SampleData.Variant(l.VariantId);
-                    <tr><td>@SampleData.VariantName(l.VariantId)</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(v.Price)</td><td class="r"><b>@Fmt.Money(v.Price * l.Qty)</b></td></tr>
+                    <tr><td>@Data.VariantName(l.VariantId)</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r">@(l.Discount > 0 ? "-" + Fmt.Money(l.Discount) : "-")</td><td class="r"><b>@Fmt.Money(l.Amount)</b></td></tr>
                 }
             </tbody>
         </table>

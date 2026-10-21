@@ -9,7 +9,8 @@ namespace SportShop.CustomerWeb.Controllers;
 public class AccountController : Controller
 {
     readonly DbStatus _db;
-    public AccountController(DbStatus db) => _db = db;
+    readonly CustomerStore _store;
+    public AccountController(DbStatus db, CustomerStore store) { _db = db; _store = store; }
 
     [HttpGet]
     public IActionResult Login() => View("Auth", new AuthVm { IsRegister = false });
@@ -19,26 +20,37 @@ public class AccountController : Controller
 
     /// <summary>
     /// Đăng nhập. Kiểm tra dữ liệu nhập giống bản thiết kế Figma.
-    /// Chưa có cơ sở dữ liệu nên đây là chế độ xem giao diện: nhập hợp lệ là vào được
-    /// (giống trang đăng nhập của web admin). Khi nối MySQL sẽ kiểm tra tài khoản thật ở đây.
+    /// Đã kết nối MySQL: kiểm tra tài khoản khách hàng trong bảng TAI_KHOAN.
+    /// Chưa kết nối: chế độ xem giao diện, nhập hợp lệ là vào được.
     /// </summary>
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Login(string username, string password)
     {
         var vm = new AuthVm { IsRegister = false, Username = username ?? "" };
         Validate(vm, username, null, null, password);
         if (vm.Errors.Count > 0) return View("Auth", vm);
 
-        // TODO (khi nối MySQL): tìm tài khoản theo tên đăng nhập, so khớp mật khẩu đã mã hóa
+        if (_db.IsConnected)
+        {
+            var (customerId, error) = _store.Login(username!, password);
+            if (customerId == null)
+            {
+                vm.Notice = error;
+                vm.NoticeIsError = true;
+                return View("Auth", vm);
+            }
+            HttpContext.Session.SetInt32("customer_id", customerId.Value);
+        }
+
         HttpContext.Session.SetString("customer", username!.Trim());
         return RedirectToAction("Index", "Home");
     }
 
     /// <summary>
-    /// Đăng ký. Chỉ kiểm tra dữ liệu; việc tạo tài khoản cần cơ sở dữ liệu.
-    /// (Ở giao diện, nút Đăng ký đã chặn trước và hiện thông báo khi chưa có CSDL.)
+    /// Đăng ký: tạo tài khoản khách hàng (TAI_KHOAN + KHACH_HANG).
+    /// Chưa kết nối CSDL thì chỉ kiểm tra dữ liệu và hiện thông báo.
     /// </summary>
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Register(string username, string email, string phone, string password)
     {
         var vm = new AuthVm { IsRegister = true, Username = username ?? "", Email = email ?? "", Phone = phone ?? "" };
@@ -52,14 +64,21 @@ public class AccountController : Controller
             return View("Auth", vm);
         }
 
-        // TODO (khi nối MySQL): kiểm tra trùng tên đăng nhập / email, băm mật khẩu, lưu tài khoản + khách hàng
-        vm.Notice = "Đăng ký thành công! Bạn có thể đăng nhập ngay.";
-        return View("Auth", vm);
+        var errors = _store.Register(username!.Trim(), email!.Trim(), phone!.Trim(), password);
+        if (errors.Count > 0)
+        {
+            foreach (var (k, v) in errors) vm.Errors[k] = v;
+            return View("Auth", vm);
+        }
+
+        // Đăng ký xong chuyển sang trang đăng nhập, điền sẵn tên đăng nhập
+        return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Bạn có thể đăng nhập ngay." });
     }
 
     public IActionResult Logout()
     {
         HttpContext.Session.Remove("customer");
+        HttpContext.Session.Remove("customer_id");
         return RedirectToAction("Index", "Home");
     }
 

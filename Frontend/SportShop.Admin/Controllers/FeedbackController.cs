@@ -4,7 +4,7 @@ using SportShop.Admin.Models;
 namespace SportShop.Admin.Controllers;
 
 /// <summary>Phản hồi khách hàng (đánh giá / góp ý / khiếu nại) và khảo sát.</summary>
-public class FeedbackController : Controller
+public class FeedbackController(ShopData db) : Controller
 {
     /// <summary>
     /// Hộp thư phản hồi: 2 tab "Chưa trả lời" / "Đã trả lời",
@@ -13,19 +13,18 @@ public class FeedbackController : Controller
     public IActionResult Index()
     {
         ViewBag.Menu = "feedback";
-        return View(SampleData.FeedbackItems.OrderByDescending(f => f.SentAt).ToList());
+        return View(db.FeedbackItems.OrderByDescending(f => f.SentAt).ToList());
     }
 
     /// <summary>Danh sách khảo sát (KHAO_SAT): nháp / đã gửi (đang thu thập) / đã đóng.</summary>
     public IActionResult Surveys()
     {
         ViewBag.Menu = "surveys";
-        var rows = new List<Row>
-        {
-            new(["Mức độ hài lòng sau mua hàng", "4 câu hỏi", "5 / 7 khách hoàn thành", "31/10/2026", "[g]Đang thu thập"]),
-            new(["Nhu cầu sản phẩm mùa mới", "6 câu hỏi", "0 / 0 khách hoàn thành", "15/11/2026", "[x]Nháp"]),
-            new(["Khảo sát chương trình thành viên", "3 câu hỏi", "6 / 7 khách hoàn thành", "31/08/2026", "[x]Đã kết thúc"]),
-        };
+        var rows = db.Surveys.Select(s => new Row(
+        [
+            s.Title, $"{s.Questions} câu hỏi", $"{s.Completed} / {s.Sent} khách hoàn thành", Fmt.Date(s.End),
+            s.Status switch { "da_gui" => "[g]Đang thu thập", "da_dong" => "[x]Đã kết thúc", _ => "[x]Nháp" }
+        ])).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {

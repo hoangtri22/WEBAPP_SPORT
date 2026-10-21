@@ -1,3 +1,5 @@
+using MySqlConnector;
+
 namespace SportShop.CustomerWeb.Services;
 
 /// <summary>
@@ -9,6 +11,12 @@ public class DbStatus
 {
     readonly string _connectionString;
 
+    // Kết quả kiểm tra được nhớ trong 15 giây để không phải mở kết nối thử ở mỗi lần tải trang
+    static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(15);
+    readonly object _lock = new();
+    bool _lastResult;
+    DateTime _checkedAt = DateTime.MinValue;
+
     public DbStatus(IConfiguration config)
     {
         _connectionString = config.GetConnectionString("Default") ?? "";
@@ -18,9 +26,30 @@ public class DbStatus
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_connectionString);
 
     /// <summary>
-    /// Có dùng được cơ sở dữ liệu hay không.
-    /// TODO (khi nối MySQL): thử mở kết nối thật tới MySQL ở đây và trả về true nếu thành công.
-    /// Hiện chưa có lớp dữ liệu nên luôn trả về false, để các nút không bị mở nhầm khi chưa có gì phía sau.
+    /// Có dùng được cơ sở dữ liệu hay không: đã điền chuỗi kết nối và mở thử kết nối tới MySQL thành công.
     /// </summary>
-    public bool IsConnected => false;
+    public bool IsConnected
+    {
+        get
+        {
+            if (!IsConfigured) return false;
+            lock (_lock)
+            {
+                if (DateTime.UtcNow - _checkedAt < CacheFor) return _lastResult;
+                try
+                {
+                    var b = new MySqlConnectionStringBuilder(_connectionString) { ConnectionTimeout = 3 };
+                    using var c = new MySqlConnection(b.ConnectionString);
+                    c.Open();
+                    _lastResult = true;
+                }
+                catch
+                {
+                    _lastResult = false;
+                }
+                _checkedAt = DateTime.UtcNow;
+                return _lastResult;
+            }
+        }
+    }
 }

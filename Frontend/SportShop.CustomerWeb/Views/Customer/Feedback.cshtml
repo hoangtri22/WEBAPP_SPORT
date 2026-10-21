@@ -1,12 +1,17 @@
 @*
     Gửi phản hồi về sản phẩm: form (chọn sản phẩm, chấm 1-5 sao, nội dung)
     và bảng "Phản hồi đã gửi" kèm cửa sổ xem chi tiết.
-    Nút "Gửi phản hồi" có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo.
+    Đã kết nối MySQL: danh sách sản phẩm và phản hồi đã gửi đọc từ CSDL, gửi phản hồi lưu vào bảng PHAN_HOI.
+    Chưa kết nối: dữ liệu mẫu, nút "Gửi phản hồi" (data-needs-db) chỉ hiện thông báo.
 *@
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Gửi phản hồi về sản phẩm";
     string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
+    bool live = Db.IsConnected;
+    int customerId = Context.Session.GetInt32("customer_id") ?? 0;
+    var products = live ? Store.Products() : StoreData.Products.Select(p => (p.Id, p.Name)).ToList();
+    var feedbacks = live ? Store.Feedbacks(customerId) : StoreData.Feedbacks;
 }
 <div class="customer-page-title"><span>LẮNG NGHE &amp; CẢI THIỆN</span><h1>Gửi phản hồi về sản phẩm</h1><p>Chia sẻ trải nghiệm để chúng tôi nâng cao chất lượng sản phẩm và dịch vụ.</p></div>
 
@@ -16,11 +21,11 @@
         <h2>Trải nghiệm của bạn thế nào?</h2>
         <p>Mỗi phản hồi đều được đội ngũ SPORTSHOP đọc và xử lý.</p>
     </div>
-    <form method="post" novalidate>
+    <form method="post" asp-controller="Customer" asp-action="Feedback" novalidate>
         <label>Chọn sản phẩm
             <select name="product">
                 <option value="" disabled selected>Chọn sản phẩm đã mua</option>
-                @foreach (var p in StoreData.Products) { <option>@p.Name</option> }
+                @foreach (var p in products) { <option value="@p.Id">@p.Name</option> }
             </select>
         </label>
         <div class="field-like">Đánh giá sản phẩm
@@ -28,6 +33,7 @@
                 @for (int s = 1; s <= 5; s++) { <button type="button" data-star="@s" aria-label="@s sao">@Icons.Svg("star", 25)</button> }
                 <span id="ratingText">Chọn số sao</span>
             </div>
+            <input type="hidden" name="stars" id="stars" value="0" />
         </div>
         <label>Nội dung phản hồi<textarea name="content" placeholder="Hãy chia sẻ điều bạn thích hoặc góp ý để sản phẩm tốt hơn..."></textarea></label>
         <div class="customer-form-actions">
@@ -38,12 +44,12 @@
 </section>
 
 <section class="card feedback-history">
-    <div class="form-card-head history-head"><div><h2>Phản hồi đã gửi</h2><p>Theo dõi trạng thái xử lý phản hồi của bạn</p></div><span>@StoreData.Feedbacks.Count.ToString("00") phản hồi</span></div>
+    <div class="form-card-head history-head"><div><h2>Phản hồi đã gửi</h2><p>Theo dõi trạng thái xử lý phản hồi của bạn</p></div><span>@feedbacks.Count.ToString("00") phản hồi</span></div>
     <div class="table-wrap">
         <table class="tbl">
             <thead><tr><th>Mã phản hồi</th><th>Sản phẩm</th><th>Nội dung phản hồi</th><th>Ngày gửi</th><th>Trạng thái</th><th></th></tr></thead>
             <tbody>
-                @foreach (var f in StoreData.Feedbacks)
+                @foreach (var f in feedbacks)
                 {
                     <tr>
                         <td><strong class="code">@f.Id</strong></td>
@@ -51,11 +57,12 @@
                         <td class="feedback-text">@f.Text</td>
                         <td class="muted">@f.Date</td>
                         <td><span class="pill @Tone(f.Tone)"><i></i>@f.Status</span></td>
-                        <td><button type="button" class="detail-link" data-detail="@f.Id" data-product="@f.Product" data-text="@f.Text" data-date="@f.Date" data-status="@f.Status">Xem chi tiết</button></td>
+                        <td><button type="button" class="detail-link" data-detail="@f.Id" data-product="@f.Product" data-text="@f.Text" data-date="@f.Date" data-status="@f.Status" data-reply="@(f.Reply ?? (live ? "" : "Cảm ơn bạn đã tin chọn sản phẩm. Chúc bạn có thêm nhiều buổi chạy thật bứt phá!"))">Xem chi tiết</button></td>
                     </tr>
                 }
             </tbody>
         </table>
+        @if (feedbacks.Count == 0) { <div class="empty">Bạn chưa gửi phản hồi nào.</div> }
     </div>
 </section>
 
@@ -70,7 +77,7 @@
             <p id="fbText"></p>
             <div class="store-reply" id="fbReply">
                 <strong>@Icons.Svg("check-circle", 16) Phản hồi từ SPORTSHOP</strong>
-                <p>Cảm ơn bạn đã tin chọn sản phẩm. Chúc bạn có thêm nhiều buổi chạy thật bứt phá!</p>
+                <p id="fbReplyText"></p>
             </div>
         </div>
     </div>
@@ -83,6 +90,7 @@
             var stars = document.querySelectorAll('#rating button'), text = document.getElementById('ratingText');
             function paint(n) {
                 stars.forEach(function (b, i) { b.classList.toggle('on', i < n); });
+                document.getElementById('stars').value = n;
                 text.textContent = n ? n + '/5 · ' + (n >= 4 ? 'Rất hài lòng' : 'Cảm ơn đánh giá của bạn') : 'Chọn số sao';
             }
             stars.forEach(function (b) { b.addEventListener('click', function () { paint(parseInt(b.dataset.star, 10)); }); });
@@ -101,8 +109,9 @@
                     var st = document.getElementById('fbStatus');
                     st.querySelector('b').textContent = b.dataset.status;
                     st.className = 'pill ' + (b.dataset.status === 'Đã trả lời' ? 'p-g' : b.dataset.status === 'Đang xử lý' ? 'p-o' : 'p-b');
-                    // Chỉ phản hồi đã được trả lời mới có câu trả lời từ cửa hàng
-                    document.getElementById('fbReply').hidden = b.dataset.status !== 'Đã trả lời';
+                    // Chỉ hiện khung trả lời khi cửa hàng đã trả lời phản hồi
+                    document.getElementById('fbReplyText').textContent = b.dataset.reply;
+                    document.getElementById('fbReply').hidden = !b.dataset.reply;
                     modal.hidden = false;
                 });
             });

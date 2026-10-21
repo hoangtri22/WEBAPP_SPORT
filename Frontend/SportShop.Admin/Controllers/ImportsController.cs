@@ -4,27 +4,19 @@ using SportShop.Admin.Models;
 namespace SportShop.Admin.Controllers;
 
 /// <summary>Quản lý nhập hàng: phiếu nhập hàng và nhà cung cấp.</summary>
-public class ImportsController : Controller
+public class ImportsController(ShopData db) : Controller
 {
     public IActionResult Index()
     {
         ViewBag.Menu = "imports";
 
         // Phiếu nhập (PHIEU_NHAP_HANG): mỗi phiếu cộng vào tồn và cập nhật giá vốn của biến thể
-        var slips = new List<Row>
-        {
-            new(["PN001", "Yonex Việt Nam", Fmt.Date(DateTime.Today.AddDays(-5)), "10 sản phẩm", "Phạm Đức Anh", "[g]" + Fmt.Money(24_000_000)]),
-            new(["PN002", "Nike Distribution VN", Fmt.Date(DateTime.Today.AddDays(-3)), "30 sản phẩm", "Phạm Đức Anh", "[g]" + Fmt.Money(51_000_000)]),
-            new(["PN003", "Xưởng may Thành Công", Fmt.Date(DateTime.Today.AddDays(-1)), "50 sản phẩm", "Phạm Đức Anh", "[g]" + Fmt.Money(6_000_000)]),
-        };
+        var slips = db.ImportSlips.Select(p => new Row(
+            [$"PN{p.Id:D3}", p.Supplier, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)])).ToList();
 
         // Nhà cung cấp (NHA_CUNG_CAP): đang hợp tác / ngừng hợp tác
-        var suppliers = new List<Row>
-        {
-            new(["NCC01", "Yonex Việt Nam", "0281234567", "sales@yonex.vn", "[g]Đang hợp tác"]),
-            new(["NCC02", "Nike Distribution VN", "0287654321", "order@nikevn.vn", "[g]Đang hợp tác"]),
-            new(["NCC03", "Xưởng may Thành Công", "0909123123", "tc@xuongmay.vn", "[x]Ngừng hợp tác"]),
-        };
+        var suppliers = db.Suppliers.Select(s => new Row(
+            [$"NCC{s.Id:D2}", s.Name, s.Phone, s.Email, s.Active ? "[g]Đang hợp tác" : "[x]Ngừng hợp tác"])).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {

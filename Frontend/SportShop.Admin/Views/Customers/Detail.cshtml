@@ -5,8 +5,8 @@
 @model Customer
 @{
     ViewData["Title"] = Model.FullName;
-    var orders = SampleData.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Date).ToList();
-    var notes = SampleData.CareNotes.Where(n => n.CustomerId == Model.Id).OrderByDescending(n => n.Date).ToList();
+    var orders = Data.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Date).ToList();
+    var notes = Data.CareNotes.Where(n => n.CustomerId == Model.Id).OrderByDescending(n => n.Date).ToList();
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
 <div class="page-head">
@@ -26,10 +26,11 @@
         <h3 class="card-h">Thông tin khách hàng</h3>
         <dl class="kv">
             <dt>Giới tính</dt><dd>@Model.Gender</dd>
-            <dt>Ngày sinh</dt><dd>@Fmt.Date(Model.Birth) (@Model.Age tuổi)</dd>
+            <dt>Ngày sinh</dt><dd>@(Model.Birth.HasValue ? $"{Fmt.Date(Model.Birth.Value)} ({Model.Age} tuổi)" : "-")</dd>
             <dt>Số điện thoại</dt><dd>@Model.Phone</dd>
             <dt>Email</dt><dd>@Model.Email</dd>
-            <dt>Tài khoản</dt><dd>@Model.Username @Fmt.Cell(Model.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
+            <dt>Tài khoản</dt><dd>@(string.IsNullOrEmpty(Model.Username) ? "Chưa có tài khoản" : Model.Username) @Fmt.Cell(Model.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
+            <dt>Nhóm khách hàng</dt><dd class="tags">@foreach (var g in Model.Groups) { <span>@g</span> }</dd>
             <dt>Sở thích</dt><dd class="tags">@foreach (var i in Model.Interests) { <span>@i</span> }</dd>
         </dl>
     </section>
@@ -39,11 +40,12 @@
             <dt>Hạng</dt><dd><b>@Model.Tier</b></dd>
             <dt>Điểm tích lũy</dt><dd>@Model.Points.ToString("N0")</dd>
             <dt>Tổng chi tiêu</dt><dd><b>@Fmt.Money(Model.TotalSpent)</b></dd>
-            <dt>Số hóa đơn</dt><dd>@orders.Count</dd>
+            <dt>Số đơn hàng</dt><dd>@orders.Count</dd>
         </dl>
         <h3 class="card-h" style="margin-top:18px">Sổ địa chỉ giao hàng</h3>
         <ul class="ul-plain">
             @foreach (var a in Model.Addresses) { <li>@a</li> }
+            @if (Model.Addresses.Length == 0) { <li class="muted">Chưa có địa chỉ</li> }
         </ul>
     </section>
 </div>
@@ -59,7 +61,7 @@
                     <tr>
                         <td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td>
                         <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
-                        <td>@string.Join("; ", o.Lines.Select(l => $"{SampleData.VariantName(l.VariantId)} x{l.Qty}"))</td>
+                        <td>@string.Join("; ", o.Lines.Select(l => $"{Data.VariantName(l.VariantId)} x{l.Qty}"))</td>
                         <td><b>@Fmt.Money(o.Total)</b></td>
                         <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>
                         <td class="r"><a class="act" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@Icons.Svg("eye", 18)</a></td>
@@ -67,7 +69,7 @@
                 }
             </tbody>
         </table>
-        @if (orders.Count == 0) { <div class="empty">Khách chưa có hóa đơn nào</div> }
+        @if (orders.Count == 0) { <div class="empty">Khách chưa có đơn hàng nào</div> }
     </div>
 </section>
 
@@ -83,7 +85,7 @@
                         <td class="muted">@Fmt.DateTimeDot(n.Date)</td>
                         <td>@Fmt.Channel(n.Channel)</td>
                         <td>@n.Content</td>
-                        <td>@SampleData.Employee(n.EmployeeId).FirstName</td>
+                        <td>@Data.Employee(n.EmployeeId).FirstName</td>
                         <td>@(n.FollowUp.HasValue ? Fmt.Date(n.FollowUp.Value) : "-")</td>
                     </tr>
                 }

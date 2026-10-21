@@ -245,6 +245,7 @@ h1, h2, h3, p { margin: 0; }
 .customer-notice { min-height: 42px; border-radius: 9px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 14px; }
 .customer-notice.success { color: #087553; background: #e9f8f1; }
 .customer-notice.error { color: #b91c1c; background: #fef0f0; }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 14px; }
 
 /* ---------- 4. Khu vực khách hàng ---------- */
 body.customer-area { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }

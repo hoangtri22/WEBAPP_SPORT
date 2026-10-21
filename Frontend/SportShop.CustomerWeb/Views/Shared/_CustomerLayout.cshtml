@@ -4,7 +4,8 @@
 *@
 @{
     string active = ViewData["Active"] as string ?? "";
-    var me = StoreData.Customer;
+    // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
+    var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -28,7 +29,7 @@
         </nav>
         <div class="customer-user">
             <span class="avatar sm">@me.Initials</span>
-            <span class="customer-user-name"><strong>@me.FullName.Split(' ')[^2] @me.FullName.Split(' ')[^1]</strong><small>Thành viên @me.Tier</small></span>
+            <span class="customer-user-name"><strong>@me.ShortName</strong><small>Thành viên @me.Tier</small></span>
             <a class="icon-square" asp-controller="Account" asp-action="Logout" title="Đăng xuất">@Icons.Svg("log-out", 18)</a>
         </div>
     </header>
@@ -42,6 +43,11 @@
     </footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="~/js/shop.js" asp-append-version="true"></script>
+    @if (TempData["Notice"] is string notice)
+    {
+        @* Thông báo sau khi lưu / gửi (ví dụ "Đã lưu thông tin cá nhân") *@
+        <script>showToast(@Json.Serialize(notice));</script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

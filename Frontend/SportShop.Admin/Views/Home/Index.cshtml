@@ -1,16 +1,16 @@
 @*
     Trang "Tổng quan hệ thống": 6 thẻ thống kê + bảng "Đơn hàng gần đây".
-    Số liệu tính từ dữ liệu mẫu (SampleData). Khi có database sẽ thay bằng truy vấn thật.
+    Số liệu tính từ dữ liệu MySQL (lớp ShopData, biến Data inject trong _ViewImports).
 *@
 @{
     ViewData["Title"] = "Tổng quan";
     var today = DateTime.Today;
     var yesterday = today.AddDays(-1);
 
-    // Doanh thu hôm nay = tổng thanh toán của hóa đơn hoàn thành trong ngày
-    decimal Revenue(DateTime d) => SampleData.Orders.Where(o => o.Status == "hoan_thanh" && o.Date.Date == d).Sum(o => o.Total);
+    // Doanh thu hôm nay = tổng thanh toán của các đơn đã lập hóa đơn trong ngày
+    decimal Revenue(DateTime d) => Data.Orders.Where(o => o.Invoiced && o.Date.Date == d).Sum(o => o.Total);
     // Số đơn được lập trong ngày
-    int OrdersOn(DateTime d) => SampleData.Orders.Count(o => o.Date.Date == d);
+    int OrdersOn(DateTime d) => Data.Orders.Count(o => o.Date.Date == d);
 
     var revToday = Revenue(today); var revYesterday = Revenue(yesterday);
     var ordToday = OrdersOn(today); var ordYesterday = OrdersOn(yesterday);
@@ -19,13 +19,13 @@
     string VsYesterday(decimal cur, decimal prev) =>
         prev == 0 ? "Hôm qua chưa có dữ liệu" : $"{(cur >= prev ? "+" : "")}{Fmt.Pct(Math.Round((cur - prev) / prev * 100, 1))} so với hôm qua";
 
-    int staffTotal = SampleData.Employees.Count;
-    int staffWorking = SampleData.Employees.Count(e => e.Working);
-    int customers = SampleData.Customers.Count;
-    int customersActive = SampleData.Customers.Count(c => !c.Locked);
-    int unanswered = SampleData.FeedbackItems.Count(f => f.Status != "da_tra_loi");
-    int followToday = SampleData.CareNotes.Count(n => n.FollowUp?.Date == today);
-    var recent = SampleData.Orders.OrderByDescending(o => o.Date).Take(5).ToList();
+    int staffTotal = Data.Employees.Count;
+    int staffWorking = Data.Employees.Count(e => e.Working);
+    int customers = Data.Customers.Count;
+    int customersActive = Data.Customers.Count(c => !c.Locked);
+    int unanswered = Data.FeedbackItems.Count(f => f.Status != "da_tra_loi");
+    int followToday = Data.CareNotes.Count(n => n.FollowUp?.Date == today);
+    var recent = Data.Orders.OrderByDescending(o => o.Date).Take(5).ToList();
 }
 
 <div class="page-head">
@@ -112,7 +112,7 @@
             <tbody>
                 @foreach (var o in recent)
                 {
-                    var name = SampleData.Customer(o.CustomerId).FullName;
+                    var name = Data.Customer(o.CustomerId).FullName;
                     <tr>
                         <td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td>
                         <td><div class="cust"><span class="mini-av">@name.Substring(0, 1)</span><b>@name</b></div></td>

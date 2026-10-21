@@ -5,7 +5,6 @@
      2. Thông báo nhỏ (toast) cho nút chưa có chức năng
      3. Bảng dữ liệu: tìm kiếm + bộ lọc + phân trang (.dtable)
      4. Phím tắt Ctrl+K
-     5. POS: hóa đơn tạm khi bán hàng tại quầy
    ===================================================================== */
 
 /* ---------- 1. Thu gọn / mở sidebar ---------- */
@@ -118,78 +117,3 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
-/* ---------- 5. POS: hóa đơn tạm khi bán tại quầy ---------- */
-(function () {
-    var list = document.getElementById('billList');
-    if (!list) return;                      // chỉ chạy ở trang Bán hàng tại quầy
-    var items = {};                         // id biến thể -> {name, variant, price, qty, stock, tone}
-    var fmt = new Intl.NumberFormat('vi-VN');
-    var cat = '';                           // loại đang chọn ('' = tất cả)
-
-    // Vẽ lại toàn bộ hóa đơn tạm và tính tiền
-    function render() {
-        var ids = Object.keys(items), sub = 0, count = 0;
-        list.innerHTML = '';
-        if (ids.length === 0) list.innerHTML = '<li class="empty">Chưa có sản phẩm nào.<br>Bấm vào sản phẩm bên trái để thêm.</li>';
-        ids.forEach(function (id) {
-            var it = items[id];
-            sub += it.price * it.qty; count += it.qty;
-            var li = document.createElement('li');
-            li.className = 'bill-line';
-            li.innerHTML =
-                '<span class="tile ' + it.tone + '">' + it.name.charAt(0) + '</span>' +
-                '<div class="bl-main"><div class="bl-top"><span>' + it.name + '</span><span>' + fmt.format(it.price * it.qty) + 'đ</span></div>' +
-                '<small>' + it.variant + '</small>' +
-                '<div class="qty"><button type="button" data-act="dec" data-id="' + id + '">&minus;</button><span>' + it.qty +
-                '</span><button type="button" data-act="inc" data-id="' + id + '">+</button></div></div>' +
-                '<button type="button" class="bl-x" data-act="del" data-id="' + id + '" title="Bỏ khỏi hóa đơn">&times;</button>';
-            list.appendChild(li);
-        });
-        var pct = parseFloat(document.getElementById('billDiscount').value) || 0;
-        var disc = Math.round(sub * pct / 100);
-        document.getElementById('billCount').textContent = count + ' sản phẩm';
-        document.getElementById('billSub').textContent = fmt.format(sub) + 'đ';
-        document.getElementById('billDisc').textContent = '-' + fmt.format(disc) + 'đ';
-        document.getElementById('billTotal').textContent = fmt.format(sub - disc) + 'đ';
-    }
-
-    // Bấm sản phẩm -> thêm 1 (không vượt quá tồn kho)
-    document.querySelectorAll('.pitem').forEach(function (b) {
-        b.addEventListener('click', function () {
-            var id = b.dataset.id, stock = parseInt(b.dataset.stock, 10);
-            if (!items[id]) items[id] = { name: b.dataset.name, variant: b.dataset.variant, price: parseFloat(b.dataset.price), qty: 0, stock: stock, tone: b.dataset.tone };
-            if (items[id].qty < stock) items[id].qty++; else showToast('Đã hết số lượng tồn của sản phẩm này.');
-            render();
-        });
-    });
-
-    // Nút + / - / xóa trong từng dòng
-    list.addEventListener('click', function (e) {
-        var b = e.target.closest('[data-act]'); if (!b) return;
-        var it = items[b.dataset.id]; if (!it) return;
-        if (b.dataset.act === 'inc') { if (it.qty < it.stock) it.qty++; else showToast('Đã hết số lượng tồn của sản phẩm này.'); }
-        else if (b.dataset.act === 'dec') { it.qty--; if (it.qty <= 0) delete items[b.dataset.id]; }
-        else delete items[b.dataset.id];
-        render();
-    });
-
-    document.getElementById('billDiscount').addEventListener('change', render);
-    document.getElementById('billClear').addEventListener('click', function () { items = {}; render(); });
-
-    // Lọc sản phẩm theo ô tìm kiếm và loại
-    function filterProducts() {
-        var q = document.getElementById('posSearch').value.trim().toLowerCase();
-        document.querySelectorAll('#posGrid .pitem').forEach(function (b) {
-            var ok = (!cat || b.dataset.cat === cat) && (!q || b.textContent.toLowerCase().indexOf(q) >= 0);
-            b.style.display = ok ? '' : 'none';
-        });
-    }
-    document.getElementById('posSearch').addEventListener('input', filterProducts);
-    document.querySelectorAll('#posChips .chip-btn').forEach(function (c) {
-        c.addEventListener('click', function () {
-            document.querySelectorAll('#posChips .chip-btn').forEach(function (x) { x.classList.toggle('active', x === c); });
-            cat = c.dataset.cat; filterProducts();
-        });
-    });
-    render();
-})();

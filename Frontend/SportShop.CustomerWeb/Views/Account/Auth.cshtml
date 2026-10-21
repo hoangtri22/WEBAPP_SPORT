@@ -2,6 +2,7 @@
     Trang đăng nhập / đăng ký (một view dùng chung), bố cục theo Figma:
     nửa trái là ảnh, nửa phải là form. Lỗi hiện dưới từng ô.
     Nút Đăng ký có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo, không gửi form.
+    Đã kết nối MySQL: đăng nhập / đăng ký kiểm tra và lưu tài khoản thật (không điền sẵn tài khoản mẫu).
 *@
 @model AuthVm
 @{
@@ -9,6 +10,7 @@
     bool reg = Model.IsRegister;
     ViewData["Title"] = reg ? "Đăng ký" : "Đăng nhập";
     string Err(string k) => Model.Errors.TryGetValue(k, out var m) ? m : "";
+    bool live = Db.IsConnected;
 }
 <div class="customer-auth">
     <section class="customer-auth-visual">
@@ -42,7 +44,7 @@
             }
 
             <label class="@(Err("username") != "" ? "has-error" : "")">Tên đăng nhập
-                <div>@Icons.Svg("user", 18)<input name="username" placeholder="Ví dụ: minhanh_98" value="@(Model.Username != "" ? Model.Username : (reg ? "" : "minhanh_98"))" autocomplete="username" /></div>
+                <div>@Icons.Svg("user", 18)<input name="username" placeholder="Ví dụ: minhanh_98" value="@(Model.Username != "" ? Model.Username : (reg || live ? "" : "minhanh_98"))" autocomplete="username" /></div>
                 @if (Err("username") != "") { <small>@Err("username")</small> }
             </label>
 
@@ -61,7 +63,7 @@
             <label class="@(Err("password") != "" ? "has-error" : "")">Mật khẩu
                 <div>
                     @Icons.Svg("lock", 18)
-                    <input name="password" id="pwd" type="password" placeholder="Tối thiểu 6 ký tự" value="@(reg ? "" : "12345678")" autocomplete="@(reg ? "new-password" : "current-password")" />
+                    <input name="password" id="pwd" type="password" placeholder="Tối thiểu 6 ký tự" value="@(reg || live ? "" : "12345678")" autocomplete="@(reg ? "new-password" : "current-password")" />
                     <button type="button" id="pwdToggle" aria-label="Hiện hoặc ẩn mật khẩu">@Icons.Svg("eye", 18)</button>
                 </div>
                 @if (Err("password") != "") { <small>@Err("password")</small> }
@@ -76,6 +78,10 @@
                 <button type="submit" class="btn btn-primary customer-submit">Đăng nhập @Icons.Svg("chevron-right", 17)</button>
             }
 
+            @if (live && !reg)
+            {
+                <div class="auth-switch">Tài khoản demo: <b>kh_an</b> / <b>123456</b></div>
+            }
             <div class="auth-switch">
                 @(reg ? "Đã có tài khoản?" : "Chưa có tài khoản?")
                 <a asp-controller="Account" asp-action="@(reg ? "Login" : "Register")">@(reg ? "Đăng nhập" : "Đăng ký")</a>

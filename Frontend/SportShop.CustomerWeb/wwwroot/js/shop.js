@@ -22,14 +22,17 @@ function showToast(msg) {
 /* ---------- 2. Nút cần cơ sở dữ liệu ----------
    Nút/liên kết có thuộc tính data-needs-db:
      - body[data-db="false"] (chưa kết nối MySQL): chặn thao tác và hiện thông báo
-     - body[data-db="true"]  (đã kết nối MySQL): để nút chạy bình thường, không hiện thông báo */
+     - body[data-db="true"]  (đã kết nối MySQL): nút gửi form (Đăng ký, Lưu thay đổi, Gửi phản hồi) chạy bình thường;
+       các nút của chức năng chưa làm (giỏ hàng, sản phẩm, khuyến mãi...) hiện thông báo "đang phát triển" */
+var SOON_MESSAGE = 'Chức năng này đang được phát triển.';
 document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-needs-db]');
     if (!el) return;
-    if (document.body.dataset.db === 'true') return;
+    var connected = document.body.dataset.db === 'true';
+    if (connected && el.type === 'submit') return;
     e.preventDefault();
     e.stopPropagation();
-    showToast();
+    showToast(connected ? SOON_MESSAGE : DB_MESSAGE);
 }, true);
 
 /* ---------- 3. Thanh tìm kiếm ---------- */

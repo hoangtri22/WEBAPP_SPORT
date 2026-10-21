@@ -1,18 +1,22 @@
-@* Màn hình đăng nhập quản trị (giao diện mẫu: chưa kiểm tra tài khoản thật). *@
+@* Màn hình đăng nhập quản trị: kiểm tra tài khoản trong bảng TAI_KHOAN (chỉ quản lý / nhân viên). *@
 @{
     ViewData["Title"] = "Đăng nhập";
 }
-<form class="login" method="post" asp-controller="Account" asp-action="Login">
+<form class="login" method="post" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewBag.ReturnUrl">
     <div class="login-brand">
         <span class="brand-mark">@Icons.Svg("activity", 24)</span>
         <span class="brand-name">SPORT<b>SHOP</b></span>
     </div>
     <h1>Đăng nhập quản trị</h1>
     <p class="login-sub">Hệ thống quản lý khách hàng (CRM)</p>
-    <label for="username">Tên đăng nhập</label>
-    <input id="username" name="username" type="text" value="quanly.minh" autocomplete="username" />
+    @if (ViewBag.Error != null)
+    {
+        <div class="login-error" role="alert">@ViewBag.Error</div>
+    }
+    <label for="username">Tên đăng nhập hoặc email</label>
+    <input id="username" name="username" type="text" value="@ViewBag.Username" autocomplete="username" required autofocus />
     <label for="password">Mật khẩu</label>
-    <input id="password" name="password" type="password" value="123456" autocomplete="current-password" />
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
     <button class="btn-primary" type="submit">Đăng nhập</button>
-    <div class="login-hint">Giao diện mẫu: chưa kiểm tra tài khoản thật.</div>
+    <div class="login-hint">Tài khoản demo: admin / 123456</div>
 </form>

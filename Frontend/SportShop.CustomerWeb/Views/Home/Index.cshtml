@@ -63,12 +63,13 @@
         </div>
     </div>
     <div class="shop-products">
-        @foreach (var p in StoreData.Products)
+        @* Đã kết nối MySQL: 8 sản phẩm mới nhất kèm ảnh thật (Backend/Images); chưa kết nối: dữ liệu mẫu *@
+        @foreach (var p in Db.IsConnected ? Store.FeaturedProducts(8) : StoreData.Products)
         {
             <article class="shop-product-card">
                 <div class="shop-product-image">
-                    <img src="@p.Image" alt="@p.Name" loading="lazy" />
-                    <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span>
+                    <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.style.visibility='hidden'" />
+                    @if (!string.IsNullOrEmpty(p.Badge)) { <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span> }
                     @* Nút tim: chỉ đổi màu trên giao diện *@
                     <button type="button" class="heart" aria-label="Yêu thích">@Icons.Svg("heart", 18)</button>
                     <button type="button" class="quick-add" data-needs-db>@Icons.Svg("shopping-bag", 16) Thêm vào giỏ</button>

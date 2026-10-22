@@ -49,6 +49,8 @@ public static class CrudDefs
             new("gioi_tinh", "Giới tính", "select", false, "|(Chưa chọn);" + Gender),
             new("ngay_sinh", "Ngày sinh", "date"),
             new("so_dien_thoai", "Số điện thoại", Placeholder: "10 chữ số"),
+            new("email", "Email", "email", Show: "edit", Hint: "Chỉ lưu khi khách có tài khoản đăng nhập. Mật khẩu do khách tự đổi, admin không sửa."),
+            new("dia_chi", "Địa chỉ giao hàng mặc định", Show: "edit", Wide: true),
             new("so_thich", "Sở thích thể thao", "interests", Wide: true),
             new("ten_dang_nhap", "Tên đăng nhập (không bắt buộc)", Show: "create", Hint: "Điền nếu muốn tạo luôn tài khoản đăng nhập cho khách."),
             new("email", "Email (nếu tạo tài khoản)", "email", Show: "create"),
@@ -102,7 +104,7 @@ public static class CrudDefs
             new("ten_san_pham", "Tên sản phẩm", Required: true),
             new("don_vi_tinh", "Đơn vị tính", Required: true, Placeholder: "cái, đôi, bộ..."),
             new("trang_thai", "Hiển thị", "select", false, "hien|Đang bán;an|Đang ẩn"),
-            new("hinh_anh", "Hình ảnh", "select", false, "lookup:images", "Chọn trong thư mục Backend/Images.", Wide: true),
+            new("hinh_anh", "Hình ảnh", "select", false, "lookup:images", "Chọn ảnh có sẵn, hoặc tải ảnh mới từ thiết bị lên bên dưới (nếu chọn file thì dùng file).", Wide: true),
             new("mo_ta", "Mô tả", "textarea", Wide: true),
         ]),
 

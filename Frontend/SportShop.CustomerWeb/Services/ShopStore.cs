@@ -26,9 +26,11 @@ public class ShopStore(IConfiguration config)
     {
         using var c = Open();
         return c.Query("""
-            SELECT l.ma_loai, l.ten_loai, (SELECT COUNT(*) FROM SAN_PHAM s WHERE s.ma_loai = l.ma_loai AND s.trang_thai = 'hien') AS so_sp
-            FROM LOAI_SP l ORDER BY l.ma_loai
-            """).Cast<IDictionary<string, object?>>()
+            SELECT l.ma_loai, l.ten_loai,
+                   (SELECT COUNT(*) FROM SAN_PHAM s WHERE s.ma_loai = l.ma_loai AND s.trang_thai = 'hien'
+                      AND EXISTS (SELECT 1 FROM BIEN_THE_SP b WHERE b.ma_san_pham = s.ma_san_pham AND b.trang_thai = 'hien' AND b.so_luong_ton > 0)) AS so_sp
+            FROM LOAI_SP l WHERE l.ten_loai <> @archived ORDER BY l.ma_loai
+            """, new { archived = Catalog.ArchivedCategory }).Cast<IDictionary<string, object?>>()
             .Select(r => new ShopCategory(I(r, "ma_loai"), S(r, "ten_loai"), I(r, "so_sp"))).ToList();
     }
 
@@ -53,6 +55,7 @@ public class ShopStore(IConfiguration config)
               AND (@category IS NULL OR sp.ma_loai = @category)
               AND (@kw IS NULL OR sp.ten_san_pham LIKE @kw OR l.ten_loai LIKE @kw)
             GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta, sp.hinh_anh
+            HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0   -- chỉ hiện sản phẩm còn hàng (có tồn kho)
             ORDER BY {order}
             LIMIT @take
             """, new { category, kw = string.IsNullOrWhiteSpace(keyword) ? null : "%" + keyword.Trim() + "%", take = take ?? 1000 })
@@ -88,7 +91,7 @@ public class ShopStore(IConfiguration config)
             WHERE ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
               AND (ct.so_luong_gioi_han IS NULL OR ct.so_luot_da_dung < ct.so_luong_gioi_han)
             ORDER BY v.phan_tram_giam DESC, v.ma_voucher
-            """).Cast<IDictionary<string, object?>>()
+            """, new { archived = Catalog.ArchivedCategory }).Cast<IDictionary<string, object?>>()
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
@@ -177,7 +180,9 @@ public class ShopStore(IConfiguration config)
             WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
             """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
-        string tier = c.ExecuteScalar<string>("SELECT hang_thanh_vien FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx) ?? "thuong";
+        // Hạng thành viên hiệu lực của khách (chưa chi tiêu thì là hạng thường)
+        var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
+        string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
         if (NS(km, "hang_ap_dung") is { Length: > 0 } need && need != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {need}.");
         if (NI(km, "so_luong_gioi_han") is int lim && I(km, "so_luot_da_dung") >= lim) throw new OrderError("Mã giảm giá đã hết lượt sử dụng.");
         int ctId = I(km, "ma_ctkm");
@@ -292,19 +297,19 @@ public class ShopStore(IConfiguration config)
             LEFT JOIN VAN_CHUYEN vc ON vc.ma_don_hang = dh.ma_don_hang
             LEFT JOIN HOA_DON hd ON hd.ma_don_hang = dh.ma_don_hang
             WHERE dh.ma_khach_hang = @customerId AND (@orderId IS NULL OR dh.ma_don_hang = @orderId)
-            ORDER BY dh.ngay_dat DESC, dh.ma_don_hang DESC
+            ORDER BY dh.ma_don_hang DESC
             """, new { customerId, orderId }).Cast<IDictionary<string, object?>>().ToList();
         if (orders.Count == 0) return [];
 
         var ids = orders.Select(o => I(o, "ma_don_hang")).ToArray();
         var lines = c.Query("""
-            SELECT ct.ma_don_hang, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, sp.hinh_anh
+            SELECT ct.ma_don_hang, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, sp.hinh_anh
             FROM CHI_TIET_DON_HANG ct JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
             WHERE ct.ma_don_hang IN @ids ORDER BY sp.ten_san_pham
             """, new { ids }).Cast<IDictionary<string, object?>>()
             .ToLookup(r => I(r, "ma_don_hang"), r => new OrderLineView(S(r, "ten_san_pham"),
                 string.Join(" / ", new[] { NS(r, "kich_co"), NS(r, "mau_sac") }.Where(s => !string.IsNullOrWhiteSpace(s))),
-                I(r, "so_luong"), D(r, "don_gia"), D(r, "thanh_tien"), NS(r, "hinh_anh")));
+                I(r, "so_luong"), D(r, "don_gia"), D(r, "thanh_tien"), NS(r, "hinh_anh"), I(r, "ma_san_pham")));
 
         return orders.Select(o => new MyOrder
         {

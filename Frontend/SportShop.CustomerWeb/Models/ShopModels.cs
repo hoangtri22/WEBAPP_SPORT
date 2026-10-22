@@ -28,7 +28,7 @@ public record CartLine(int VariantId, int ProductId, string Name, string? Size, 
     public bool Enough => Qty <= Stock;
 }
 
-public record OrderLineView(string Name, string Label, int Qty, decimal Price, decimal Amount, string? Image);
+public record OrderLineView(string Name, string Label, int Qty, decimal Price, decimal Amount, string? Image, int ProductId);
 
 /// <summary>Đơn hàng của khách (DON_HANG + VAN_CHUYEN + HOA_DON).</summary>
 public class MyOrder

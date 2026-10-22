@@ -90,11 +90,12 @@
                                     <div class="line">
                                         <select name="dong_bien_the" class="js-variant">
                                             <option value="">-- Chọn sản phẩm --</option>
-                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
+                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe_nhap")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
                                         </select>
                                         <input type="number" name="dong_so_luong" class="js-qty" min="1" value="10" aria-label="Số lượng" />
                                         <input type="number" name="dong_don_gia" class="js-cost" min="0" step="1000" placeholder="Đơn giá nhập" aria-label="Đơn giá nhập" />
                                         <button type="button" class="act js-remove-line" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
+                                        <input type="number" name="dong_gia_ban" class="js-sell" min="1" step="1000" placeholder="Giá bán (sản phẩm chưa có biến thể)" aria-label="Giá bán" hidden />
                                     </div>
                                 </template>
                             </div>
@@ -173,6 +174,12 @@
                                     <option value="@o.Value" data-info="@o.Data" selected="@(val == o.Value)">@o.Label</option>
                                 }
                             </select>
+                            @if (f.Name == "hinh_anh")
+                            {
+                                @* Tải ảnh mới từ thiết bị: file được gửi kèm biểu mẫu và lưu vào thư mục Uploads *@
+                                <input type="file" name="hinh_anh_file" class="js-image-file" accept="image/png,image/jpeg,image/webp,image/gif" />
+                                <img class="img-preview" alt="Ảnh xem trước" hidden />
+                            }
                             break;
 
                         case "textarea":

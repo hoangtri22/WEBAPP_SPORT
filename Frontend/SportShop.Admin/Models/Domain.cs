@@ -58,7 +58,7 @@ public record CustomerGroup(int Id, string Name, string Criterion, string Value,
 public record Supplier(int Id, string Name, string Phone, string Email, string Address, bool Active);
 
 /// <summary>Phiếu nhập hàng (PHIEU_NHAP_HANG) và tổng số lượng nhập.</summary>
-public record ImportSlip(int Id, string Supplier, DateTime Date, int Quantity, string Employee, decimal Total);
+public record ImportSlip(int Id, string Supplier, DateTime Date, int Quantity, string Employee, decimal Total, string Items = "");
 
 /// <summary>Chương trình khuyến mãi (CTKM) kèm mô tả mức giảm.</summary>
 public record Promotion(int Id, string Name, string Type, DateTime Start, DateTime End, string Discount, string Status, int Uses);
@@ -75,7 +75,11 @@ public record CareNote(int CustomerId, int EmployeeId, string Channel, string Co
 /// <summary>Phản hồi của khách (PHAN_HOI) kèm câu trả lời của nhân viên (TRA_LOI_PHAN_HOI).</summary>
 public record FeedbackItem(
     int Id, int CustomerId, string Type, int? Stars, string Title, string Body, DateTime SentAt,
-    string? Target, string Status, bool Visible, string? Reply, DateTime? ReplyAt, int? ReplyEmployeeId);
+    string? Target, string Status, bool Visible, string? Reply, DateTime? ReplyAt, int? ReplyEmployeeId)
+{
+    /// <summary>Đã được trả lời: trạng thái "đã trả lời" hoặc đã có câu trả lời của cửa hàng (kể cả khi trạng thái còn ghi "đang xử lý").</summary>
+    public bool Answered => Status == "da_tra_loi" || Reply != null;
+}
 
 /// <summary>Khách hàng (KHACH_HANG) kèm tài khoản, sở thích, sổ địa chỉ và các nhóm khách hàng.</summary>
 public class Customer

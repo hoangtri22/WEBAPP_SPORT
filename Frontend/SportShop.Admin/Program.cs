@@ -75,6 +75,11 @@ if (Directory.Exists(imagesDir))
 else
     app.Logger.LogWarning("Không tìm thấy thư mục ảnh sản phẩm: {Dir}", imagesDir);
 
+// Ảnh sản phẩm tải lên từ thiết bị (do web admin lưu) ở Frontend/Uploads, phục vụ tại đường dẫn /uploads
+var uploadsDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, app.Configuration["Paths:Uploads"] ?? "../Uploads"));
+Directory.CreateDirectory(uploadsDir);
+app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(uploadsDir), RequestPath = "/uploads" });
+
 app.UseRouting();
 
 app.UseAuthentication();

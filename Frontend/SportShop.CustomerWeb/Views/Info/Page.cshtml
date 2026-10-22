@@ -1,0 +1,22 @@
+@*
+    Trang thông tin tĩnh (chính sách, hướng dẫn, giới thiệu): tiêu đề, lời giới thiệu và các mục nội dung.
+    Nội dung nằm trong Models/InfoPages.cs.
+*@
+@model InfoPage
+@{
+    ViewData["Title"] = Model.Title;
+}
+<section class="shop-page info-page">
+    <div class="shop-page-head">
+        <span class="eyebrow">@Model.Eyebrow</span>
+        <h1>@Model.Title</h1>
+        <p>@Model.Intro</p>
+    </div>
+    @foreach (var s in Model.Sections)
+    {
+        <div class="card pad info-section">
+            <h3>@s.Heading</h3>
+            @foreach (var p in s.Paragraphs) { <p>@p</p> }
+        </div>
+    }
+</section>

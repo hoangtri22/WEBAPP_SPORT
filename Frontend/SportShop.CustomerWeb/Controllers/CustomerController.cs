@@ -11,7 +11,7 @@ namespace SportShop.CustomerWeb.Controllers;
 /// Đã kết nối MySQL: đọc / ghi dữ liệu thật của khách đang đăng nhập.
 /// Chưa kết nối: hiện dữ liệu mẫu (StoreData), các nút lưu / gửi chỉ hiện thông báo.
 /// </summary>
-public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop) : Controller
+public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop, LoginThrottle throttle) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
 
@@ -51,25 +51,65 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Profile));
     }
 
+    // ===================== Đổi mật khẩu =====================
+
+    /// <summary>
+    /// Khách tự đổi mật khẩu: nhập mật khẩu hiện tại, mật khẩu mới và nhập lại. Nhập sai mật khẩu hiện tại nhiều lần thì bị khóa tạm
+    /// (giống đăng nhập). Mật khẩu mới được lưu ngay vào tài khoản nên web quản trị thấy giá trị mới khi mở lại hồ sơ khách.
+    /// </summary>
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult ChangePassword(string currentPassword, string newPassword, string confirmPassword)
+    {
+        if (!db.IsConnected) return RedirectToAction(nameof(Profile));
+        currentPassword ??= ""; newPassword ??= "";
+        string throttleKey = "pw:" + CustomerId;
+        string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        int minutesLeft = throttle.MinutesLeft(throttleKey, ip);
+
+        string? error =
+            minutesLeft > 0 ? $"Bạn nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau {minutesLeft} phút." :
+            currentPassword.Length == 0 ? "Vui lòng nhập mật khẩu hiện tại." :
+            newPassword.Length < 6 ? "Mật khẩu mới cần có ít nhất 6 ký tự." :
+            newPassword != confirmPassword ? "Mật khẩu nhập lại không khớp." :
+            newPassword == currentPassword ? "Mật khẩu mới phải khác mật khẩu hiện tại." : null;
+
+        if (error == null)
+        {
+            error = store.ChangePassword(CustomerId, currentPassword, newPassword);
+            if (error != null) throttle.Fail(throttleKey, ip); else throttle.Reset(throttleKey, ip);
+        }
+
+        TempData["Notice"] = error ?? "Đã đổi mật khẩu thành công.";
+        return RedirectToAction(nameof(Profile));
+    }
+
     // ===================== Phản hồi về sản phẩm =====================
 
     public IActionResult Feedback() { ViewData["Active"] = "feedback"; return View(); }
 
+    /// <summary>Gửi phản hồi sản phẩm. Có order (gửi từ trang "Đơn hàng của tôi") thì chỉ nhận sản phẩm nằm trong đơn đã giao đó.</summary>
     [HttpPost, ValidateAntiForgeryToken]
-    public IActionResult Feedback(int product, int stars, string content)
+    public IActionResult Feedback(int product, int stars, string content, int? order = null)
     {
         if (!db.IsConnected) return RedirectToAction(nameof(Feedback));
         content = (content ?? "").Trim();
         string? error =
             !store.Products().Any(p => p.Id == product) ? "Vui lòng chọn sản phẩm." :
+            !HasReceivedProduct(product, order) ? "Bạn chỉ gửi được phản hồi cho sản phẩm đã mua và đã nhận hàng." :
             stars is < 1 or > 5 ? "Vui lòng chọn số sao đánh giá." :
             content.Length == 0 ? "Vui lòng nhập nội dung phản hồi." :
             content.Length > 1000 ? "Nội dung phản hồi tối đa 1000 ký tự." : null;
         if (error == null) store.SendFeedback(CustomerId, product, stars, content);
 
         TempData["Notice"] = error ?? "Cảm ơn bạn! Phản hồi đã được gửi đến SPORTSHOP.";
-        return RedirectToAction(nameof(Feedback));
+        // Gửi từ trang đơn hàng thì quay lại trang đơn hàng, gửi từ trang phản hồi thì ở lại trang phản hồi
+        return order.HasValue ? RedirectToAction(nameof(Orders)) : RedirectToAction(nameof(Feedback));
     }
+
+    /// <summary>Khách đã nhận sản phẩm này chưa: trong đơn đã giao được chỉ định (nếu có), hoặc trong bất kỳ đơn đã giao nào.</summary>
+    bool HasReceivedProduct(int product, int? order) => order is int orderId
+        ? shop.Orders(CustomerId, orderId).Any(o => o.Status == "da_giao" && o.Lines.Any(l => l.ProductId == product))
+        : store.PurchasedProducts(CustomerId).Any(p => p.Id == product);
 
     // ===================== Khảo sát =====================
 

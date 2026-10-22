@@ -12,7 +12,7 @@ public class ImportsController(ShopData db) : Controller
 
         // Phiếu nhập (PHIEU_NHAP_HANG): mỗi phiếu cộng vào tồn và cập nhật giá vốn của biến thể
         var slips = db.ImportSlips.Select(p => new Row(
-            [$"PN{p.Id:D3}", p.Supplier, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], null, p.Id)).ToList();
+            [$"PN{p.Id:D3}", p.Supplier, p.Items, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], null, p.Id)).ToList();
 
         // Nhà cung cấp (NHA_CUNG_CAP): đang hợp tác / ngừng hợp tác
         var suppliers = db.Suppliers.Select(s => new Row(
@@ -24,7 +24,7 @@ public class ImportsController(ShopData db) : Controller
             Subtitle = "Theo dõi phiếu nhập và nhà cung cấp",
             Sections =
             [
-                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, AddLabel = "Thêm mới", ShowActions = true, Entity = "import", CanEdit = false, CanDelete = false },
+                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Mặt hàng nhập", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, AddLabel = "Thêm mới", ShowActions = true, Entity = "import", CanEdit = false, CanDelete = false },
                 new() { Heading = "Nhà cung cấp", Columns = ["Mã NCC", "Tên nhà cung cấp", "Số điện thoại", "Email", "Trạng thái"], Rows = suppliers, AddLabel = "Thêm nhà cung cấp", ShowActions = true, Toolbar = false, Entity = "supplier" },
             ]
         });

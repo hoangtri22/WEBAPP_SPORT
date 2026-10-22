@@ -19,7 +19,6 @@ public class EmployeesController(ShopData db) : Controller
         {
             Title = "Quản lý nhân viên",
             Subtitle = "Theo dõi đội ngũ và trạng thái làm việc",
-            Note = "Nhân viên nghỉ việc chỉ chuyển sang trạng thái \"nghỉ việc\" để vẫn giữ lại lịch sử hóa đơn, phiếu nhập và chăm sóc mà nhân viên đó đã thực hiện.",
             Sections = [new() { Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "employee" }]
         });
     }

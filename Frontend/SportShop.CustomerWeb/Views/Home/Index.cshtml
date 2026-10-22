@@ -3,6 +3,7 @@
     giới thiệu, 4 cam kết, danh mục, sản phẩm nổi bật, banner khuyến mãi, đăng ký nhận ưu đãi.
     Các nút cần dữ liệu (thêm vào giỏ, xem tất cả...) có data-needs-db: chưa có CSDL thì hiện thông báo.
 *@
+@inject ShopStore Shop
 @{
     ViewData["Title"] = "Trang chủ";
 }
@@ -41,13 +42,31 @@
         <a class="heading-link" asp-controller="Shop" asp-action="Index">Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</a>
     </div>
     <div class="shop-category-grid">
-        @foreach (var c in StoreData.Categories)
+        @* Đã kết nối MySQL: danh mục lấy từ bảng loại sản phẩm, số sản phẩm là số sản phẩm đang bán (admin thêm / đổi thì tự cập nhật); chưa kết nối: dữ liệu mẫu *@
+        @if (Db.IsConnected)
         {
-            <a class="shop-category @c.Css" asp-controller="Shop" asp-action="Index" asp-route-q="@(c.Css switch { "running" => "Giày", "men" => "Áo", "women" => "Quần", _ => "Vợt" })">
-                @Icons.Svg(c.Icon, 30)
-                <span><strong>@c.Name</strong><small>@c.Sub</small></span>
-                <i>@Icons.Svg("chevron-right", 18)</i>
-            </a>
+            string[] styles = ["running", "men", "women", "gear"], icons = ["zap", "user", "sparkles", "activity"];
+            var categories = Shop.Categories();
+            for (int i = 0; i < categories.Count; i++)
+            {
+                var c = categories[i];
+                <a class="shop-category @styles[i % styles.Length]" asp-controller="Shop" asp-action="Index" asp-route-cat="@c.Id">
+                    @Icons.Svg(icons[i % icons.Length], 30)
+                    <span><strong>@c.Name</strong><small>@c.Count sản phẩm</small></span>
+                    <i>@Icons.Svg("chevron-right", 18)</i>
+                </a>
+            }
+        }
+        else
+        {
+            foreach (var c in StoreData.Categories)
+            {
+                <a class="shop-category @c.Css" asp-controller="Shop" asp-action="Index">
+                    @Icons.Svg(c.Icon, 30)
+                    <span><strong>@c.Name</strong><small>@c.Sub</small></span>
+                    <i>@Icons.Svg("chevron-right", 18)</i>
+                </a>
+            }
         }
     </div>
 </section>
@@ -68,6 +87,8 @@
         {
             <article class="shop-product-card">
                 <div class="shop-product-image">
+                    @* Bấm vào hình sản phẩm cũng mở trang chi tiết, giống nút "Chọn mua" *@
+                    <a class="image-link" asp-controller="Shop" asp-action="Detail" asp-route-id="@p.Id" aria-label="@p.Name"></a>
                     <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.style.visibility='hidden'" />
                     @if (!string.IsNullOrEmpty(p.Badge)) { <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span> }
                     @* Nút tim: chỉ đổi màu trên giao diện *@
@@ -91,7 +112,7 @@
         <span>CHỈ TRONG TUẦN NÀY</span>
         <h2>Chạy xa hơn.<br />Tiết kiệm nhiều hơn.</h2>
         <p>Giảm đến <strong>40%</strong> các sản phẩm chạy bộ chọn lọc.</p>
-        <a class="btn btn-orange" asp-controller="Shop" asp-action="Promotions">Mua ngay @Icons.Svg("chevron-right", 18)</a>
+        <a class="btn btn-orange" asp-controller="Shop" asp-action="Index">Mua ngay @Icons.Svg("chevron-right", 18)</a>
     </div>
     <div class="campaign-card"><span>EXTRA</span><strong>15%</strong><small>Nhập mã</small><b>RUN15</b></div>
     <div class="campaign-shoe"><img src="@StoreData.CampaignImage" alt="Bộ sưu tập giày chạy bộ khuyến mãi" loading="lazy" /></div>

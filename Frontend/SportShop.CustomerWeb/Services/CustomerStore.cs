@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Dapper;
 using MySqlConnector;
 using SportShop.CustomerWeb.Models;
@@ -16,6 +18,10 @@ public class CustomerStore(IConfiguration config)
 
     MySqlConnection Open() => new(_cs);
 
+    /// <summary>So sánh mật khẩu theo thời gian không phụ thuộc nội dung, tránh lộ thông tin qua thời gian phản hồi.</summary>
+    static bool SamePassword(string stored, string entered)
+        => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(entered));
+
     // ===================== Đăng nhập / đăng ký =====================
 
     /// <summary>Trả về mã khách hàng nếu đăng nhập đúng, ngược lại trả về thông báo lỗi.</summary>
@@ -32,7 +38,7 @@ public class CustomerStore(IConfiguration config)
             LIMIT 1
             """, new { u = username.Trim() });
 
-        if (r == null || !string.Equals(r.Password, password, StringComparison.Ordinal))
+        if (r == null || !SamePassword(r.Password, password))
             return (null, "Sai tên đăng nhập hoặc mật khẩu.");
         if (r.AccountStatus != "hoat_dong")
             return (null, "Tài khoản đã bị khóa. Vui lòng liên hệ cửa hàng để được hỗ trợ.");
@@ -87,7 +93,7 @@ public class CustomerStore(IConfiguration config)
         var r = c.QueryFirstOrDefault<ProfileRow>("""
             SELECT kh.ho_lot AS LastName, kh.ten AS FirstName, tk.ten_dang_nhap AS Username, tk.email AS Email,
                    COALESCE(kh.so_dien_thoai, tk.so_dien_thoai) AS Phone, kh.ngay_sinh AS Birth, kh.gioi_tinh AS Gender,
-                   kh.hang_thanh_vien AS Tier, kh.diem_tich_luy AS Points,
+                   kh.hang_thanh_vien AS Tier, kh.tong_chi_tieu AS Spent, kh.diem_tich_luy AS Points,
                    (SELECT COUNT(*) FROM DON_HANG d WHERE d.ma_khach_hang = kh.ma_khach_hang) AS Orders
             FROM KHACH_HANG kh LEFT JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan
             WHERE kh.ma_khach_hang = @customerId
@@ -97,7 +103,7 @@ public class CustomerStore(IConfiguration config)
         string full = $"{r.LastName} {r.FirstName}".Trim();
         var words = full.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string initials = words.Length == 0 ? "?" : (words.Length == 1 ? words[0][..1] : words[0][..1] + words[^1][..1]).ToUpper();
-        string tier = r.Tier switch { "thuong" => "Thường", "bac" => "Bạc", "vang" => "Vàng", _ => r.Tier ?? "" };
+        string tier = MemberTier.Label(MemberTier.Effective(r.Tier, r.Spent));
         return new CustomerProfile(full, initials, r.Username ?? "", r.Email ?? "", r.Phone ?? "",
             r.Birth?.ToString("yyyy-MM-dd") ?? "", r.Gender ?? "", tier, (int)r.Orders, r.Points);
     }
@@ -158,12 +164,31 @@ public class CustomerStore(IConfiguration config)
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
             WHERE sp.trang_thai = 'hien'
             GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.hinh_anh
+            HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0   -- chỉ hiện sản phẩm còn hàng (có tồn kho)
             ORDER BY sp.ma_san_pham DESC
             LIMIT @count
             """, new { count })
             .Select(p => new StoreProduct(p.Id, p.Name, p.Type,
                 p.Price is decimal v ? string.Format(vi, "{0:N0}₫", v) : "Liên hệ", "", "", p.Image ?? ""))
             .ToList();
+    }
+
+    /// <summary>
+    /// Đổi mật khẩu của khách: kiểm tra mật khẩu hiện tại rồi lưu mật khẩu mới vào tài khoản (TAI_KHOAN.mat_khau).
+    /// Trả về thông báo lỗi, hoặc null nếu đổi thành công.
+    /// </summary>
+    public string? ChangePassword(int customerId, string currentPassword, string newPassword)
+    {
+        using var c = Open();
+        var r = c.QueryFirstOrDefault<PasswordRow>("""
+            SELECT tk.ma_tai_khoan AS AccountId, tk.mat_khau AS Password
+            FROM KHACH_HANG kh JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan
+            WHERE kh.ma_khach_hang = @customerId
+            """, new { customerId });
+        if (r == null) return "Không tìm thấy tài khoản.";
+        if (!SamePassword(r.Password, currentPassword)) return "Mật khẩu hiện tại không đúng.";
+        c.Execute("UPDATE TAI_KHOAN SET mat_khau = @newPassword WHERE ma_tai_khoan = @accountId", new { newPassword, accountId = r.AccountId });
+        return null;
     }
 
     // ===================== Phản hồi =====================
@@ -173,6 +198,21 @@ public class CustomerStore(IConfiguration config)
     {
         using var c = Open();
         return c.Query<(int, string)>("SELECT ma_san_pham, ten_san_pham FROM SAN_PHAM WHERE trang_thai = 'hien' ORDER BY ten_san_pham").ToList();
+    }
+
+    /// <summary>Sản phẩm khách đã mua và nhận hàng (nằm trong đơn "Đã giao"): chỉ những sản phẩm này mới được gửi phản hồi.</summary>
+    public List<(int Id, string Name)> PurchasedProducts(int customerId)
+    {
+        using var c = Open();
+        return c.Query<(int, string)>("""
+            SELECT DISTINCT sp.ma_san_pham, sp.ten_san_pham
+            FROM DON_HANG dh
+            JOIN CHI_TIET_DON_HANG ct ON ct.ma_don_hang = dh.ma_don_hang
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
+            JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+            WHERE dh.ma_khach_hang = @customerId AND dh.trang_thai_don_hang = 'da_giao'
+            ORDER BY sp.ten_san_pham
+            """, new { customerId }).ToList();
     }
 
     public void SendFeedback(int customerId, int productId, int stars, string content)
@@ -195,7 +235,7 @@ public class CustomerStore(IConfiguration config)
                      ORDER BY t.ma_tra_loi DESC LIMIT 1) AS Reply
             FROM PHAN_HOI ph LEFT JOIN SAN_PHAM sp ON sp.ma_san_pham = ph.ma_san_pham
             WHERE ph.ma_khach_hang = @customerId
-            ORDER BY ph.ngay_gui DESC
+            ORDER BY ph.ma_phan_hoi DESC
             """, new { customerId })
             .Select(r =>
             {
@@ -287,7 +327,8 @@ public class CustomerStore(IConfiguration config)
     }
 
     // Lớp đọc kết quả truy vấn
+    class PasswordRow { public int AccountId { get; set; } public string Password { get; set; } = ""; }
     class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } }
-    class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public int Points { get; set; } public long Orders { get; set; } }
+    class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public decimal Spent { get; set; } public int Points { get; set; } public long Orders { get; set; } }
     class FeedbackDbRow { public int Id { get; set; } public string Product { get; set; } = ""; public string Text { get; set; } = ""; public DateTime SentAt { get; set; } public string Status { get; set; } = ""; public string? Reply { get; set; } }
 }

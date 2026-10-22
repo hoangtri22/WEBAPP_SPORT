@@ -23,9 +23,9 @@
     int staffWorking = Data.Employees.Count(e => e.Working);
     int customers = Data.Customers.Count;
     int customersActive = Data.Customers.Count(c => !c.Locked);
-    int unanswered = Data.FeedbackItems.Count(f => f.Status != "da_tra_loi");
+    int unanswered = Data.FeedbackItems.Count(f => !f.Answered);
     int followToday = Data.CareNotes.Count(n => n.FollowUp?.Date == today);
-    var recent = Data.Orders.OrderByDescending(o => o.Date).Take(5).ToList();
+    var recent = Data.Orders.OrderByDescending(o => o.Id).Take(5).ToList();
 }
 
 <div class="page-head">

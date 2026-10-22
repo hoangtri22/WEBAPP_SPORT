@@ -10,7 +10,8 @@ public class AccountController : Controller
 {
     readonly DbStatus _db;
     readonly CustomerStore _store;
-    public AccountController(DbStatus db, CustomerStore store) { _db = db; _store = store; }
+    readonly LoginThrottle _throttle;
+    public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle) { _db = db; _store = store; _throttle = throttle; }
 
     [HttpGet]
     public IActionResult Login() => View("Auth", new AuthVm { IsRegister = false });
@@ -32,13 +33,25 @@ public class AccountController : Controller
 
         if (_db.IsConnected)
         {
+            // Sai mật khẩu quá nhiều lần thì khóa tạm thời để chống dò mật khẩu
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            int minutesLeft = _throttle.MinutesLeft(username!, ip);
+            if (minutesLeft > 0)
+            {
+                vm.Notice = $"Bạn đăng nhập sai quá nhiều lần. Vui lòng thử lại sau {minutesLeft} phút.";
+                vm.NoticeIsError = true;
+                return View("Auth", vm);
+            }
+
             var (customerId, error) = _store.Login(username!, password);
             if (customerId == null)
             {
+                _throttle.Fail(username!, ip);
                 vm.Notice = error;
                 vm.NoticeIsError = true;
                 return View("Auth", vm);
             }
+            _throttle.Reset(username!, ip);
             HttpContext.Session.SetInt32("customer_id", customerId.Value);
         }
 

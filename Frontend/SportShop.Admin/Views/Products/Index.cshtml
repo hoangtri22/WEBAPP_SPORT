@@ -8,7 +8,7 @@
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
     // Dữ liệu biến thể → bảng ở cuối trang (dùng lại partial _Section)
-    var variants = Data.Variants.Select(v => new Row(
+    var variants = Data.ActiveVariants.Select(v => new Row(
         [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], null, v.Id)).ToList();
     var variantSection = new TableSection
     {
@@ -49,11 +49,11 @@
 
     @* ----- Dạng lưới ----- *@
     <div class="prod-grid" id="prodGrid">
-        @foreach (var p in Data.Products)
+        @foreach (var p in Data.ActiveProducts)
         {
             var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
             var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
-            <article class="prod" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
+            <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
                     <span>@p.Name.Substring(0, 1)</span>
                     @* Ảnh sản phẩm (SAN_PHAM.hinh_anh); không tải được ảnh thì hiện chữ cái đầu phía sau *@
@@ -75,7 +75,7 @@
         <table class="tbl">
             <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Loại</th><th>ĐVT</th><th>Giá bán</th><th>Tồn</th><th>Hiển thị</th><th>Thao tác</th></tr></thead>
             <tbody>
-                @foreach (var p in Data.Products)
+                @foreach (var p in Data.ActiveProducts)
                 {
                     var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
                     var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";

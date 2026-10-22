@@ -46,6 +46,30 @@
                 </div>
             }
         </div>
+        @* Đơn đã giao: khách đánh giá các sản phẩm trong đơn này (chỉ hiện tên sản phẩm của đơn) *@
+        @if (o.Status == "da_giao")
+        {
+            <details class="review-box">
+                <summary>Đánh giá sản phẩm trong đơn này</summary>
+                <form method="post" asp-action="Feedback" class="review-form">
+                    <input type="hidden" name="order" value="@o.Id" />
+                    <label>Sản phẩm
+                        <select name="product">
+                            @foreach (var l in o.Lines.DistinctBy(x => x.ProductId)) { <option value="@l.ProductId">@l.Name</option> }
+                        </select>
+                    </label>
+                    <div class="field-like">Đánh giá
+                        <div class="rating-input" data-rating>
+                            @for (int s = 1; s <= 5; s++) { <button type="button" data-star="@s" aria-label="@s sao">@Icons.Svg("star", 25)</button> }
+                            <span>Chọn số sao</span>
+                        </div>
+                        <input type="hidden" name="stars" value="0" />
+                    </div>
+                    <label>Nội dung phản hồi<textarea name="content" rows="3" maxlength="1000" placeholder="Chia sẻ điều bạn thích hoặc góp ý để sản phẩm tốt hơn..."></textarea></label>
+                    <button type="submit" class="btn btn-primary">@Icons.Svg("send", 17) Gửi phản hồi</button>
+                </form>
+            </details>
+        }
         <div class="order-foot">
             <div class="order-ship">
                 <small class="muted">Giao đến: @o.Receiver · @o.Phone · @o.Address</small>
@@ -81,5 +105,19 @@
                     .catch(function () { });
             }, 8000);
         })();
+
+        // Chấm sao ở form đánh giá của từng đơn: bấm sao thứ n thì tô n sao đầu và ghi số sao vào ô ẩn
+        document.querySelectorAll('[data-rating]').forEach(function (box) {
+            var stars = box.querySelectorAll('button'), label = box.querySelector('span'), value = box.parentNode.querySelector('input[name=stars]');
+            var words = ['Chọn số sao', 'Rất tệ', 'Chưa tốt', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];
+            stars.forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var n = +b.dataset.star;
+                    value.value = n;
+                    stars.forEach(function (x) { x.classList.toggle('on', +x.dataset.star <= n); });
+                    label.textContent = n + '/5 · ' + words[n];
+                });
+            });
+        });
     </script>
 }

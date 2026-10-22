@@ -73,7 +73,6 @@ public class AccountController(ShopData db) : Controller
         {
             Title = "Tài khoản & Phân quyền",
             Subtitle = "Quản lý quyền truy cập hệ thống",
-            Note = "Quản lý có toàn quyền, nhân viên xử lý nghiệp vụ bán hàng và chăm sóc khách, khách hàng chỉ quản lý thông tin của mình. Tài khoản bị khóa không đăng nhập được nhưng dữ liệu vẫn được giữ lại.",
             Sections = [new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account" }]
         });
     }

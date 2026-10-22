@@ -65,7 +65,8 @@ public class ReportsController(ShopData db) : Controller
         ViewBag.Menu = "reports";
 
         // ----- Xác định khoảng thời gian và kỳ trước có cùng độ dài -----
-        var end = (to ?? DateTime.Today).Date;
+        // Không chọn ngày thì lấy 30 ngày gần nhất; nếu trong 30 ngày đó chưa có hóa đơn nào (ví dụ đã chỉnh giờ máy) thì lấy đến ngày có hóa đơn mới nhất
+        var end = (to ?? DefaultEndDate()).Date;
         var start = (from ?? end.AddDays(-29)).Date;
         if (start > end) (start, end) = (end, start);
         int days = (end - start).Days + 1;
@@ -148,7 +149,7 @@ public class ReportsController(ShopData db) : Controller
             }).ToList();
 
         // Sản phẩm tồn kho nhiều (báo cáo "sản phẩm tồn kho" trong PDF)
-        var high = db.Variants.OrderByDescending(v => v.Stock).Take(5)
+        var high = db.ActiveVariants.OrderByDescending(v => v.Stock).Take(5)
             .Select(v => new Row([db.VariantName(v.Id), v.Stock.ToString()])).ToList();
 
         // Hiệu quả khuyến mãi trong kỳ: số lượt dùng, tổng tiền giảm, doanh thu các hóa đơn áp dụng
@@ -195,6 +196,15 @@ public class ReportsController(ShopData db) : Controller
     }
 
     /// <summary>% thay đổi so với kỳ trước (không có dữ liệu kỳ trước thì báo "Chưa có dữ liệu kỳ trước").</summary>
+    /// <summary>Ngày kết thúc mặc định của báo cáo: hôm nay, hoặc ngày có hóa đơn mới nhất nếu 30 ngày gần đây không có hóa đơn.</summary>
+    DateTime DefaultEndDate()
+    {
+        var today = DateTime.Today;
+        var invoiced = db.Orders.Where(o => o.Invoiced).Select(o => o.Date.Date).ToList();
+        bool anyRecent = invoiced.Any(d => d >= today.AddDays(-29) && d <= today);
+        return invoiced.Count == 0 || anyRecent ? today : invoiced.Max();
+    }
+
     static Delta Change(decimal cur, decimal prev)
     {
         if (prev == 0) return new("Chưa có dữ liệu kỳ trước", true);

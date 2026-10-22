@@ -10,6 +10,12 @@
     string adminUrl = Config["Links:AdminUrl"] ?? "#";
     // Số sản phẩm trong giỏ (lưu trong session) hiện trên biểu tượng giỏ hàng
     int cartCount = Db.IsConnected ? ShopStore.CartCount(Context.Session) : 0;
+    // Mục menu đang mở (gạch chân đúng trang): Trang chủ / Sản phẩm / Khuyến mãi
+    string controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string actionName = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    bool onHome = controllerName == "Home" && actionName == "Index";
+    bool onPromo = controllerName == "Shop" && actionName == "Promotions";
+    bool onShop = controllerName == "Shop" && !onPromo;
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -34,9 +40,9 @@
     <header class="shop-header">
         <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
         <nav>
-            <a class="active" asp-controller="Home" asp-action="Index">Trang chủ</a>
-            <a asp-controller="Shop" asp-action="Index">Sản phẩm</a>
-            <a class="sale" asp-controller="Shop" asp-action="Promotions">Khuyến mãi</a>
+            <a class="@(onHome ? "active" : "")" asp-controller="Home" asp-action="Index">Trang chủ</a>
+            <a class="@(onShop ? "active" : "")" asp-controller="Shop" asp-action="Index">Sản phẩm</a>
+            <a class="sale @(onPromo ? "active" : "")" asp-controller="Shop" asp-action="Promotions">Khuyến mãi</a>
         </nav>
         <div class="shop-actions">
             <button type="button" id="searchToggle" aria-label="Tìm kiếm">@Icons.Svg("search", 20)</button>
@@ -86,14 +92,32 @@
             <p>Đồng hành cùng bạn trên hành trình sống khỏe và chinh phục mọi giới hạn.</p>
             <span>@Icons.Svg("map-pin", 15) 128 Nguyễn Trãi, Quận 1, TP.HCM</span>
         </div>
-        <div><strong>Mua sắm</strong><button type="button" data-needs-db>Giày thể thao</button><button type="button" data-needs-db>Quần áo</button><button type="button" data-needs-db>Dụng cụ</button><button type="button" data-needs-db>Khuyến mãi</button></div>
-        <div><strong>Hỗ trợ</strong><button type="button" data-needs-db>Chính sách đổi trả</button><button type="button" data-needs-db>Giao hàng</button><button type="button" data-needs-db>Hướng dẫn chọn size</button><button type="button" data-needs-db>Liên hệ</button></div>
-        <div><strong>SPORTSHOP</strong><button type="button" data-needs-db>Về chúng tôi</button><button type="button" data-needs-db>Hệ thống cửa hàng</button><button type="button" data-needs-db>Tuyển dụng</button><a href="@adminUrl">Đăng nhập quản trị</a></div>
+        <div>
+            <strong>Mua sắm</strong>
+            <a asp-controller="Shop" asp-action="Index" asp-route-q="Giày">Giày thể thao</a>
+            <a asp-controller="Shop" asp-action="Index" asp-route-q="Quần áo">Quần áo</a>
+            <a asp-controller="Shop" asp-action="Index" asp-route-q="Phụ kiện">Dụng cụ</a>
+            <a asp-controller="Shop" asp-action="Promotions">Khuyến mãi</a>
+        </div>
+        <div>
+            <strong>Hỗ trợ</strong>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="doi-tra">Chính sách đổi trả</a>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="giao-hang">Giao hàng</a>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="chon-size">Hướng dẫn chọn size</a>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="lien-he">Liên hệ</a>
+        </div>
+        <div>
+            <strong>SPORTSHOP</strong>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="ve-chung-toi">Về chúng tôi</a>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="he-thong-cua-hang">Hệ thống cửa hàng</a>
+            <a asp-controller="Info" asp-action="Page" asp-route-id="tuyen-dung">Tuyển dụng</a>
+            <a href="@adminUrl">Đăng nhập quản trị</a>
+        </div>
     </footer>
 
     @* Thanh điều hướng dưới cùng, chỉ hiện trên điện thoại *@
     <nav class="shop-mobile-nav">
-        <a class="active" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
+        <a class="@(onHome ? "active" : "")" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
         <button type="button" id="searchToggleMobile">@Icons.Svg("search", 20)<span>Tìm kiếm</span></button>
         <button type="button" data-needs-db>@Icons.Svg("heart", 20)<span>Yêu thích</span></button>
         <a asp-controller="Cart" asp-action="Index">@Icons.Svg("shopping-bag", 20)<span>Giỏ hàng@(cartCount > 0 ? " (" + cartCount + ")" : "")</span></a>

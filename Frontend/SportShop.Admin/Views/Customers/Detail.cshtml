@@ -5,7 +5,7 @@
 @model Customer
 @{
     ViewData["Title"] = Model.FullName;
-    var orders = Data.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Date).ToList();
+    var orders = Data.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Id).ToList();
     var notes = Data.CareNotes.Where(n => n.CustomerId == Model.Id).OrderByDescending(n => n.Date).ToList();
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
@@ -23,7 +23,11 @@
 
 <div class="grid2">
     <section class="card pad">
-        <h3 class="card-h">Thông tin khách hàng</h3>
+        <div class="card-h-row">
+            <h3 class="card-h">Thông tin khách hàng</h3>
+            @* Sửa mọi thông tin của khách (họ tên, giới tính, ngày sinh, điện thoại, email, địa chỉ, sở thích) trừ mật khẩu: mật khẩu do khách tự đổi *@
+            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 16) Chỉnh sửa thông tin</button>
+        </div>
         <dl class="kv">
             <dt>Giới tính</dt><dd>@Model.Gender</dd>
             <dt>Ngày sinh</dt><dd>@(Model.Birth.HasValue ? $"{Fmt.Date(Model.Birth.Value)} ({Model.Age} tuổi)" : "-")</dd>
@@ -51,7 +55,10 @@
             <dt>Tổng chi tiêu</dt><dd><b>@Fmt.Money(Model.TotalSpent)</b></dd>
             <dt>Số đơn hàng</dt><dd>@orders.Count</dd>
         </dl>
-        <h3 class="card-h" style="margin-top:18px">Sổ địa chỉ giao hàng</h3>
+        <div class="card-h-row" style="margin-top:18px">
+            <h3 class="card-h">Sổ địa chỉ giao hàng</h3>
+            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 16) Sửa địa chỉ</button>
+        </div>
         <ul class="ul-plain">
             @foreach (var a in Model.Addresses) { <li>@a</li> }
             @if (Model.Addresses.Length == 0) { <li class="muted">Chưa có địa chỉ</li> }

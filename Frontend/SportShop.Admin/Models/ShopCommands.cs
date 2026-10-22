@@ -33,6 +33,8 @@ public class Form(IFormCollection f)
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     public string S(string k) => f[k].ToString().Trim();
+    /// <summary>File người dùng chọn tải lên (ví dụ ảnh sản phẩm); null nếu không chọn.</summary>
+    public IFormFile? File(string k) => f.Files.GetFile(k);
     public string? N(string k) { var v = S(k); return v.Length == 0 ? null : v; }
     public int I(string k) => int.TryParse(S(k), NumberStyles.Integer, Inv, out var n) ? n : 0;
     public int? NI(string k) => int.TryParse(S(k), NumberStyles.Integer, Inv, out var n) ? n : null;
@@ -48,11 +50,14 @@ public class ShopCommands
 {
     readonly string _cs;
     readonly string _imagesDir;
+    readonly string _uploadsDir;
 
     public ShopCommands(IConfiguration config, IWebHostEnvironment env)
     {
         _cs = config.GetConnectionString("Default") ?? "";
         _imagesDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Images"] ?? "../../Backend/Images"));
+        // Ảnh sản phẩm tải lên từ thiết bị lưu ở Frontend/Uploads, cả hai web cùng phục vụ tại đường dẫn /uploads
+        _uploadsDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Uploads"] ?? "../Uploads"));
     }
 
     // ============================================================
@@ -78,8 +83,8 @@ public class ShopCommands
         {
             "vaitro" => Q("SELECT ma_vai_tro v, ten_vai_tro l FROM VAI_TRO ORDER BY ma_vai_tro", "v", "l"),
             "vaitro_nv" => Q("SELECT ma_vai_tro v, ten_vai_tro l FROM VAI_TRO WHERE ten_vai_tro <> 'Khách hàng' ORDER BY ma_vai_tro", "v", "l"),
-            "loai" => Q("SELECT ma_loai v, ten_loai l FROM LOAI_SP ORDER BY ten_loai", "v", "l"),
-            "sanpham" => Q("SELECT ma_san_pham v, ten_san_pham l FROM SAN_PHAM ORDER BY ten_san_pham", "v", "l"),
+            "loai" => Q($"SELECT ma_loai v, ten_loai l FROM LOAI_SP WHERE ten_loai <> '{Catalog.ArchivedCategory}' ORDER BY ten_loai", "v", "l"),
+            "sanpham" => Q($"SELECT sp.ma_san_pham v, sp.ten_san_pham l FROM SAN_PHAM sp JOIN LOAI_SP lo ON lo.ma_loai = sp.ma_loai WHERE lo.ten_loai <> '{Catalog.ArchivedCategory}' ORDER BY sp.ten_san_pham", "v", "l"),
             "ncc" => Q("SELECT ma_ncc v, ten_ncc l FROM NHA_CUNG_CAP WHERE trang_thai = 'hop_tac' ORDER BY ten_ncc", "v", "l"),
             "sothich" => Q("SELECT ma_so_thich v, ten_so_thich l FROM SO_THICH ORDER BY ten_so_thich", "v", "l", blank: true),
             "ctkm" => Q("SELECT ma_ctkm v, ten_ctkm l FROM CTKM ORDER BY ngay_bat_dau DESC", "v", "l", blank: true),
@@ -94,26 +99,71 @@ public class ShopCommands
                 FROM KHACH_HANG kh ORDER BY kh.ten, kh.ho_lot
                 """, "v", "l", "d"),
             // Biến thể: Data = "giá bán|tồn kho|giá vốn"
-            "bienthe" => Q("""
+            "bienthe" => Q($"""
                 SELECT bt.ma_bien_the v,
-                       CONCAT(sp.ten_san_pham, IFNULL(CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'), '')) l,
+                       CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) l,
                        CONCAT(bt.gia_ban, '|', bt.so_luong_ton, '|', bt.gia_von) d
-                FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham ORDER BY sp.ten_san_pham, bt.kich_co
+                FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+                JOIN LOAI_SP lo ON lo.ma_loai = sp.ma_loai AND lo.ten_loai <> '{Catalog.ArchivedCategory}'
+                ORDER BY sp.ten_san_pham, bt.kich_co
+                """, "v", "l", "d"),
+            // Dòng phiếu nhập: các biến thể, cộng thêm các sản phẩm CHƯA có biến thể nào (giá trị "p<mã sản phẩm>", Data = "0|0|0|new")
+            // để sản phẩm vừa thêm có ngay trong danh sách; sản phẩm bị xóa thì tự mất khỏi danh sách
+            "bienthe_nhap" => Q($"""
+                SELECT CAST(bt.ma_bien_the AS CHAR) v,
+                       CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) l,
+                       CONCAT(bt.gia_ban, '|', bt.so_luong_ton, '|', bt.gia_von) d
+                FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+                JOIN LOAI_SP lo ON lo.ma_loai = sp.ma_loai AND lo.ten_loai <> '{Catalog.ArchivedCategory}'
+                UNION ALL
+                SELECT CONCAT('p', sp.ma_san_pham) v, CONCAT(sp.ten_san_pham, ' (chưa có biến thể)') l, '0|0|0|new' d
+                FROM SAN_PHAM sp JOIN LOAI_SP lo ON lo.ma_loai = sp.ma_loai AND lo.ten_loai <> '{Catalog.ArchivedCategory}'
+                WHERE NOT EXISTS (SELECT 1 FROM BIEN_THE_SP b WHERE b.ma_san_pham = sp.ma_san_pham)
+                ORDER BY l
                 """, "v", "l", "d"),
             "images" => ImageOptions(),
             _ => [],
         };
     }
 
-    /// <summary>Các file ảnh trong thư mục Backend/Images, giá trị lưu là "/images/tên-file".</summary>
+    /// <summary>Danh sách ảnh để chọn: ảnh có sẵn trong Backend/Images ("/images/tên-file") và ảnh đã tải lên từ thiết bị ("/uploads/tên-file").</summary>
     List<Opt> ImageOptions()
     {
         var list = new List<Opt> { new("", "(Chưa có ảnh)") };
-        if (Directory.Exists(_imagesDir))
-            list.AddRange(Directory.EnumerateFiles(_imagesDir)
-                .Where(p => Regex.IsMatch(p, @"\.(jpe?g|png|webp|gif)$", RegexOptions.IgnoreCase))
-                .OrderBy(p => p).Select(p => new Opt("/images/" + Path.GetFileName(p), Path.GetFileName(p))));
+        list.AddRange(ImagesIn(_imagesDir, "/images/"));
+        list.AddRange(ImagesIn(_uploadsDir, "/uploads/"));
         return list;
+    }
+
+    static IEnumerable<Opt> ImagesIn(string dir, string urlPrefix) =>
+        !Directory.Exists(dir) ? [] : Directory.EnumerateFiles(dir)
+            .Where(p => Regex.IsMatch(p, @"\.(jpe?g|png|webp|gif)$", RegexOptions.IgnoreCase))
+            .OrderBy(p => p).Select(p => new Opt(urlPrefix + Path.GetFileName(p), Path.GetFileName(p)));
+
+    const long MaxUploadBytes = 5 * 1024 * 1024;
+
+    /// <summary>
+    /// Lưu ảnh sản phẩm tải lên từ thiết bị vào thư mục Uploads với tên ngẫu nhiên, trả về đường dẫn "/uploads/tên-file".
+    /// Chỉ nhận ảnh JPG, PNG, WEBP, GIF tối đa 5 MB; kiểm tra cả phần đầu file để chắc đó đúng là ảnh.
+    /// </summary>
+    string SaveUploadedImage(IFormFile file)
+    {
+        string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp" or ".gif")) throw new UserError("Chỉ nhận ảnh định dạng JPG, PNG, WEBP hoặc GIF.");
+        if (file.Length > MaxUploadBytes) throw new UserError("Ảnh quá lớn, tối đa 5 MB.");
+
+        byte[] head = new byte[12];
+        using (var s = file.OpenReadStream()) s.ReadExactly(head, 0, (int)Math.Min(head.Length, file.Length));
+        bool isImage = head is [0xFF, 0xD8, 0xFF, ..]                                   // JPEG
+                    || head is [0x89, 0x50, 0x4E, 0x47, ..]                            // PNG
+                    || head is [0x47, 0x49, 0x46, 0x38, ..]                            // GIF
+                    || head is [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50]; // WEBP
+        if (!isImage) throw new UserError("File tải lên không phải là ảnh hợp lệ.");
+
+        Directory.CreateDirectory(_uploadsDir);
+        string name = $"sp-{Guid.NewGuid():N}{ext}";
+        using (var fs = File.Create(Path.Combine(_uploadsDir, name))) file.CopyTo(fs);
+        return "/uploads/" + name;
     }
 
     // ============================================================
@@ -126,7 +176,11 @@ public class ShopCommands
         IDictionary<string, object?>? row = entity switch
         {
             "account" => One(c, "SELECT ten_dang_nhap, email, so_dien_thoai, ma_vai_tro, trang_thai FROM TAI_KHOAN WHERE ma_tai_khoan=@id", new { id }),
-            "customer" => One(c, "SELECT ho_lot, ten, gioi_tinh, ngay_sinh, so_dien_thoai FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }),
+            "customer" => One(c, """
+                SELECT kh.ho_lot, kh.ten, kh.gioi_tinh, kh.ngay_sinh, kh.so_dien_thoai, tk.email,
+                       (SELECT d.dia_chi_chi_tiet FROM SO_DIA_CHI d WHERE d.ma_khach_hang = kh.ma_khach_hang ORDER BY d.la_mac_dinh DESC, d.ma_dia_chi LIMIT 1) AS dia_chi
+                FROM KHACH_HANG kh LEFT JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan WHERE kh.ma_khach_hang=@id
+                """, new { id }),
             "group" => One(c, "SELECT ten_nhom, mo_ta, loai_tieu_chi, gia_tri_tu, gia_tri_den, gioi_tinh, ma_so_thich FROM NHOM_KHACH_HANG WHERE ma_nhom_kh=@id", new { id }),
             "employee" => One(c, "SELECT ho_lot, ten, gioi_tinh, ngay_sinh, chuc_vu, luong_co_ban, trang_thai FROM NHAN_VIEN WHERE ma_nhan_vien=@id", new { id }),
             "category" => One(c, "SELECT ten_loai FROM LOAI_SP WHERE ma_loai=@id", new { id }),
@@ -178,7 +232,7 @@ public class ShopCommands
     {
         using var c = new MySqlConnection(_cs);
         return c.Query("""
-            SELECT CONCAT(sp.ten_san_pham, IFNULL(CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'), '')) AS ten,
+            SELECT CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) AS ten,
                    ct.so_luong, ct.don_gia, ct.thanh_tien
             FROM CHI_TIET_PHIEU_NHAP_HANG ct JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
             JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE ct.ma_phieu_nhap = @id
@@ -294,6 +348,7 @@ public class ShopCommands
                     new { last, first, gender, birth, phone = phone.NullIfEmpty(), id }, tx) == 0
                 && c.ExecuteScalar<int>("SELECT COUNT(*) FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx) == 0)
                 throw new UserError("Không tìm thấy khách hàng.");
+            UpdateCustomerAccountAndAddress(c, tx, id, f, last, first, phone);
         }
 
         // Sở thích: thay toàn bộ bằng các ô được tích
@@ -301,6 +356,39 @@ public class ShopCommands
         foreach (var s in f.Many("so_thich").Select(v => int.TryParse(v, out var n) ? n : 0).Where(n => n > 0).Distinct())
             c.Execute("INSERT INTO KHACH_HANG_SO_THICH (ma_khach_hang, ma_so_thich) VALUES (@id, @s)", new { id, s }, tx);
         return $"Đã lưu khách hàng {last} {first}.";
+    }
+
+    /// <summary>
+    /// Sửa thông tin khách ngoài hồ sơ: email và số điện thoại của tài khoản (giống khi khách tự sửa ở web khách) và địa chỉ giao hàng mặc định.
+    /// Không bao giờ đổi mật khẩu: mật khẩu do khách tự đổi, web admin chỉ xem lại giá trị hiện có trong CSDL.
+    /// </summary>
+    void UpdateCustomerAccountAndAddress(MySqlConnection c, MySqlTransaction tx, int id, Form f, string last, string first, string phone)
+    {
+        // Email và số điện thoại của tài khoản đăng nhập (khách mua tại quầy chưa có tài khoản thì bỏ qua)
+        int? accountId = c.ExecuteScalar<int?>("SELECT ma_tai_khoan FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx);
+        string email = f.S("email");
+        if (accountId != null)
+        {
+            if (email.Length == 0) throw new UserError("Vui lòng nhập email của khách.");
+            CheckEmail(email);
+            if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM TAI_KHOAN WHERE email=@email AND ma_tai_khoan<>@accountId", new { email, accountId }, tx) > 0)
+                throw new UserError("Email đã được tài khoản khác sử dụng.");
+            c.Execute("UPDATE TAI_KHOAN SET email=@email, so_dien_thoai=@phone WHERE ma_tai_khoan=@accountId", new { email, phone = phone.NullIfEmpty(), accountId }, tx);
+        }
+
+        // Địa chỉ giao hàng mặc định: sửa địa chỉ mặc định hiện có, chưa có thì thêm mới (để trống thì giữ nguyên)
+        string address = f.S("dia_chi");
+        if (address.Length == 0) return;
+        if (address.Length > 255) throw new UserError("Địa chỉ tối đa 255 ký tự.");
+        int? addressId = c.ExecuteScalar<int?>("SELECT ma_dia_chi FROM SO_DIA_CHI WHERE ma_khach_hang=@id ORDER BY la_mac_dinh DESC, ma_dia_chi LIMIT 1", new { id }, tx);
+        if (addressId != null)
+            c.Execute("UPDATE SO_DIA_CHI SET dia_chi_chi_tiet=@address WHERE ma_dia_chi=@addressId", new { address, addressId }, tx);
+        else
+        {
+            if (phone.Length == 0) throw new UserError("Cần có số điện thoại của khách để lưu địa chỉ giao hàng.");
+            c.Execute("INSERT INTO SO_DIA_CHI (ma_khach_hang, ten_nguoi_nhan, sdt_nguoi_nhan, dia_chi_chi_tiet, la_mac_dinh) VALUES (@id, @name, @phone, @address, 1)",
+                new { id, name = $"{last} {first}".Trim(), phone, address }, tx);
+        }
     }
 
     // ---------- Nhóm khách hàng ----------
@@ -410,7 +498,9 @@ public class ShopCommands
         if (cat == 0) throw new UserError("Vui lòng chọn loại sản phẩm.");
         if (name.Length == 0 || unit.Length == 0) throw new UserError("Vui lòng nhập tên sản phẩm và đơn vị tính.");
         string status = f.S("trang_thai") == "an" ? "an" : "hien";
-        var p = new { cat, name, unit, desc = f.N("mo_ta"), status, img = f.N("hinh_anh"), id };
+        // Có chọn ảnh từ thiết bị thì dùng ảnh đó, không thì dùng ảnh chọn trong danh sách
+        string? img = f.File("hinh_anh_file") is { Length: > 0 } upload ? SaveUploadedImage(upload) : f.N("hinh_anh");
+        var p = new { cat, name, unit, desc = f.N("mo_ta"), status, img, id };
         if (id == 0) c.Execute("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai, hinh_anh) VALUES (@cat, @name, @unit, @desc, @status, @img)", p, tx);
         else c.Execute("UPDATE SAN_PHAM SET ma_loai=@cat, ten_san_pham=@name, don_vi_tinh=@unit, mo_ta=@desc, trang_thai=@status, hinh_anh=@img WHERE ma_san_pham=@id", p, tx);
         return $"Đã lưu sản phẩm \"{name}\".";
@@ -450,13 +540,28 @@ public class ShopCommands
         if (supplier == 0) throw new UserError("Vui lòng chọn nhà cung cấp.");
 
         // Các dòng: biến thể + số lượng + đơn giá (bỏ qua dòng bỏ trống, gộp dòng trùng biến thể)
-        var v = f.All("dong_bien_the"); var q = f.All("dong_so_luong"); var pr = f.All("dong_don_gia");
+        var v = f.All("dong_bien_the"); var q = f.All("dong_so_luong"); var pr = f.All("dong_don_gia"); var sell = f.All("dong_gia_ban");
         var lines = new Dictionary<int, (int Qty, decimal Price)>();
+        var createdVariants = new Dictionary<int, int>();   // mã sản phẩm → biến thể mặc định vừa tạo trong phiếu này
         for (int i = 0; i < v.Length; i++)
         {
-            if (!int.TryParse(v[i], out int variant) || variant == 0) continue;
+            int variant;
+            decimal Num(string[] a) => i < a.Length && decimal.TryParse(a[i].Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : -1;
             int qty = i < q.Length && int.TryParse(q[i], out var qq) ? qq : 0;
-            decimal price = i < pr.Length && decimal.TryParse(pr[i].Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : -1;
+            decimal price = Num(pr);
+            if (v[i].StartsWith('p') && int.TryParse(v[i][1..], out int productId))
+            {
+                // Sản phẩm chưa có biến thể: tự tạo biến thể mặc định (không size, không màu) với giá bán nhập ở dòng này
+                if (!createdVariants.TryGetValue(productId, out variant))
+                {
+                    decimal sellPrice = Num(sell);
+                    if (sellPrice <= 0) throw new UserError("Sản phẩm chưa có biến thể nên cần nhập giá bán cho dòng đó.");
+                    variant = c.ExecuteScalar<int>("INSERT INTO BIEN_THE_SP (ma_san_pham, gia_ban, gia_von, so_luong_ton, trang_thai) VALUES (@productId, @sellPrice, @cost, 0, 'hien'); SELECT LAST_INSERT_ID();",
+                        new { productId, sellPrice, cost = Math.Max(0, price) }, tx);
+                    createdVariants[productId] = variant;
+                }
+            }
+            else if (!int.TryParse(v[i], out variant) || variant == 0) continue;
             if (qty <= 0) throw new UserError("Số lượng nhập phải lớn hơn 0.");
             if (price < 0) throw new UserError("Vui lòng nhập đơn giá nhập cho mọi dòng.");
             lines[variant] = lines.TryGetValue(variant, out var old) ? (old.Qty + qty, price) : (qty, price);
@@ -524,7 +629,8 @@ public class ShopCommands
                 FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
                 WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
                 """, new { code }, tx) ?? throw new UserError("Mã voucher không hợp lệ hoặc đã hết hạn.");
-            string tier = c.ExecuteScalar<string>("SELECT hang_thanh_vien FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx) ?? "thuong";
+            var member = One(c, "SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx);
+            string tier = member == null ? "thuong" : MemberTier.Effective(S(member, "hang_thanh_vien"), decimal.Parse(Dec(member, "tong_chi_tieu"), CultureInfo.InvariantCulture));
             if (S(km, "hang_ap_dung") is { Length: > 0 } need && need != tier) throw new UserError($"Voucher chỉ áp dụng cho khách hạng {need}.");
             if (S(km, "so_luong_gioi_han") is { Length: > 0 } lim && int.Parse(S(km, "so_luot_da_dung")) >= int.Parse(lim)) throw new UserError("Voucher đã hết lượt sử dụng.");
             int ctId = int.Parse(S(km, "ma_ctkm"));
@@ -548,7 +654,7 @@ public class ShopCommands
         {
             // Trừ tồn kho; không đủ hàng thì báo lỗi (hoàn tác cả đơn)
             if (c.Execute("UPDATE BIEN_THE_SP SET so_luong_ton = so_luong_ton - @qty WHERE ma_bien_the=@variant AND so_luong_ton >= @qty", new { qty, variant }, tx) == 0)
-                throw new UserError("Không đủ tồn kho cho: " + c.ExecuteScalar<string>("SELECT CONCAT(sp.ten_san_pham, IFNULL(CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'), '')) FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE bt.ma_bien_the=@variant", new { variant }, tx) + ".");
+                throw new UserError("Không đủ tồn kho cho: " + c.ExecuteScalar<string>("SELECT CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE bt.ma_bien_the=@variant", new { variant }, tx) + ".");
             c.Execute("INSERT INTO CHI_TIET_DON_HANG (ma_don_hang, ma_bien_the, so_luong, don_gia, giam_gia, thanh_tien) VALUES (@order, @variant, @qty, @price, 0, @amount)",
                 new { order, variant, qty, price, amount = qty * price }, tx);
         }
@@ -634,7 +740,9 @@ public class ShopCommands
         decimal spent = Math.Max(0, decimal.Parse(Dec(kh, "tong_chi_tieu"), CultureInfo.InvariantCulture) - total);
         int points = Math.Max(0, int.Parse(S(kh, "diem_tich_luy")) - (int)Math.Floor(total / 10000));
         string[] tiers = ["thuong", "bac", "vang", "VIP"];
-        int oldRank = Math.Max(0, Array.IndexOf(tiers, S(kh, "hang_thanh_vien")));
+        // Hạng hiện tại tính theo tổng chi tiêu trước khi hoàn (khách chưa chi tiêu thì là hạng thường)
+        string currentTier = MemberTier.Effective(S(kh, "hang_thanh_vien"), spent + total);
+        int oldRank = Math.Max(0, Array.IndexOf(tiers, currentTier));
         int rankBySpent = spent >= 10_000_000 ? 3 : spent >= 5_000_000 ? 2 : spent >= 2_000_000 ? 1 : 0;
         c.Execute("UPDATE KHACH_HANG SET tong_chi_tieu=@spent, diem_tich_luy=@points, hang_thanh_vien=@tier WHERE ma_khach_hang=@customer",
             new { spent, points, tier = tiers[Math.Min(oldRank, rankBySpent)], customer }, tx);
@@ -689,7 +797,8 @@ public class ShopCommands
         var kh = One(c, "SELECT tong_chi_tieu, hang_thanh_vien FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx)!;
         decimal spent = decimal.Parse(Dec(kh, "tong_chi_tieu"), CultureInfo.InvariantCulture) + total;
         string[] tiers = ["thuong", "bac", "vang", "VIP"];
-        int oldRank = Math.Max(0, Array.IndexOf(tiers, S(kh, "hang_thanh_vien")));
+        // Hạng hiện tại tính theo tổng chi tiêu trước khi cộng đơn này (khách chưa chi tiêu thì là hạng thường)
+        int oldRank = Math.Max(0, Array.IndexOf(tiers, MemberTier.Effective(S(kh, "hang_thanh_vien"), spent - total)));
         int newRank = Math.Max(oldRank, spent >= 10_000_000 ? 3 : spent >= 5_000_000 ? 2 : spent >= 2_000_000 ? 1 : 0);
         c.Execute("UPDATE KHACH_HANG SET tong_chi_tieu=@spent, diem_tich_luy = diem_tich_luy + @pts, hang_thanh_vien=@tier WHERE ma_khach_hang=@customer",
             new { spent, pts = (int)Math.Floor(total / 10000), tier = tiers[newRank], customer }, tx);
@@ -877,10 +986,29 @@ public class ShopCommands
                 }
             case "category":
                 {
-                    if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM SAN_PHAM WHERE ma_loai=@id", new { id }, tx) > 0)
-                        throw new UserError("Loại này còn sản phẩm nên không xóa được. Hãy chuyển sản phẩm sang loại khác trước.");
+                    var name = c.ExecuteScalar<string>("SELECT ten_loai FROM LOAI_SP WHERE ma_loai=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy loại sản phẩm.");
+                    int removed = 0, kept = 0;
+                    int? archiveId = null;
+                    foreach (var product in c.Query<int>("SELECT ma_san_pham FROM SAN_PHAM WHERE ma_loai=@id", new { id }, tx).ToList())
+                    {
+                        if (ProductHasHistory(c, tx, product))
+                        {
+                            // Đã có đơn hàng / phiếu nhập / khuyến mãi / phản hồi: giữ lại để lịch sử không mất,
+                            // nhưng ẩn khỏi cửa hàng và chuyển sang loại ẩn "[Đã xóa]" (không hiện ở admin và web khách)
+                            archiveId ??= ArchivedCategoryId(c, tx);
+                            c.Execute("UPDATE SAN_PHAM SET trang_thai='an', ma_loai=@archiveId WHERE ma_san_pham=@product", new { archiveId, product }, tx);
+                            kept++;
+                        }
+                        else
+                        {
+                            c.Execute("DELETE FROM BIEN_THE_SP WHERE ma_san_pham=@product", new { product }, tx);
+                            c.Execute("DELETE FROM SAN_PHAM WHERE ma_san_pham=@product", new { product }, tx);
+                            removed++;
+                        }
+                    }
                     c.Execute("DELETE FROM LOAI_SP WHERE ma_loai=@id", new { id }, tx);
-                    return "Đã xóa loại sản phẩm.";
+                    string detail = removed + kept == 0 ? "" : $" {removed} sản phẩm đã xóa" + (kept > 0 ? $", {kept} sản phẩm đã có lịch sử mua nên được ẩn khỏi cửa hàng (lịch sử mua hàng vẫn giữ)." : ".");
+                    return $"Đã xóa loại \"{name}\".{detail}";
                 }
             case "product":
                 {
@@ -1003,6 +1131,22 @@ public class ShopCommands
         catch (MySqlException e) { return new Result(false, Friendly(e)); }
     }
 
+
+    /// <summary>Sản phẩm đã gắn với dữ liệu khác (đơn hàng, hóa đơn, phiếu nhập, khuyến mãi theo sản phẩm, phản hồi) nên không được xóa hẳn.</summary>
+    static bool ProductHasHistory(MySqlConnection c, MySqlTransaction tx, int product) => c.ExecuteScalar<int>("""
+        SELECT (SELECT COUNT(*) FROM CHI_TIET_DON_HANG x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
+             + (SELECT COUNT(*) FROM CHI_TIET_HOA_DON x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
+             + (SELECT COUNT(*) FROM CHI_TIET_PHIEU_NHAP_HANG x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
+             + (SELECT COUNT(*) FROM KM_THEO_SP WHERE ma_san_pham = @product)
+             + (SELECT COUNT(*) FROM PHAN_HOI WHERE ma_san_pham = @product)
+        """, new { product }, tx) > 0;
+
+    /// <summary>Mã của loại ẩn "[Đã xóa]" (tạo nếu chưa có), nơi giữ các sản phẩm đã có lịch sử khi xóa loại sản phẩm.</summary>
+    static int ArchivedCategoryId(MySqlConnection c, MySqlTransaction tx)
+    {
+        var id = c.ExecuteScalar<int?>("SELECT ma_loai FROM LOAI_SP WHERE ten_loai=@name", new { name = Catalog.ArchivedCategory }, tx);
+        return id ?? c.ExecuteScalar<int>("INSERT INTO LOAI_SP (ten_loai) VALUES (@name); SELECT LAST_INSERT_ID();", new { name = Catalog.ArchivedCategory }, tx);
+    }
     static string Friendly(MySqlException e) => e.Number switch
     {
         1062 => "Dữ liệu bị trùng (tên đăng nhập, email, mã voucher hoặc biến thể đã tồn tại).",

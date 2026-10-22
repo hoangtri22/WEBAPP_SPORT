@@ -74,6 +74,23 @@
             <button type="submit" class="btn btn-primary" data-needs-db>@Icons.Svg("check", 17) Lưu thay đổi</button>
         </div>
     </form>
+
+    @* Đổi mật khẩu: bấm nút để mở biểu mẫu; mật khẩu mới được lưu ngay vào tài khoản *@
+    <section class="card customer-form pw-card">
+        <details>
+            <summary class="btn btn-secondary pw-toggle">@Icons.Svg("lock", 17) Đổi mật khẩu</summary>
+            <form method="post" asp-controller="Customer" asp-action="ChangePassword" class="pw-form" novalidate>
+                <div class="form-grid">
+                    <label class="full-field">Mật khẩu hiện tại<input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+                    <label>Mật khẩu mới<input name="newPassword" type="password" autocomplete="new-password" minlength="6" required /><small>Tối thiểu 6 ký tự</small></label>
+                    <label>Nhập lại mật khẩu mới<input name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required /></label>
+                </div>
+                <div class="customer-form-actions">
+                    <button type="submit" class="btn btn-primary" data-needs-db>@Icons.Svg("check", 17) Lưu mật khẩu mới</button>
+                </div>
+            </form>
+        </details>
+    </section>
 </div>
 
 @section Scripts {

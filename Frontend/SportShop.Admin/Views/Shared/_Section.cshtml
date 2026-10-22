@@ -71,7 +71,7 @@
                                     }
                                     @if (Model.CanDelete)
                                     {
-                                        <button type="button" class="act" data-crud="delete" data-entity="@Model.Entity" data-id="@r.Id" data-name="@r.Cells[0]" title="Xóa">@Icons.Svg("trash", 18)</button>
+                                        <button type="button" class="act" data-crud="delete" data-entity="@Model.Entity" data-id="@r.Id" data-name="@r.Cells[0]" data-warn="@(Model.Entity == "category" ? "Các sản phẩm trong loại này cũng sẽ bị xóa khỏi cửa hàng. Sản phẩm đã có lịch sử mua thì được ẩn nhưng lịch sử mua hàng của khách vẫn giữ nguyên." : null)" title="Xóa">@Icons.Svg("trash", 18)</button>
                                     }
                                 </div>
                             </td>

@@ -58,6 +58,9 @@ public class ShopData
     public List<string> Categories => _categories.Value.Select(c => c.Name).ToList();
     public List<Product> Products => _products.Value;
     public List<Variant> Variants => _variants.Value;
+    /// <summary>Sản phẩm / biến thể chưa bị xóa (không thuộc loại ẩn "đã xóa"). Dùng khi liệt kê; tra cứu theo mã vẫn dùng Products / Variants để lịch sử đơn hàng hiện đủ tên.</summary>
+    public List<Product> ActiveProducts => Products.Where(p => p.Category != Catalog.ArchivedCategory).ToList();
+    public List<Variant> ActiveVariants { get { var ids = ActiveProducts.Select(p => p.Id).ToHashSet(); return Variants.Where(v => ids.Contains(v.ProductId)).ToList(); } }
     public List<Employee> Employees => _employees.Value;
     public List<Customer> Customers => _customers.Value;
     public List<CustomerGroup> CustomerGroups => _groups.Value;
@@ -128,7 +131,7 @@ public class ShopData
     // ================= Truy vấn từng bảng =================
 
     List<Category> LoadCategories() =>
-        Query("SELECT ma_loai, ten_loai FROM LOAI_SP ORDER BY ma_loai")
+        Query("SELECT ma_loai, ten_loai FROM LOAI_SP WHERE ten_loai <> @archived ORDER BY ma_loai", new { archived = Catalog.ArchivedCategory })
             .Select(r => new Category(I(r, "ma_loai"), S(r, "ten_loai"))).ToList();
 
     List<Product> LoadProducts() =>
@@ -197,7 +200,7 @@ public class ShopData
                 Groups = groups[id].ToArray(),
                 TotalSpent = M(r, "tong_chi_tieu"),
                 Points = I(r, "diem_tich_luy"),
-                Tier = S(r, "hang_thanh_vien") switch { "thuong" => "Thường", "bac" => "Bạc", "vang" => "Vàng", var t => t },
+                Tier = MemberTier.Label(MemberTier.Effective(S(r, "hang_thanh_vien"), M(r, "tong_chi_tieu"))),
             };
         }).ToList();
     }
@@ -310,8 +313,22 @@ public class ShopData
             .Select(r => new Supplier(I(r, "ma_ncc"), S(r, "ten_ncc"), S(r, "so_dien_thoai"), S(r, "email"), S(r, "dia_chi"),
                 S(r, "trang_thai") == "hop_tac")).ToList();
 
-    List<ImportSlip> LoadImports() =>
-        Query("""
+    List<ImportSlip> LoadImports()
+    {
+        // Các mặt hàng của từng phiếu (tên đầy đủ kèm size / màu và số lượng), đọc lại từ CSDL mỗi lần nên luôn khớp dữ liệu hiện tại
+        var items = Query("""
+            SELECT c.ma_phieu_nhap, sp.ten_san_pham, bt.kich_co, bt.mau_sac, c.so_luong
+            FROM CHI_TIET_PHIEU_NHAP_HANG c
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the = c.ma_bien_the
+            JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+            ORDER BY c.ma_phieu_nhap, c.ma_bien_the
+            """).ToLookup(r => I(r, "ma_phieu_nhap"), r =>
+            {
+                var extra = string.Join(" / ", new[] { NS(r, "kich_co"), NS(r, "mau_sac") }.Where(s => !string.IsNullOrEmpty(s)));
+                return $"{S(r, "ten_san_pham")}{(extra.Length == 0 ? "" : $" ({extra})")} × {I(r, "so_luong")}";
+            });
+
+        return Query("""
             SELECT pn.ma_phieu_nhap, ncc.ten_ncc, pn.ngay_nhap, CONCAT(nv.ho_lot, ' ', nv.ten) AS nv_ten, pn.tong_tien,
                    (SELECT IFNULL(SUM(c.so_luong), 0) FROM CHI_TIET_PHIEU_NHAP_HANG c WHERE c.ma_phieu_nhap = pn.ma_phieu_nhap) AS so_luong
             FROM PHIEU_NHAP_HANG pn
@@ -319,7 +336,8 @@ public class ShopData
             JOIN NHAN_VIEN nv ON nv.ma_nhan_vien = pn.ma_nhan_vien
             ORDER BY pn.ngay_nhap DESC
             """).Select(r => new ImportSlip(I(r, "ma_phieu_nhap"), S(r, "ten_ncc"), T(r, "ngay_nhap"), I(r, "so_luong"),
-                S(r, "nv_ten"), M(r, "tong_tien"))).ToList();
+                S(r, "nv_ten"), M(r, "tong_tien"), string.Join("; ", items[I(r, "ma_phieu_nhap")]))).ToList();
+    }
 
     List<Promotion> LoadPromotions()
     {

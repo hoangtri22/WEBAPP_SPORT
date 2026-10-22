@@ -10,7 +10,8 @@
     string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
     bool live = Db.IsConnected;
     int customerId = Context.Session.GetInt32("customer_id") ?? 0;
-    var products = live ? Store.Products() : StoreData.Products.Select(p => (p.Id, p.Name)).ToList();
+    // Đã kết nối: chỉ các sản phẩm khách đã mua và nhận hàng (đơn "Đã giao")
+    var products = live ? Store.PurchasedProducts(customerId) : StoreData.Products.Select(p => (p.Id, p.Name)).ToList();
     var feedbacks = live ? Store.Feedbacks(customerId) : StoreData.Feedbacks;
 }
 <div class="customer-page-title"><span>LẮNG NGHE &amp; CẢI THIỆN</span><h1>Gửi phản hồi về sản phẩm</h1><p>Chia sẻ trải nghiệm để chúng tôi nâng cao chất lượng sản phẩm và dịch vụ.</p></div>
@@ -23,8 +24,8 @@
     </div>
     <form method="post" asp-controller="Customer" asp-action="Feedback" novalidate>
         <label>Chọn sản phẩm
-            <select name="product">
-                <option value="" disabled selected>Chọn sản phẩm đã mua</option>
+            <select name="product" disabled="@(live && products.Count == 0)">
+                <option value="" disabled selected>@(live && products.Count == 0 ? "Bạn chưa có sản phẩm nào đã mua và nhận hàng" : "Chọn sản phẩm đã mua")</option>
                 @foreach (var p in products) { <option value="@p.Id">@p.Name</option> }
             </select>
         </label>

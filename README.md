@@ -26,12 +26,20 @@ SportShop/
 ## Chức năng
 
 ### Web khách hàng (`Frontend/SportShop.CustomerWeb`, http://localhost:5003)
-- **Tài khoản:** đăng ký, đăng nhập, đăng xuất, chỉnh sửa thông tin cá nhân (kèm sở thích thể thao).
+- **Tài khoản:** đăng ký, đăng nhập, đăng xuất, chỉnh sửa thông tin cá nhân (kèm sở thích thể thao) và **tự đổi mật khẩu**
+  (nhập mật khẩu hiện tại, mật khẩu mới, nhập lại). Mật khẩu mới được web quản trị thấy ngay.
 - **Mua hàng:** trang chủ cửa hàng, danh sách sản phẩm (lọc theo loại, tìm kiếm, sắp xếp), chi tiết sản phẩm với chọn size / màu,
   giỏ hàng, thanh toán với mã giảm giá (thanh toán giả lập, miễn phí giao hàng từ 500.000₫), trang khuyến mãi.
+  Số sản phẩm ở từng danh mục trang chủ lấy theo dữ liệu thật. Chỉ hiện sản phẩm đang bán và còn tồn kho; sản phẩm chưa có tồn kho
+  hoặc bị ẩn không hiện ở cửa hàng.
 - **Đơn hàng của tôi:** theo dõi trạng thái chờ xác nhận → đang chuẩn bị → đang giao → đã giao, tự hủy đơn khi còn chờ xác nhận.
-  Khi đơn vừa chuyển "Đã giao" trong lúc khách đang xem, trang báo rồi quay về trang chủ.
-- **Phản hồi và khảo sát:** gửi phản hồi về sản phẩm, làm khảo sát được cửa hàng gửi.
+  Khi đơn vừa chuyển "Đã giao" trong lúc khách đang xem, trang báo rồi quay về trang chủ. Đơn đã giao có mục đánh giá các sản phẩm trong đơn.
+  Lịch sử mua hàng vẫn giữ nguyên kể cả khi sản phẩm bị ẩn hoặc loại sản phẩm bị xóa.
+- **Phản hồi và khảo sát:** chỉ gửi được phản hồi cho sản phẩm đã mua và đã nhận hàng; làm khảo sát được cửa hàng gửi.
+- **Trang thông tin:** chính sách đổi trả, giao hàng, hướng dẫn chọn size, liên hệ, về chúng tôi, hệ thống cửa hàng, tuyển dụng
+  (nội dung ở `Models/InfoPages.cs`).
+- **Bảo mật:** sai mật khẩu 5 lần thì khóa đăng nhập tạm 5 phút (`Services/LoginThrottle.cs`), so sánh mật khẩu theo thời gian không đổi,
+  cookie gắn SameSite và các header chống nhúng trang / đoán kiểu file.
 - Nút "Trang quản trị" chuyển sang web quản trị (địa chỉ cấu hình ở `appsettings.json`, mục `Links:AdminUrl`).
 
 Mã nguồn chính: `Services/CustomerStore.cs` (tài khoản, phản hồi, khảo sát) và `Services/ShopStore.cs` (sản phẩm, giỏ hàng, đặt hàng, đơn hàng).
@@ -43,13 +51,19 @@ nhân viên, loại sản phẩm, sản phẩm, hóa đơn, khuyến mãi và ma
 Các bảng có tìm kiếm, bộ lọc và phân trang. Nút thêm / xem / sửa / xóa mở biểu mẫu ở ngăn bên phải và ghi thẳng vào MySQL
 (`Models/ShopCommands.cs`, `Controllers/CrudController.cs`).
 
-- **Khách hàng:** thêm, sửa, xóa; khóa / mở khóa tài khoản; phân nhóm khách; ghi chú chăm sóc; xem mật khẩu (chỉ vai trò Quản lý).
+- **Khách hàng:** thêm, xóa; sửa mọi thông tin (họ tên, giới tính, ngày sinh, điện thoại, email, địa chỉ giao hàng, sở thích) trừ mật khẩu;
+  khóa / mở khóa tài khoản; phân nhóm khách; ghi chú chăm sóc. Mật khẩu do khách tự đổi, admin chỉ xem lại giá trị hiện có (chỉ vai trò Quản lý).
+  Khách chưa chi tiêu đồng nào luôn là hạng Thường.
 - **Đơn hàng:** lập đơn tại quầy (trừ tồn kho, kiểm tra voucher) và duyệt đơn khách đặt online.
   - Đơn **chưa thanh toán** chỉ ở "Chờ xác nhận"; phải chuyển sang "Đã thanh toán" thì mới chọn được đang chuẩn bị / đang giao / đã giao / đã hủy.
   - Khi chuyển **"Đã giao"**: tự lập hóa đơn, cộng doanh thu và lợi nhuận vào báo cáo, cộng tổng chi tiêu, điểm tích lũy và nâng hạng thành viên cho khách.
   - **"Đã giao"** và **"Đã hủy"** là trạng thái cuối, không đổi được nữa.
   - Hủy đơn hoàn lại tồn kho; nếu khách đã thanh toán thì hoàn tiền, trừ khỏi doanh thu và tổng chi tiêu.
 - **Sản phẩm và nhập hàng:** quản lý loại, sản phẩm, biến thể (size, màu, giá bán, giá vốn, tồn), nhà cung cấp; phiếu nhập cộng tồn kho và cập nhật giá vốn.
+  - Thêm sản phẩm có thể **tải ảnh từ thiết bị** (JPG, PNG, WEBP, GIF, tối đa 5 MB); ảnh lưu ở `Frontend/Uploads` và cả hai web phục vụ tại `/uploads`.
+  - Phiếu nhập hàng chọn được cả sản phẩm chưa có biến thể (nhập thêm giá bán, hệ thống tự tạo biến thể mặc định); danh sách phiếu hiện tên đầy đủ các mặt hàng.
+  - **Xóa loại sản phẩm:** sản phẩm trong loại bị xóa; sản phẩm đã có lịch sử (đơn hàng, phiếu nhập, khuyến mãi, phản hồi) được ẩn thay vì xóa hẳn
+    (chuyển sang loại ẩn "[Đã xóa]") để lịch sử mua hàng và báo cáo không mất.
 - **Khuyến mãi và marketing:** chương trình giảm giá theo sản phẩm / đơn hàng / voucher; chiến dịch thông báo gửi cho nhóm khách.
 - **Phản hồi và khảo sát:** trả lời hoặc ẩn phản hồi; tạo, gửi, đóng khảo sát và xem thống kê kết quả.
 - **Tài khoản và phân quyền:** thêm, sửa, khóa, xóa tài khoản; tài khoản và nhân viên chỉ vai trò Quản lý được thao tác.
@@ -61,8 +75,9 @@ nên có thể chạy lại bất kỳ lúc nào để đưa dữ liệu về nh
 
 ### Chưa làm
 - App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) và Web API để app gọi vào.
-- Mã hóa mật khẩu (hiện lưu dạng văn bản theo thiết kế của nhóm).
+- Mã hóa mật khẩu (hiện lưu dạng văn bản theo thiết kế của nhóm, nên admin xem được mật khẩu khách).
 - Khuyến mãi theo sản phẩm và theo mốc đơn hàng chưa tự áp dụng ở bước thanh toán (hiện chỉ áp dụng được mã voucher).
+- Gửi chiến dịch thông báo tới khách: hiện chỉ ghi nhận chiến dịch đã gửi, chưa gửi email / SMS thật hay hiện thông báo ở web khách.
 
 ## Cách chạy
 

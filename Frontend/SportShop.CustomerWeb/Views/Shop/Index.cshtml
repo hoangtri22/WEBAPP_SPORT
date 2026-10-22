@@ -7,6 +7,8 @@
     ViewData["Title"] = "Sản phẩm";
     var cats = (List<ShopCategory>)ViewBag.Categories;
     int? cat = ViewBag.Cat; string q = ViewBag.Q ?? ""; string sort = ViewBag.Sort ?? "new";
+    // Đang tìm kiếm theo từ khóa: chỉ hiện kết quả, không hiện thanh lọc loại / tìm kiếm / sắp xếp
+    bool searching = !string.IsNullOrWhiteSpace(q);
 }
 <section class="shop-page">
     <div class="shop-page-head">
@@ -15,6 +17,8 @@
         <p>@Model.Count sản phẩm</p>
     </div>
 
+    @if (!searching)
+    {
     <form class="shop-filter" method="get" asp-action="Index">
         <div class="chip-row">
             <a class="chip-link @(cat == null ? "active" : "")" asp-action="Index" asp-route-q="@q" asp-route-sort="@sort">Tất cả</a>
@@ -34,6 +38,7 @@
             </select>
         </div>
     </form>
+    }
 
     @if (Model.Count == 0)
     {

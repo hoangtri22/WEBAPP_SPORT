@@ -8,13 +8,13 @@
 @model List<FeedbackItem>
 @{
     ViewData["Title"] = "Phản hồi khách hàng";
-    var pending = Model.Where(f => f.Status != "da_tra_loi").ToList();
-    var answered = Model.Where(f => f.Status == "da_tra_loi").ToList();
+    var pending = Model.Where(f => !f.Answered).ToList();
+    var answered = Model.Where(f => f.Answered).ToList();
 
     // Chữ viết tắt cho avatar (vd "Nguyễn Minh Anh" -> "NA": chữ đầu họ + chữ đầu tên)
     // Chữ viết tắt cho avatar; khách đăng ký qua web có thể thiếu họ lót hoặc tên nên lấy chữ cái đầu của phần nào có
     string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
-    string StatusPill(FeedbackItem f) => f.Status switch { "moi" => "[o]Chưa trả lời", "dang_xu_ly" => "[b]Đang xử lý", _ => "[g]Đã trả lời" };
+    string StatusPill(FeedbackItem f) => f.Answered ? "[g]Đã trả lời" : f.Status == "dang_xu_ly" ? "[b]Đang xử lý" : "[o]Chưa trả lời";
 }
 <div class="page-head">
     <div>
@@ -41,7 +41,7 @@
             @foreach (var f in Model)
             {
                 var c = Data.Customer(f.CustomerId);
-                bool isPending = f.Status != "da_tra_loi";
+                bool isPending = !f.Answered;
                 <button type="button" class="msg @(f == pending.FirstOrDefault() ? "active" : "")" data-id="@f.Id" data-group="@(isPending ? "pending" : "answered")"
                         data-text="@(c.FullName + " " + f.Title + " " + f.Body)" @(isPending ? "" : "hidden")>
                     <span class="avatar sm">@Initials(c)</span>

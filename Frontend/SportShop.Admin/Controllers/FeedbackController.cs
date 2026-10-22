@@ -13,7 +13,7 @@ public class FeedbackController(ShopData db) : Controller
     public IActionResult Index()
     {
         ViewBag.Menu = "feedback";
-        return View(db.FeedbackItems.OrderByDescending(f => f.SentAt).ToList());
+        return View(db.FeedbackItems.OrderByDescending(f => f.Id).ToList());
     }
 
     /// <summary>Danh sách khảo sát (KHAO_SAT): nháp / đã gửi (đang thu thập) / đã đóng.</summary>

@@ -101,7 +101,9 @@ document.addEventListener('click', function (e) {
     if (crud) {
         var d = crud.dataset;
         if (d.crud === 'delete') {
-            if (!confirm('Bạn chắc chắn muốn xóa "' + (d.name || 'mục này') + '"?')) return;
+            // Có cảnh báo hệ quả (ví dụ xóa loại sản phẩm) thì hiện thêm trong hộp xác nhận
+            var warn = d.warn ? '\n\n' + d.warn : '';
+            if (!confirm('Bạn chắc chắn muốn xóa "' + (d.name || 'mục này') + '"?' + warn)) return;
             var fd = new FormData(); fd.append('entity', d.entity); fd.append('id', d.id);
             postForm('/Crud/Delete', fd).then(handleResult);
         } else {
@@ -156,7 +158,7 @@ function initForm(form) {
         // Thông tin biến thể đang chọn: "giá bán|tồn kho|giá vốn"
         function info(line) {
             var o = line.querySelector('.js-variant').selectedOptions[0], p = ((o && o.dataset.info) || '').split('|');
-            return { price: parseFloat(p[0]) || 0, stock: parseInt(p[1], 10) || 0, cost: parseFloat(p[2]) || 0 };
+            return { price: parseFloat(p[0]) || 0, stock: parseInt(p[1], 10) || 0, cost: parseFloat(p[2]) || 0, isNew: p[3] === 'new' };
         }
         function recalc() {
             var total = 0;
@@ -174,7 +176,13 @@ function initForm(form) {
             body.appendChild(tpl.content.cloneNode(true));
             var line = body.lastElementChild;
             line.querySelector('.js-variant').addEventListener('change', function () {
-                if (kind === 'import') line.querySelector('.js-cost').value = info(line).cost || '';
+                if (kind === 'import') {
+                    line.querySelector('.js-cost').value = info(line).cost || '';
+                    // Sản phẩm chưa có biến thể: hiện ô nhập giá bán để hệ thống tự tạo biến thể mặc định khi lưu phiếu
+                    var sell = line.querySelector('.js-sell');
+                    sell.hidden = !info(line).isNew;
+                    if (sell.hidden) sell.value = '';
+                }
                 if (kind === 'order') line.querySelector('.js-qty').max = info(line).stock || '';
                 recalc();
             });
@@ -229,6 +237,18 @@ function initForm(form) {
             bind(body.lastElementChild);
         });
         if (!body.children.length && addBtn) addBtn.click();
+    });
+
+    // Ảnh sản phẩm: chọn file từ thiết bị thì hiện ảnh xem trước (kiểm tra loại và dung lượng trước khi gửi)
+    var imageFile = form.querySelector('.js-image-file');
+    if (imageFile) imageFile.addEventListener('change', function () {
+        var preview = form.querySelector('.img-preview'), file = imageFile.files[0];
+        if (!file) { preview.hidden = true; return; }
+        if (!/^image\//.test(file.type) || file.size > 5 * 1024 * 1024) {
+            showToast('Chỉ nhận ảnh JPG, PNG, WEBP, GIF tối đa 5 MB.', true);
+            imageFile.value = ''; preview.hidden = true; return;
+        }
+        preview.src = URL.createObjectURL(file); preview.hidden = false;
     });
 
     // Gửi biểu mẫu

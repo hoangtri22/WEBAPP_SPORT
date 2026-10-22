@@ -6,11 +6,11 @@ namespace SportShop.Admin.Controllers;
 /// <summary>Quản lý hóa đơn &amp; giao hàng.</summary>
 public class OrdersController(ShopData db) : Controller
 {
-    /// <summary>Danh sách đơn hàng / hóa đơn, mới nhất trước. Nút con mắt mở chi tiết.</summary>
+    /// <summary>Danh sách đơn hàng / hóa đơn, mới nhất trước (xếp theo mã đơn nên không đổi khi chỉnh giờ máy). Nút con mắt mở chi tiết.</summary>
     public IActionResult Index()
     {
         ViewBag.Menu = "orders";
-        var rows = db.Orders.OrderByDescending(o => o.Date).Select(o => new Row(
+        var rows = db.Orders.OrderByDescending(o => o.Id).Select(o => new Row(
             [o.Code, db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total), Fmt.OrderStatus(o.Status)],
             Url.Action(nameof(Detail), new { id = o.Code }), o.Id)).ToList();
 

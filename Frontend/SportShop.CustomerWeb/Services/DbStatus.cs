@@ -15,7 +15,8 @@ public class DbStatus
     static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(15);
     readonly object _lock = new();
     bool _lastResult;
-    DateTime _checkedAt = DateTime.MinValue;
+    // Thời điểm kiểm tra gần nhất tính bằng đồng hồ đếm của hệ thống (không đổi khi chỉnh giờ máy)
+    long _checkedAtMs = long.MinValue / 2;
 
     public DbStatus(IConfiguration config)
     {
@@ -35,7 +36,7 @@ public class DbStatus
             if (!IsConfigured) return false;
             lock (_lock)
             {
-                if (DateTime.UtcNow - _checkedAt < CacheFor) return _lastResult;
+                if (Environment.TickCount64 - _checkedAtMs < (long)CacheFor.TotalMilliseconds) return _lastResult;
                 try
                 {
                     var b = new MySqlConnectionStringBuilder(_connectionString) { ConnectionTimeout = 3 };
@@ -47,7 +48,7 @@ public class DbStatus
                 {
                     _lastResult = false;
                 }
-                _checkedAt = DateTime.UtcNow;
+                _checkedAtMs = Environment.TickCount64;
                 return _lastResult;
             }
         }

@@ -97,16 +97,32 @@ public class ShopStore(IConfiguration config)
 
     // ===================== Giỏ hàng (lưu trong session) =====================
 
-    const string CartKey = "cart";
+    const string GuestCartKey = "cart:guest";
 
-    public static Dictionary<int, int> GetCart(ISession s)
+    /// <summary>Khóa lưu giỏ hàng trong session: mỗi tài khoản đăng nhập có giỏ riêng ("cart:{mã khách}"), chưa đăng nhập dùng giỏ vãng lai.</summary>
+    static string CartKey(ISession s) => s.GetInt32("customer_id") is int id ? "cart:" + id : GuestCartKey;
+
+    static Dictionary<int, int> ReadCart(ISession s, string key)
     {
-        var json = s.GetString(CartKey);
+        var json = s.GetString(key);
         return string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<Dictionary<int, int>>(json) ?? [];
     }
 
-    static void SaveCart(ISession s, Dictionary<int, int> cart) => s.SetString(CartKey, JsonSerializer.Serialize(cart));
-    public static void ClearCart(ISession s) => s.Remove(CartKey);
+    public static Dictionary<int, int> GetCart(ISession s) => ReadCart(s, CartKey(s));
+
+    /// <summary>Khi khách đăng nhập: giỏ chọn trước lúc đăng nhập (giỏ vãng lai) được gộp vào giỏ của tài khoản rồi xóa khỏi giỏ vãng lai.</summary>
+    public static void MergeGuestCart(ISession s)
+    {
+        var guest = ReadCart(s, GuestCartKey);
+        if (guest.Count == 0) return;
+        var mine = GetCart(s);
+        foreach (var (variant, qty) in guest) mine[variant] = mine.GetValueOrDefault(variant) + qty;
+        SaveCart(s, mine);
+        s.Remove(GuestCartKey);
+    }
+
+    static void SaveCart(ISession s, Dictionary<int, int> cart) => s.SetString(CartKey(s), JsonSerializer.Serialize(cart));
+    public static void ClearCart(ISession s) => s.Remove(CartKey(s));
     public static int CartCount(ISession s) => GetCart(s).Values.Sum();
 
     /// <summary>Thêm vào giỏ (cộng dồn). Trả về thông báo lỗi nếu biến thể không bán được hoặc vượt tồn kho.</summary>

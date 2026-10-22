@@ -53,6 +53,7 @@ public class AccountController : Controller
             }
             _throttle.Reset(username!, ip);
             HttpContext.Session.SetInt32("customer_id", customerId.Value);
+            ShopStore.MergeGuestCart(HttpContext.Session);   // giỏ chọn trước khi đăng nhập được gộp vào giỏ của tài khoản
         }
 
         HttpContext.Session.SetString("customer", username!.Trim());

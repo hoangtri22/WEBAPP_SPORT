@@ -165,7 +165,7 @@ public class CustomerStore(IConfiguration config)
             JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
             WHERE sp.trang_thai = 'hien'
-            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.hinh_anh
+            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai
             HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0   -- chỉ hiện sản phẩm còn hàng (có tồn kho)
             ORDER BY sp.ma_san_pham DESC
             LIMIT @count

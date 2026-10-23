@@ -327,7 +327,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
 
         var ids = orders.Select(o => I(o, "ma_don_hang")).ToArray();
         var lines = c.Query("""
-            SELECT ct.ma_don_hang, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, bt.hinh_anh
+            SELECT ct.ma_don_hang, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, bt.hinh_anh
             FROM CHI_TIET_DON_HANG ct JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
             WHERE ct.ma_don_hang IN @ids ORDER BY sp.ten_san_pham
             """, new { ids }).Cast<IDictionary<string, object?>>()

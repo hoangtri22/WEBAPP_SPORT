@@ -512,7 +512,9 @@ public class ShopCommands
         if (product == 0) throw new UserError("Vui lòng chọn sản phẩm.");
         if (price <= 0) throw new UserError("Giá bán phải lớn hơn 0.");
         if (cost < 0 || stock < 0) throw new UserError("Giá vốn và số lượng tồn không được âm.");
-        var p = new { product, size = f.N("kich_co"), color = f.N("mau_sac"), price, cost, stock, status = f.S("trang_thai") == "an" ? "an" : "hien", img = f.N("hinh_anh"), id };
+        // Có chọn ảnh từ thiết bị thì dùng ảnh đó, không thì dùng ảnh chọn trong danh sách (ảnh theo màu của biến thể)
+        string? img = f.File("hinh_anh_file") is { Length: > 0 } upload ? SaveUploadedImage(upload) : f.N("hinh_anh");
+        var p = new { product, size = f.N("kich_co"), color = f.N("mau_sac"), price, cost, stock, status = f.S("trang_thai") == "an" ? "an" : "hien", img, id };
         if (id == 0) c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai, hinh_anh) VALUES (@product, @size, @color, @price, @cost, @stock, @status, @img)", p, tx);
         else c.Execute("UPDATE BIEN_THE_SP SET ma_san_pham=@product, kich_co=@size, mau_sac=@color, gia_ban=@price, gia_von=@cost, so_luong_ton=@stock, trang_thai=@status, hinh_anh=@img WHERE ma_bien_the=@id", p, tx);
         return "Đã lưu biến thể sản phẩm.";

@@ -14,7 +14,12 @@ public class AccountController : Controller
     public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle) { _db = db; _store = store; _throttle = throttle; }
 
     [HttpGet]
-    public IActionResult Login() => View("Auth", new AuthVm { IsRegister = false });
+    public IActionResult Login()
+    {
+        // Lời nhắc khi bị chuyển sang đây vì chưa đăng nhập (ví dụ bấm thêm vào giỏ hàng)
+        var notice = TempData["LoginNotice"] as string;
+        return View("Auth", new AuthVm { IsRegister = false, Notice = notice, NoticeIsError = notice != null });
+    }
 
     [HttpGet]
     public IActionResult Register() => View("Auth", new AuthVm { IsRegister = true });
@@ -53,7 +58,6 @@ public class AccountController : Controller
             }
             _throttle.Reset(username!, ip);
             HttpContext.Session.SetInt32("customer_id", customerId.Value);
-            ShopStore.MergeGuestCart(HttpContext.Session);   // giỏ chọn trước khi đăng nhập được gộp vào giỏ của tài khoản
         }
 
         HttpContext.Session.SetString("customer", username!.Trim());

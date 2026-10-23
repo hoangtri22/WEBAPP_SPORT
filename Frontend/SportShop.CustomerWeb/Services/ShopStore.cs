@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Dapper;
 using MySqlConnector;
 using SportShop.CustomerWeb.Models;
@@ -9,9 +8,9 @@ namespace SportShop.CustomerWeb.Services;
 /// <summary>
 /// Cửa hàng trong MySQL: xem sản phẩm, giỏ hàng, đặt hàng, đơn hàng của tôi.
 /// Chỉ dùng các bảng có sẵn (SAN_PHAM, BIEN_THE_SP, DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN...), không đổi cấu trúc CSDL.
-/// Giỏ hàng lưu trong session (không cần bảng riêng): { mã biến thể → số lượng }.
+/// Giỏ hàng lưu theo từng tài khoản trong file (CartStore), không cần thêm bảng trong CSDL: { mã biến thể → số lượng }.
 /// </summary>
-public class ShopStore(IConfiguration config)
+public class ShopStore(IConfiguration config, CartStore carts)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
     MySqlConnection Open() => new(_cs);
@@ -95,39 +94,27 @@ public class ShopStore(IConfiguration config)
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
-    // ===================== Giỏ hàng (lưu trong session) =====================
+    // ===================== Giỏ hàng (lưu theo tài khoản) =====================
+    // Mỗi tài khoản có giỏ riêng, lưu trong file (CartStore) nên đăng xuất hay đăng nhập lại vẫn còn nguyên giỏ.
+    // Chưa đăng nhập thì không có giỏ: phải đăng nhập (hoặc đăng ký) mới thêm được sản phẩm vào giỏ.
 
-    const string GuestCartKey = "cart:guest";
+    /// <summary>Mã khách hàng đang đăng nhập (lưu trong session lúc đăng nhập); 0 nếu chưa đăng nhập.</summary>
+    static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
 
-    /// <summary>Khóa lưu giỏ hàng trong session: mỗi tài khoản đăng nhập có giỏ riêng ("cart:{mã khách}"), chưa đăng nhập dùng giỏ vãng lai.</summary>
-    static string CartKey(ISession s) => s.GetInt32("customer_id") is int id ? "cart:" + id : GuestCartKey;
+    public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? carts.Get(id) : [];
 
-    static Dictionary<int, int> ReadCart(ISession s, string key)
+    void SaveCart(ISession s, Dictionary<int, int> cart)
     {
-        var json = s.GetString(key);
-        return string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<Dictionary<int, int>>(json) ?? [];
+        if (CustomerOf(s) is > 0 and var id) carts.Save(id, cart);
     }
 
-    public static Dictionary<int, int> GetCart(ISession s) => ReadCart(s, CartKey(s));
-
-    /// <summary>Khi khách đăng nhập: giỏ chọn trước lúc đăng nhập (giỏ vãng lai) được gộp vào giỏ của tài khoản rồi xóa khỏi giỏ vãng lai.</summary>
-    public static void MergeGuestCart(ISession s)
-    {
-        var guest = ReadCart(s, GuestCartKey);
-        if (guest.Count == 0) return;
-        var mine = GetCart(s);
-        foreach (var (variant, qty) in guest) mine[variant] = mine.GetValueOrDefault(variant) + qty;
-        SaveCart(s, mine);
-        s.Remove(GuestCartKey);
-    }
-
-    static void SaveCart(ISession s, Dictionary<int, int> cart) => s.SetString(CartKey(s), JsonSerializer.Serialize(cart));
-    public static void ClearCart(ISession s) => s.Remove(CartKey(s));
-    public static int CartCount(ISession s) => GetCart(s).Values.Sum();
+    public void ClearCart(ISession s) => SaveCart(s, []);
+    public int CartCount(ISession s) => GetCart(s).Values.Sum();
 
     /// <summary>Thêm vào giỏ (cộng dồn). Trả về thông báo lỗi nếu biến thể không bán được hoặc vượt tồn kho.</summary>
     public string? AddToCart(ISession s, int variantId, int qty)
     {
+        if (CustomerOf(s) == 0) return "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.";
         if (qty <= 0) return "Số lượng không hợp lệ.";
         using var c = Open();
         var stock = c.ExecuteScalar<int?>("SELECT so_luong_ton FROM BIEN_THE_SP WHERE ma_bien_the=@variantId AND trang_thai='hien'", new { variantId });

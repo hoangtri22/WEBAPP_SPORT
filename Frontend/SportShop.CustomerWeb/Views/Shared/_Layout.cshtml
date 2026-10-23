@@ -3,13 +3,14 @@
     thanh điều hướng dưới cùng trên điện thoại. Giao diện theo bản thiết kế Figma.
     Mọi nút cần cơ sở dữ liệu đều có thuộc tính data-needs-db: chưa có CSDL thì bấm chỉ hiện thông báo.
 *@
+@inject ShopStore Shop
 @{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
     // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
     var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
     string adminUrl = Config["Links:AdminUrl"] ?? "#";
-    // Số sản phẩm trong giỏ (lưu trong session) hiện trên biểu tượng giỏ hàng
-    int cartCount = Db.IsConnected ? ShopStore.CartCount(Context.Session) : 0;
+    // Số sản phẩm trong giỏ của tài khoản đang đăng nhập hiện trên biểu tượng giỏ hàng
+    int cartCount = Db.IsConnected ? Shop.CartCount(Context.Session) : 0;
     // Mục menu đang mở (gạch chân đúng trang): Trang chủ / Sản phẩm / Khuyến mãi
     string controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string actionName = ViewContext.RouteData.Values["action"]?.ToString() ?? "";

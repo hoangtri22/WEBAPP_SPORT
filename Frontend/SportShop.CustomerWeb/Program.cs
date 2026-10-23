@@ -25,6 +25,8 @@ builder.Services.AddSingleton<DbStatus>();
 builder.Services.AddScoped<CustomerStore>();
 // Cửa hàng: sản phẩm, giỏ hàng, đặt hàng, đơn hàng của tôi
 builder.Services.AddScoped<ShopStore>();
+// Giỏ hàng của từng tài khoản, lưu trong file App_Data/carts.json (còn nguyên ở các lần đăng nhập sau)
+builder.Services.AddSingleton<CartStore>();
 // Chống dò mật khẩu: khóa tạm khi đăng nhập sai nhiều lần
 builder.Services.AddSingleton<LoginThrottle>();
 // Cookie chống giả mạo yêu cầu (antiforgery): chỉ gửi trong cùng trang web

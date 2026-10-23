@@ -17,7 +17,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     public IActionResult Index()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
-        return View(shop.CartLines(HttpContext.Session));
+        return LoggedIn ? View(shop.CartLines(HttpContext.Session)) : LoginRequired("xem giỏ hàng");
     }
 
     // Thêm vào giỏ (từ trang chi tiết sản phẩm). buyNow = true: thêm xong chuyển thẳng sang thanh toán.
@@ -25,6 +25,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     public IActionResult Add(int variantId, int qty = 1, bool buyNow = false, string? back = null)
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
+        if (!LoggedIn) return LoginRequired("thêm sản phẩm vào giỏ hàng");
         var error = shop.AddToCart(HttpContext.Session, variantId, qty);
         if (error != null) TempData["ShopError"] = error;
         else TempData["ShopNotice"] = "Đã thêm vào giỏ hàng.";
@@ -35,6 +36,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Update(int variantId, int qty)
     {
+        if (!LoggedIn) return LoginRequired("sửa giỏ hàng");
         var line = shop.CartLines(HttpContext.Session).FirstOrDefault(l => l.VariantId == variantId);
         if (line != null && qty > line.Stock)
         {
@@ -48,6 +50,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Remove(int variantId)
     {
+        if (!LoggedIn) return LoginRequired("sửa giỏ hàng");
         shop.SetQty(HttpContext.Session, variantId, 0);
         return RedirectToAction(nameof(Index));
     }
@@ -57,11 +60,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     public IActionResult Checkout()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
-        if (!LoggedIn)
-        {
-            TempData["ShopError"] = "Vui lòng đăng nhập để đặt hàng.";
-            return RedirectToAction("Login", "Account");
-        }
+        if (!LoggedIn) return LoginRequired("đặt hàng");
         var lines = shop.CartLines(HttpContext.Session);
         if (lines.Count == 0) return RedirectToAction(nameof(Index));
         return View(BuildCheckout(lines, shop.Receiver(CustomerId), 0, null));
@@ -88,14 +87,14 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
             TempData["ShopError"] = "Có sản phẩm vượt quá tồn kho, vui lòng chỉnh lại số lượng trong giỏ hàng.";
             return RedirectToAction(nameof(Index));
         }
-        var (orderId, error) = shop.PlaceOrder(CustomerId, to, payMethod, voucher, ShopStore.GetCart(HttpContext.Session));
+        var (orderId, error) = shop.PlaceOrder(CustomerId, to, payMethod, voucher, shop.GetCart(HttpContext.Session));
         if (orderId == null)
         {
             var vm = BuildCheckout(lines, to, payMethod, voucher);
             vm.Error = error;
             return View(vm);
         }
-        ShopStore.ClearCart(HttpContext.Session);
+        shop.ClearCart(HttpContext.Session);
         return RedirectToAction(nameof(Done), new { id = orderId });
     }
 
@@ -106,6 +105,13 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         var order = shop.Orders(CustomerId, id).FirstOrDefault();
         if (order == null) return NotFound();
         return View(order);
+    }
+
+    /// <summary>Chưa đăng nhập: chuyển sang trang đăng nhập kèm lời nhắc (chưa có tài khoản thì đăng ký).</summary>
+    IActionResult LoginRequired(string action)
+    {
+        TempData["LoginNotice"] = $"Vui lòng đăng nhập để {action}. Nếu chưa có tài khoản, hãy đăng ký.";
+        return RedirectToAction("Login", "Account");
     }
 
     CheckoutVm BuildCheckout(List<CartLine> lines, ReceiverInfo to, int payMethod, string? voucher)

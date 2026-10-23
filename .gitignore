@@ -14,3 +14,6 @@ appsettings.Local.json
 # Ảnh sản phẩm tải lên khi chạy thử (không đưa lên GitHub)
 Frontend/Uploads/*
 !Frontend/Uploads/.gitkeep
+
+# Giỏ hàng của từng tài khoản (dữ liệu chạy thử, không đưa lên GitHub)
+Frontend/SportShop.CustomerWeb/App_Data/

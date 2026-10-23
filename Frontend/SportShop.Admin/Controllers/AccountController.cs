@@ -7,10 +7,6 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>
-/// Đăng nhập / đăng xuất (kiểm tra tài khoản trong bảng TAI_KHOAN)
-/// và trang "Tài khoản &amp; Phân quyền".
-/// </summary>
 public class AccountController(ShopData db) : Controller
 {
     // GET /  : màn hình đăng nhập (không có sidebar)

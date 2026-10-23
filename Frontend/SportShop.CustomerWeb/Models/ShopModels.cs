@@ -15,7 +15,7 @@ public record ShopProduct(int Id, string Name, string Category, string Unit, str
 }
 
 /// <summary>Biến thể (size, màu) của một sản phẩm.</summary>
-public record ShopVariant(int Id, string? Size, string? Color, decimal Price, int Stock)
+public record ShopVariant(int Id, string? Size, string? Color, decimal Price, int Stock, string? Image = null)
 {
     public string Label => string.Join(" / ", new[] { Size, Color }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }

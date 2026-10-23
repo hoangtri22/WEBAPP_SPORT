@@ -1,5 +1,6 @@
 @*
     Chi tiết sản phẩm: ảnh, giá, chọn biến thể (size / màu), số lượng, "Thêm vào giỏ" hoặc "Mua ngay".
+    Mỗi biến thể có ảnh riêng (BIEN_THE_SP.hinh_anh): chọn màu nào thì ảnh lớn đổi theo màu đó.
 *@
 @model (ShopProduct Product, List<ShopVariant> Variants)
 @{
@@ -7,12 +8,14 @@
     ViewData["Title"] = p.Name;
     var related = (List<ShopProduct>)ViewBag.Related;
     var first = Model.Variants.FirstOrDefault(v => v.Stock > 0);
+    // Ảnh ban đầu: ảnh của biến thể đang chọn sẵn, không có thì dùng ảnh đại diện của sản phẩm
+    var image = first?.Image ?? p.Image;
 }
 <section class="shop-page">
     <a class="back-link" asp-action="Index">@Icons.Svg("arrow-left", 16) Tất cả sản phẩm</a>
     <div class="detail-layout">
         <div class="detail-image">
-            @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" onerror="this.style.visibility='hidden'" /> }
+            <img id="detailImg" src="@image" alt="@p.Name" hidden="@string.IsNullOrEmpty(image)" onerror="this.style.visibility='hidden'" />
         </div>
         <div class="detail-info">
             <span class="eyebrow">@p.Category.ToUpper()</span>
@@ -33,7 +36,7 @@
                         @foreach (var v in Model.Variants)
                         {
                             <label class="variant @(v.Stock <= 0 ? "off" : "")">
-                                <input type="radio" name="variantId" value="@v.Id" data-price="@Fmt.Money(v.Price)" data-stock="@v.Stock" disabled="@(v.Stock <= 0)" checked="@(v == first)" />
+                                <input type="radio" name="variantId" value="@v.Id" data-price="@Fmt.Money(v.Price)" data-stock="@v.Stock" data-image="@(v.Image ?? p.Image)" disabled="@(v.Stock <= 0)" checked="@(v == first)" />
                                 <span>@(string.IsNullOrEmpty(v.Label) ? "Mặc định" : v.Label)</span>
                                 <small>@(v.Stock <= 0 ? "Hết hàng" : Fmt.Money(v.Price))</small>
                             </label>
@@ -68,12 +71,14 @@
 
 @section Scripts {
     <script>
-        // Đổi phiên bản thì cập nhật giá và số lượng tối đa; nút +/- chỉnh số lượng
+        // Đổi phiên bản thì cập nhật ảnh, giá và số lượng tối đa; nút +/- chỉnh số lượng
         (function () {
             var qty = document.getElementById('qty'); if (!qty) return;
             function sync() {
                 var r = document.querySelector('.variant input:checked'); if (!r) return;
                 document.getElementById('detailPrice').textContent = r.dataset.price;
+                var img = document.getElementById('detailImg');
+                if (r.dataset.image) { img.style.visibility = ''; img.hidden = false; img.src = r.dataset.image; }
                 qty.max = r.dataset.stock;
                 if (+qty.value > +r.dataset.stock) qty.value = r.dataset.stock;
                 document.getElementById('stockText').textContent = 'Còn ' + r.dataset.stock + ' sản phẩm';

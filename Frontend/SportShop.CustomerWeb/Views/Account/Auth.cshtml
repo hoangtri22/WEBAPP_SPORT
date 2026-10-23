@@ -1,9 +1,3 @@
-@*
-    Trang đăng nhập / đăng ký (một view dùng chung), bố cục theo Figma:
-    nửa trái là ảnh, nửa phải là form. Lỗi hiện dưới từng ô.
-    Nút Đăng ký có data-needs-db: chưa có cơ sở dữ liệu thì hiện thông báo, không gửi form.
-    Đã kết nối MySQL: đăng nhập / đăng ký kiểm tra và lưu tài khoản thật (không điền sẵn tài khoản mẫu).
-*@
 @model AuthVm
 @{
     Layout = "_AuthLayout";
@@ -17,7 +11,7 @@
         <img src="@StoreData.AuthImage" alt="Vận động viên đang thi đấu trên đường chạy" />
         <div class="customer-auth-shade"></div>
         <div class="customer-auth-story">
-            <a class="auth-back" asp-controller="Home" asp-action="Index">@Icons.Svg("arrow-left", 17) Về cửa hàng</a>
+            <a class="auth-back" asp-controller="Home" asp-action="Index">Về trang chủ</a>
             <div class="logo logo-white"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></div>
             <div class="story-copy">
                 <span>SỐNG KHỎE · CHƠI HẾT MÌNH</span>

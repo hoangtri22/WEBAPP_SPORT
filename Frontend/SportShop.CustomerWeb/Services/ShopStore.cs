@@ -45,7 +45,9 @@ public class ShopStore(IConfiguration config, CartStore carts)
         };
         using var c = Open();
         return c.Query($"""
-            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta, sp.hinh_anh,
+            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta,
+                   (SELECT b2.hinh_anh FROM BIEN_THE_SP b2 WHERE b2.ma_san_pham = sp.ma_san_pham AND b2.hinh_anh IS NOT NULL
+                    ORDER BY b2.trang_thai = 'an', b2.ma_bien_the LIMIT 1) AS hinh_anh,
                    MIN(bt.gia_ban) AS gia_min, MAX(bt.gia_ban) AS gia_max, IFNULL(SUM(bt.so_luong_ton), 0) AS ton
             FROM SAN_PHAM sp
             JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
@@ -53,8 +55,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
             WHERE sp.trang_thai = 'hien'
               AND (@category IS NULL OR sp.ma_loai = @category)
               AND (@kw IS NULL OR sp.ten_san_pham LIKE @kw OR l.ten_loai LIKE @kw)
-            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta, sp.hinh_anh
-            HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0   -- chỉ hiện sản phẩm còn hàng (có tồn kho)
+            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta
             ORDER BY {order}
             LIMIT @take
             """, new { category, kw = string.IsNullOrWhiteSpace(keyword) ? null : "%" + keyword.Trim() + "%", take = take ?? 1000 })
@@ -65,18 +66,20 @@ public class ShopStore(IConfiguration config, CartStore carts)
     {
         using var c = Open();
         var r = c.Query("""
-            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta, sp.hinh_anh,
+            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta,
+                   (SELECT b2.hinh_anh FROM BIEN_THE_SP b2 WHERE b2.ma_san_pham = sp.ma_san_pham AND b2.hinh_anh IS NOT NULL
+                    ORDER BY b2.trang_thai = 'an', b2.ma_bien_the LIMIT 1) AS hinh_anh,
                    MIN(bt.gia_ban) AS gia_min, MAX(bt.gia_ban) AS gia_max, IFNULL(SUM(bt.so_luong_ton), 0) AS ton
             FROM SAN_PHAM sp
             JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
             WHERE sp.ma_san_pham = @id AND sp.trang_thai = 'hien'
-            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta, sp.hinh_anh
+            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta
             """, new { id }).Cast<IDictionary<string, object?>>().FirstOrDefault();
         if (r == null) return null;
-        var variants = c.Query("SELECT ma_bien_the, kich_co, mau_sac, gia_ban, so_luong_ton FROM BIEN_THE_SP WHERE ma_san_pham=@id AND trang_thai='hien' ORDER BY gia_ban, ma_bien_the", new { id })
+        var variants = c.Query("SELECT ma_bien_the, kich_co, mau_sac, gia_ban, so_luong_ton, hinh_anh FROM BIEN_THE_SP WHERE ma_san_pham=@id AND trang_thai='hien' ORDER BY gia_ban, ma_bien_the", new { id })
             .Cast<IDictionary<string, object?>>()
-            .Select(v => new ShopVariant(I(v, "ma_bien_the"), NS(v, "kich_co"), NS(v, "mau_sac"), D(v, "gia_ban"), I(v, "so_luong_ton"))).ToList();
+            .Select(v => new ShopVariant(I(v, "ma_bien_the"), NS(v, "kich_co"), NS(v, "mau_sac"), D(v, "gia_ban"), I(v, "so_luong_ton"), NS(v, "hinh_anh"))).ToList();
         return (ToProduct(r), variants);
     }
 
@@ -142,7 +145,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         var ids = cart.Keys.ToArray();
         using var c = Open();
         var lines = c.Query("""
-            SELECT bt.ma_bien_the, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, sp.hinh_anh, bt.gia_ban, bt.so_luong_ton
+            SELECT bt.ma_bien_the, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, bt.hinh_anh, bt.gia_ban, bt.so_luong_ton
             FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
             WHERE bt.ma_bien_the IN @ids AND bt.trang_thai = 'hien' AND sp.trang_thai = 'hien'
             """, new { ids }).Cast<IDictionary<string, object?>>()
@@ -155,11 +158,29 @@ public class ShopStore(IConfiguration config, CartStore carts)
 
     // ===================== Thanh toán =====================
 
+    /// <summary>Các phương thức thanh toán giả lập luôn có sẵn cho khách chọn (không cần nhập thông tin thẻ).</summary>
+    static readonly string[] DefaultPayMethods =
+        ["Thanh toán khi nhận hàng (COD)", "Chuyển khoản ngân hàng", "Ví điện tử (MoMo, ZaloPay)", "Thẻ ATM / Visa / Mastercard"];
+
+    /// <summary>
+    /// Danh sách phương thức thanh toán (giả lập). Đơn hàng bắt buộc tham chiếu bảng PHUONG_THUC_THANH_TOAN,
+    /// nên phương thức nào chưa có trong bảng thì được thêm vào; chọn phương thức nào cũng đặt hàng được.
+    /// </summary>
     public List<PaymentMethod> PaymentMethods()
     {
         using var c = Open();
-        return c.Query("SELECT ma_phuong_thuc_thanh_toan, ten_phuong_thuc_thanh_toan FROM PHUONG_THUC_THANH_TOAN WHERE trang_thai='hoat_dong' ORDER BY 1")
-            .Cast<IDictionary<string, object?>>().Select(r => new PaymentMethod(I(r, "ma_phuong_thuc_thanh_toan"), S(r, "ten_phuong_thuc_thanh_toan"))).ToList();
+        var list = new List<PaymentMethod>();
+        foreach (var name in DefaultPayMethods)
+        {
+            c.Execute("""
+                INSERT INTO PHUONG_THUC_THANH_TOAN (ten_phuong_thuc_thanh_toan, trang_thai)
+                SELECT @name, 'hoat_dong' FROM DUAL
+                WHERE NOT EXISTS (SELECT 1 FROM PHUONG_THUC_THANH_TOAN WHERE ten_phuong_thuc_thanh_toan = @name)
+                """, new { name });
+            int id = c.ExecuteScalar<int>("SELECT ma_phuong_thuc_thanh_toan FROM PHUONG_THUC_THANH_TOAN WHERE ten_phuong_thuc_thanh_toan = @name", new { name });
+            list.Add(new PaymentMethod(id, name));
+        }
+        return list;
     }
 
     /// <summary>Thông tin nhận hàng điền sẵn: địa chỉ mặc định trong sổ địa chỉ, không có thì lấy tên + SĐT của khách.</summary>
@@ -217,6 +238,9 @@ public class ShopStore(IConfiguration config, CartStore carts)
         if (string.IsNullOrWhiteSpace(to.Name) || string.IsNullOrWhiteSpace(to.Phone) || string.IsNullOrWhiteSpace(to.Address))
             return (null, "Vui lòng nhập đủ họ tên, số điện thoại và địa chỉ nhận hàng.");
         if (!System.Text.RegularExpressions.Regex.IsMatch(to.Phone.Trim(), @"^0\d{9}$")) return (null, "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
+        // Thanh toán giả lập: phương thức không hợp lệ thì dùng phương thức đầu tiên (COD), không chặn đặt hàng
+        var methods = PaymentMethods();
+        if (!methods.Any(m => m.Id == payMethod)) payMethod = methods[0].Id;
         try
         {
             using var c = Open();
@@ -224,9 +248,6 @@ public class ShopStore(IConfiguration config, CartStore carts)
             using var tx = c.BeginTransaction();
             try
             {
-                if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM PHUONG_THUC_THANH_TOAN WHERE ma_phuong_thuc_thanh_toan=@payMethod AND trang_thai='hoat_dong'", new { payMethod }, tx) == 0)
-                    throw new OrderError("Vui lòng chọn phương thức thanh toán.");
-
                 // Giá lấy tại thời điểm đặt; khóa dòng tồn kho để hai khách không mua trùng hàng cuối
                 decimal subtotal = 0;
                 var priced = new List<(int Variant, int Qty, decimal Price)>();
@@ -306,7 +327,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
 
         var ids = orders.Select(o => I(o, "ma_don_hang")).ToArray();
         var lines = c.Query("""
-            SELECT ct.ma_don_hang, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, sp.hinh_anh
+            SELECT ct.ma_don_hang, sp.ten_san_pham, bt.kich_co, bt.mau_sac, ct.so_luong, ct.don_gia, ct.thanh_tien, bt.hinh_anh
             FROM CHI_TIET_DON_HANG ct JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
             WHERE ct.ma_don_hang IN @ids ORDER BY sp.ten_san_pham
             """, new { ids }).Cast<IDictionary<string, object?>>()

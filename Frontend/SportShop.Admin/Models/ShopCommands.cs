@@ -184,8 +184,8 @@ public class ShopCommands
             "group" => One(c, "SELECT ten_nhom, mo_ta, loai_tieu_chi, gia_tri_tu, gia_tri_den, gioi_tinh, ma_so_thich FROM NHOM_KHACH_HANG WHERE ma_nhom_kh=@id", new { id }),
             "employee" => One(c, "SELECT ho_lot, ten, gioi_tinh, ngay_sinh, chuc_vu, luong_co_ban, trang_thai FROM NHAN_VIEN WHERE ma_nhan_vien=@id", new { id }),
             "category" => One(c, "SELECT ten_loai FROM LOAI_SP WHERE ma_loai=@id", new { id }),
-            "product" => One(c, "SELECT ma_loai, ten_san_pham, don_vi_tinh, trang_thai, hinh_anh, mo_ta FROM SAN_PHAM WHERE ma_san_pham=@id", new { id }),
-            "variant" => One(c, "SELECT ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai FROM BIEN_THE_SP WHERE ma_bien_the=@id", new { id }),
+            "product" => One(c, "SELECT ma_loai, ten_san_pham, don_vi_tinh, trang_thai, mo_ta FROM SAN_PHAM WHERE ma_san_pham=@id", new { id }),
+            "variant" => One(c, "SELECT ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai, hinh_anh FROM BIEN_THE_SP WHERE ma_bien_the=@id", new { id }),
             "supplier" => One(c, "SELECT ten_ncc, so_dien_thoai, email, dia_chi, trang_thai FROM NHA_CUNG_CAP WHERE ma_ncc=@id", new { id }),
             "import" => One(c, "SELECT ma_ncc, ngay_nhap FROM PHIEU_NHAP_HANG WHERE ma_phieu_nhap=@id", new { id }),
             "order" => One(c, """
@@ -498,11 +498,10 @@ public class ShopCommands
         if (cat == 0) throw new UserError("Vui lòng chọn loại sản phẩm.");
         if (name.Length == 0 || unit.Length == 0) throw new UserError("Vui lòng nhập tên sản phẩm và đơn vị tính.");
         string status = f.S("trang_thai") == "an" ? "an" : "hien";
-        // Có chọn ảnh từ thiết bị thì dùng ảnh đó, không thì dùng ảnh chọn trong danh sách
-        string? img = f.File("hinh_anh_file") is { Length: > 0 } upload ? SaveUploadedImage(upload) : f.N("hinh_anh");
-        var p = new { cat, name, unit, desc = f.N("mo_ta"), status, img, id };
-        if (id == 0) c.Execute("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai, hinh_anh) VALUES (@cat, @name, @unit, @desc, @status, @img)", p, tx);
-        else c.Execute("UPDATE SAN_PHAM SET ma_loai=@cat, ten_san_pham=@name, don_vi_tinh=@unit, mo_ta=@desc, trang_thai=@status, hinh_anh=@img WHERE ma_san_pham=@id", p, tx);
+        // Ảnh nằm ở từng biến thể (BIEN_THE_SP.hinh_anh), không lưu ở sản phẩm
+        var p = new { cat, name, unit, desc = f.N("mo_ta"), status, id };
+        if (id == 0) c.Execute("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai) VALUES (@cat, @name, @unit, @desc, @status)", p, tx);
+        else c.Execute("UPDATE SAN_PHAM SET ma_loai=@cat, ten_san_pham=@name, don_vi_tinh=@unit, mo_ta=@desc, trang_thai=@status WHERE ma_san_pham=@id", p, tx);
         return $"Đã lưu sản phẩm \"{name}\".";
     }
 
@@ -513,9 +512,9 @@ public class ShopCommands
         if (product == 0) throw new UserError("Vui lòng chọn sản phẩm.");
         if (price <= 0) throw new UserError("Giá bán phải lớn hơn 0.");
         if (cost < 0 || stock < 0) throw new UserError("Giá vốn và số lượng tồn không được âm.");
-        var p = new { product, size = f.N("kich_co"), color = f.N("mau_sac"), price, cost, stock, status = f.S("trang_thai") == "an" ? "an" : "hien", id };
-        if (id == 0) c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai) VALUES (@product, @size, @color, @price, @cost, @stock, @status)", p, tx);
-        else c.Execute("UPDATE BIEN_THE_SP SET ma_san_pham=@product, kich_co=@size, mau_sac=@color, gia_ban=@price, gia_von=@cost, so_luong_ton=@stock, trang_thai=@status WHERE ma_bien_the=@id", p, tx);
+        var p = new { product, size = f.N("kich_co"), color = f.N("mau_sac"), price, cost, stock, status = f.S("trang_thai") == "an" ? "an" : "hien", img = f.N("hinh_anh"), id };
+        if (id == 0) c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai, hinh_anh) VALUES (@product, @size, @color, @price, @cost, @stock, @status, @img)", p, tx);
+        else c.Execute("UPDATE BIEN_THE_SP SET ma_san_pham=@product, kich_co=@size, mau_sac=@color, gia_ban=@price, gia_von=@cost, so_luong_ton=@stock, trang_thai=@status, hinh_anh=@img WHERE ma_bien_the=@id", p, tx);
         return "Đã lưu biến thể sản phẩm.";
     }
 

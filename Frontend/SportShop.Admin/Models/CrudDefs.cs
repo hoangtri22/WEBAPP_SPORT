@@ -118,6 +118,7 @@ public static class CrudDefs
             new("gia_von", "Giá vốn (đ)", "number", Hint: "Giá vốn tự cập nhật theo đơn giá nhập gần nhất khi lập phiếu nhập."),
             new("so_luong_ton", "Số lượng tồn", "number", Hint: "Tồn kho tự tăng khi nhập hàng và giảm khi bán."),
             new("trang_thai", "Hiển thị", "select", false, "hien|Đang bán;an|Đang ẩn"),
+            new("hinh_anh", "Hình ảnh", "select", false, "lookup:images", "Ảnh của biến thể (theo màu), chọn trong thư mục Backend/Images. Ảnh biến thể đầu tiên là ảnh đại diện của sản phẩm.", Wide: true),
         ]),
 
         // ---------- Nhà cung cấp (NHA_CUNG_CAP) ----------

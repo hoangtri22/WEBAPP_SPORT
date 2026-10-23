@@ -15,7 +15,7 @@ public record Category(int Id, string Name);
 /// <summary>Biến thể sản phẩm (BIEN_THE_SP): size, màu, giá bán, giá vốn, tồn.</summary>
 public record Variant(int Id, int ProductId, string? Size, string? Color, decimal Price, decimal Cost, int Stock);
 
-/// <summary>Sản phẩm (SAN_PHAM). Visible = trạng thái hiện/ẩn. Image = đường dẫn ảnh, ví dụ "/images/ao-drifit.jpg".</summary>
+/// <summary>Sản phẩm (SAN_PHAM). Visible = trạng thái hiện/ẩn. Image = ảnh đại diện, lấy từ biến thể đầu tiên có ảnh (BIEN_THE_SP.hinh_anh).</summary>
 public record Product(int Id, string Category, string Name, string Unit, bool Visible, string Description, string? Image = null);
 
 /// <summary>Một dòng chi tiết đơn hàng: giá bán, giảm giá lưu tại thời điểm đặt, giá vốn tại thời điểm bán.</summary>

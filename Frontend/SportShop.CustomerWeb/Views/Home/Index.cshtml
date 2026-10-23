@@ -1,9 +1,3 @@
-﻿@*
-    Trang chủ cửa hàng theo thiết kế Figma:
-    giới thiệu, 4 cam kết, danh mục, sản phẩm nổi bật, banner khuyến mãi, đăng ký nhận ưu đãi.
-    Các nút cần dữ liệu (thêm vào giỏ, xem tất cả...) có data-needs-db: chưa có CSDL thì hiện thông báo.
-*@
-@inject ShopStore Shop
 @{
     ViewData["Title"] = "Trang chủ";
 }
@@ -82,7 +76,6 @@
         </div>
     </div>
     <div class="shop-products">
-        @* Đã kết nối MySQL: 8 sản phẩm mới nhất kèm ảnh thật (Backend/Images); chưa kết nối: dữ liệu mẫu *@
         @foreach (var p in Db.IsConnected ? Store.FeaturedProducts(8) : StoreData.Products)
         {
             <article class="shop-product-card">

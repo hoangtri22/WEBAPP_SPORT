@@ -158,7 +158,9 @@ public class CustomerStore(IConfiguration config)
         using var c = Open();
         var vi = new System.Globalization.CultureInfo("vi-VN");
         return c.Query<(int Id, string Name, string Type, decimal? Price, string? Image)>("""
-            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, MIN(bt.gia_ban), sp.hinh_anh
+            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, MIN(bt.gia_ban),
+                   (SELECT b2.hinh_anh FROM BIEN_THE_SP b2 WHERE b2.ma_san_pham = sp.ma_san_pham AND b2.hinh_anh IS NOT NULL
+                    ORDER BY b2.trang_thai = 'an', b2.ma_bien_the LIMIT 1) AS hinh_anh
             FROM SAN_PHAM sp
             JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'

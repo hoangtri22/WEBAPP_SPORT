@@ -56,7 +56,7 @@
             <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
                     <span>@p.Name.Substring(0, 1)</span>
-                    @* Ảnh sản phẩm (SAN_PHAM.hinh_anh); không tải được ảnh thì hiện chữ cái đầu phía sau *@
+                    @* Ảnh đại diện (ảnh của biến thể đầu tiên, BIEN_THE_SP.hinh_anh); không tải được ảnh thì hiện chữ cái đầu phía sau *@
                     @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.remove()" /> }
                     <button type="button" class="dots light" data-crud="edit" data-entity="product" data-id="@p.Id" aria-label="Chỉnh sửa sản phẩm">@Icons.Svg("more", 18)</button>
                 </div>

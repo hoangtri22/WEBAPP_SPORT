@@ -136,7 +136,9 @@ public class ShopData
 
     List<Product> LoadProducts() =>
         Query("""
-            SELECT sp.ma_san_pham, l.ten_loai, sp.ten_san_pham, sp.don_vi_tinh, sp.trang_thai, sp.mo_ta, sp.hinh_anh
+            SELECT sp.ma_san_pham, l.ten_loai, sp.ten_san_pham, sp.don_vi_tinh, sp.trang_thai, sp.mo_ta,
+                   (SELECT b2.hinh_anh FROM BIEN_THE_SP b2 WHERE b2.ma_san_pham = sp.ma_san_pham AND b2.hinh_anh IS NOT NULL
+                    ORDER BY b2.trang_thai = 'an', b2.ma_bien_the LIMIT 1) AS hinh_anh
             FROM SAN_PHAM sp JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
             ORDER BY sp.ma_san_pham
             """).Select(r => new Product(I(r, "ma_san_pham"), S(r, "ten_loai"), S(r, "ten_san_pham"), S(r, "don_vi_tinh"),

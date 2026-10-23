@@ -419,3 +419,9 @@ body.bare { align-items: center; justify-content: center; min-height: 100vh; bac
 .card-h-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .card-h-row .card-h { margin: 0; }
 .card-h-row .btn-outline { height: 36px; padding: 0 14px; }
+
+/* Cột "Mặt hàng nhập" của danh sách phiếu nhập: mỗi mặt hàng một dòng gọn, phần dư gộp thành "+ N mặt hàng khác" */
+.item-list { list-style: none; margin: 0; padding: 0; min-width: 240px; max-width: 340px; line-height: 1.5; font-size: 13.5px; }
+.item-list li { padding: 1px 0; }
+.item-list li + li { border-top: 1px dashed #edf1f4; }
+.item-list .more { color: var(--teal); font-weight: 600; cursor: help; }

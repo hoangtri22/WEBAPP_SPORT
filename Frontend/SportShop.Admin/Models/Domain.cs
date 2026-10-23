@@ -145,11 +145,25 @@ public static class Fmt
     }
 
     /// <summary>
-    /// Hiển thị ô bảng. Chuỗi bắt đầu bằng [g]/[o]/[b]/[r]/[x]/[p] sẽ thành "pill" có chấm màu:
-    /// g = xanh lá, o = vàng cam, b = xanh dương, r = đỏ, x = xám, p = tím.
+    /// Nội dung một ô của bảng. "[g]Chữ" (g, o, b, p, r, x) là nhãn màu; "[l]dòng 1\ndòng 2..." là danh sách gọn:
+    /// hiện tối đa 3 dòng đầu, phần còn lại gộp thành "+ N mặt hàng khác" (rê chuột để xem đủ; phần ẩn vẫn nằm trong ô để tìm kiếm được).
     /// </summary>
     public static IHtmlContent Cell(string s)
     {
+        if (s.StartsWith("[l]"))
+        {
+            const int Shown = 3;
+            var items = s[3..].Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var html = new System.Text.StringBuilder("<ul class=\"item-list\">");
+            foreach (var item in items.Take(Shown)) html.Append("<li>").Append(WebUtility.HtmlEncode(item)).Append("</li>");
+            if (items.Length > Shown)
+            {
+                html.Append("<li class=\"more\" title=\"").Append(WebUtility.HtmlEncode(string.Join("\n", items))).Append("\">+ ")
+                    .Append(items.Length - Shown).Append(" mặt hàng khác</li>");
+                foreach (var item in items.Skip(Shown)) html.Append("<li hidden>").Append(WebUtility.HtmlEncode(item)).Append("</li>");
+            }
+            return new HtmlString(html.Append("</ul>").ToString());
+        }
         if (s.Length > 3 && s[0] == '[' && s[2] == ']')
             return new HtmlString($"<span class=\"pill p-{s[1]}\"><i></i>{WebUtility.HtmlEncode(s[3..])}</span>");
         return new HtmlString(WebUtility.HtmlEncode(s));

@@ -592,7 +592,8 @@ public class ShopCommands
         int pay = f.I("ma_phuong_thuc_thanh_toan"); decimal ship = f.D("phi_van_chuyen");
         string status = f.S("trang_thai_don_hang"); if (status is not ("cho_xac_nhan" or "dang_chuan_bi" or "dang_giao" or "da_giao")) status = "cho_xac_nhan";
         string paid = f.S("trang_thai_thanh_toan") == "da_thanh_toan" ? "da_thanh_toan" : "chua_thanh_toan";
-        if (paid == "chua_thanh_toan" && status != "cho_xac_nhan") throw new UserError("Đơn chưa thanh toán nên chỉ ở trạng thái \"Chờ xác nhận\". Chọn \"Đã thanh toán\" nếu khách đã trả tiền.");
+        // Đơn chưa thanh toán chuyển được sang đang chuẩn bị / đang giao; muốn "Đã giao" thì phải thanh toán trước
+        if (paid == "chua_thanh_toan" && status == "da_giao") throw new UserError("Đơn chưa thanh toán chưa chuyển được sang \"Đã giao\". Chọn \"Đã thanh toán\" nếu khách đã trả tiền.");
         if (customer == 0) throw new UserError("Vui lòng chọn khách hàng.");
         if (name.Length == 0 || phone.Length == 0 || addr.Length == 0) throw new UserError("Vui lòng nhập đủ thông tin người nhận.");
         if (pay == 0) throw new UserError("Vui lòng chọn phương thức thanh toán.");
@@ -686,8 +687,8 @@ public class ShopCommands
         if (oldStatus == "da_huy") throw new UserError("Đơn hàng đã hủy, không thể thay đổi trạng thái.");
         if (oldStatus == "da_giao") throw new UserError("Đơn hàng đã giao, không thể thay đổi trạng thái.");
         if (oldPay == "da_thanh_toan" && pay == "chua_thanh_toan") throw new UserError("Đơn đã thanh toán và lập hóa đơn, không chuyển lại \"Chưa thanh toán\".");
-        // Đơn chưa thanh toán thì chưa được xử lý tiếp: phải chuyển sang "Đã thanh toán" trước, rồi mới chọn đang chuẩn bị / đang giao / đã giao / đã hủy
-        if (pay == "chua_thanh_toan" && status != "cho_xac_nhan") throw new UserError("Đơn chưa thanh toán nên chỉ ở trạng thái \"Chờ xác nhận\". Vui lòng chuyển sang \"Đã thanh toán\" trước khi đổi trạng thái đơn.");
+        // Đơn chưa thanh toán chuyển được sang đang chuẩn bị / đang giao; "Đã giao" và "Đã hủy" chỉ mở khi đã thanh toán
+        if (pay == "chua_thanh_toan" && status is "da_giao" or "da_huy") throw new UserError("Đơn chưa thanh toán chưa chuyển được sang \"Đã giao\" hoặc \"Đã hủy\". Vui lòng chuyển sang \"Đã thanh toán\" trước.");
 
         string msg = "Đã cập nhật đơn hàng.";
         if (status == "da_huy")

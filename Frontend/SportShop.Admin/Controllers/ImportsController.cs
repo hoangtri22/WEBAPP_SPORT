@@ -12,7 +12,7 @@ public class ImportsController(ShopData db) : Controller
 
         // Phiếu nhập (PHIEU_NHAP_HANG): mỗi phiếu cộng vào tồn và cập nhật giá vốn của biến thể
         var slips = db.ImportSlips.Select(p => new Row(
-            [$"PN{p.Id:D3}", p.Supplier, p.Items, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], null, p.Id)).ToList();
+            [$"PN{p.Id:D3}", p.Supplier, "[l]" + p.Items, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], null, p.Id)).ToList();
 
         // Nhà cung cấp (NHA_CUNG_CAP): đang hợp tác / ngừng hợp tác
         var suppliers = db.Suppliers.Select(s => new Row(

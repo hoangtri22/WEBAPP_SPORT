@@ -338,7 +338,7 @@ public class ShopData
             JOIN NHAN_VIEN nv ON nv.ma_nhan_vien = pn.ma_nhan_vien
             ORDER BY pn.ngay_nhap DESC
             """).Select(r => new ImportSlip(I(r, "ma_phieu_nhap"), S(r, "ten_ncc"), T(r, "ngay_nhap"), I(r, "so_luong"),
-                S(r, "nv_ten"), M(r, "tong_tien"), string.Join("; ", items[I(r, "ma_phieu_nhap")]))).ToList();
+                S(r, "nv_ten"), M(r, "tong_tien"), string.Join((char)10, items[I(r, "ma_phieu_nhap")]))).ToList();
     }
 
     List<Promotion> LoadPromotions()

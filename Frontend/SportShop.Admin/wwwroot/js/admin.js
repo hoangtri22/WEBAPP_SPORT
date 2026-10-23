@@ -197,14 +197,14 @@ function initForm(form) {
         add();
     });
 
-    // Đơn hàng: chưa thanh toán thì chỉ được ở "Chờ xác nhận"; chọn "Đã thanh toán" xong mới mở các trạng thái còn lại
+    // Đơn hàng: chưa thanh toán thì chọn được chờ xác nhận / đang chuẩn bị / đang giao; "Đã giao" và "Đã hủy" chỉ mở sau khi chọn "Đã thanh toán"
     var stSel = form.elements['trang_thai_don_hang'], paySel = form.elements['trang_thai_thanh_toan'];
     if (form.dataset.entity === 'order' && stSel && paySel) {
         function syncStatus() {
             var unpaid = paySel.value !== 'da_thanh_toan';
-            Array.prototype.forEach.call(stSel.options, function (o) { o.disabled = unpaid && o.value !== 'cho_xac_nhan'; });
-            if (unpaid) stSel.value = 'cho_xac_nhan';
-            if (stSel.value && stSel.selectedOptions[0] && stSel.selectedOptions[0].disabled) stSel.value = 'cho_xac_nhan';
+            Array.prototype.forEach.call(stSel.options, function (o) { o.disabled = unpaid && (o.value === 'da_giao' || o.value === 'da_huy'); });
+            // Đang chọn "Đã giao" / "Đã hủy" mà đổi về chưa thanh toán thì đưa về "Chờ xác nhận"
+            if (stSel.selectedOptions[0] && stSel.selectedOptions[0].disabled) stSel.value = 'cho_xac_nhan';
             applyShowWhen();
         }
         paySel.addEventListener('change', syncStatus);

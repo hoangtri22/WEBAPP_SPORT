@@ -50,11 +50,11 @@
             <select id="quickStatus" disabled="@locked">
                 @foreach (var (value, text) in statuses)
                 {
-                    <option value="@value" selected="@(value == Model.Status)" disabled="@(unpaid && value != "cho_xac_nhan")">@text</option>
+                    <option value="@value" selected="@(value == Model.Status)" disabled="@(unpaid && value is "da_giao" or "da_huy")">@text</option>
                 }
             </select>
             <button type="button" class="btn-primary" disabled="@locked" data-quick="order" data-id="@Model.Id" data-field="trang_thai_don_hang" data-from="#quickStatus">Cập nhật</button>
-            @if (unpaid) { <small class="muted" style="width:100%">Đơn chưa thanh toán nên chỉ ở "Chờ xác nhận". Bấm "Chỉnh sửa", chọn Thanh toán = "Đã thanh toán" và lưu, sau đó mới chọn được các trạng thái còn lại.</small> }
+            @if (unpaid) { <small class="muted" style="width:100%">Đơn chưa thanh toán chỉ chuyển được đến "Đang chuẩn bị" hoặc "Đang giao". Muốn chọn "Đã giao" hoặc "Đã hủy", bấm "Chỉnh sửa", chọn Thanh toán = "Đã thanh toán" và lưu.</small> }
             @if (locked) { <small class="muted" style="width:100%">Đơn @(Model.Status == "da_giao" ? "đã giao" : "đã hủy") là trạng thái cuối nên không đổi được nữa.</small> }
         </div>
     </section>

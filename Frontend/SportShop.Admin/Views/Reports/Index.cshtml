@@ -1,18 +1,9 @@
-@*
-    Báo cáo thống kê: lọc theo khoảng thời gian (form GET: from, to) rồi hiển thị
-      - 4 thẻ số liệu (doanh thu thuần, đơn hàng, giá trị trung bình, lợi nhuận)
-      - biểu đồ vùng doanh thu theo tuần, biểu đồ cột sản phẩm bán chạy
-      - biểu đồ tròn nhóm khách hàng theo tuổi, hiệu suất nhân viên
-      - bảng lợi nhuận theo sản phẩm, tồn kho nhiều, hiệu quả khuyến mãi (theo PDF mục 3.1.9)
-    Toạ độ biểu đồ đã được ReportsController tính sẵn.
-*@
 @using SportShop.Admin.Controllers
 @model ReportsVm
 @{
     ViewData["Title"] = "Báo cáo thống kê";
-    const double circ = 2 * Math.PI * 54;     // chu vi vòng tròn bán kính 54 (biểu đồ tròn)
-    double offset = 0;                        // vị trí bắt đầu của từng phần
-    // Số thực → chuỗi dùng dấu chấm thập phân (bắt buộc cho thuộc tính SVG)
+    const double circ = 2 * Math.PI * 54;
+    double offset = 0;
     string Num(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 }
 <div class="page-head">
@@ -23,7 +14,6 @@
     </div>
 </div>
 
-@* ===== Bộ lọc khoảng thời gian ===== *@
 <form class="card range" method="get" asp-controller="Reports" asp-action="Index" id="rangeForm">
     <div class="range-input">
         @Icons.Svg("calendar", 20)
@@ -45,7 +35,6 @@
     <button type="submit" class="btn-primary">Xem báo cáo</button>
 </form>
 
-@* ===== 4 thẻ số liệu ===== *@
 <div class="kpis">
     <div class="kpi">
         <small>Doanh thu thuần</small>
@@ -70,7 +59,6 @@
 </div>
 
 <div class="charts">
-    @* ===== Biểu đồ vùng: doanh thu theo tuần ===== *@
     <section class="card pad chart-main">
         <div class="chart-head">
             <div><h3>Doanh thu theo tuần</h3><p>Đơn vị: triệu đồng</p></div>
@@ -83,11 +71,9 @@
                     <stop offset="100%" stop-color="#0f766e" stop-opacity="0" />
                 </linearGradient>
             </defs>
-            @* Đường kẻ ngang + nhãn trục tung *@
             @foreach (var t in Model.YTicks)
             {
                 <line x1="44" x2="744" y1="@Num(t.Y)" y2="@Num(t.Y)" class="grid-line" />
-                @* Dùng Html.Raw vì Razor hiểu nhầm thẻ SVG <text> là thẻ đặc biệt của Razor *@
                 @Html.Raw($"<text x=\"36\" y=\"{Num(t.Y + 4)}\" text-anchor=\"end\" class=\"axis\">{t.Label}</text>")
             }
             <path d="@Model.AreaPath" fill="url(#areaFill)" />
@@ -103,7 +89,6 @@
         </svg>
     </section>
 
-    @* ===== Biểu đồ cột: sản phẩm bán chạy ===== *@
     <section class="card pad chart-side">
         <div class="chart-head">
             <div><h3>Sản phẩm bán chạy</h3><p>Theo số lượng đã bán</p></div>
@@ -130,7 +115,6 @@
 </div>
 
 <div class="charts two">
-    @* ===== Biểu đồ tròn: nhóm khách hàng ===== *@
     <section class="card pad">
         <div class="donut-wrap">
             <div class="donut">
@@ -143,7 +127,6 @@
                                 stroke-dasharray="@len.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) @((circ - len).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
                                 stroke-dashoffset="@((-offset).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
                                 transform="rotate(-90 70 70)"><title>@p.Label: @p.Count khách</title></circle>
-                        @* cộng dồn để phần kế tiếp bắt đầu đúng chỗ phần trước kết thúc *@
                         offset += len;
 
                     }
@@ -160,7 +143,6 @@
         </div>
     </section>
 
-    @* ===== Hiệu suất nhân viên ===== *@
     <section class="card pad">
         <div class="chart-head"><div><h3>Hiệu suất nhân viên</h3><p>Top nhân viên (hóa đơn + chăm sóc + phản hồi)</p></div></div>
         <div class="staff">
@@ -183,7 +165,6 @@
     </section>
 </div>
 
-@* ===== Các bảng báo cáo chi tiết theo PDF ===== *@
 <section class="card">
     <div class="card-title">Lợi nhuận theo sản phẩm</div>
     <div class="table-wrap">
@@ -217,7 +198,7 @@
 
 @section Scripts {
     <script>
-        // Chọn nhanh kỳ báo cáo → điền sẵn 2 ô ngày rồi gửi form
+        // Chọn nhanh kỳ báo cáo: điền ngày from/to rồi gửi form GET đến ReportsController.Index.
         document.getElementById('period').addEventListener('change', function () {
             var v = this.value; if (!v) return;
             var end = new Date(), start = new Date();

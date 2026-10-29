@@ -1,16 +1,9 @@
-@*
-    Gửi phản hồi về sản phẩm: form (chọn sản phẩm, chấm 1-5 sao, nội dung)
-    và bảng "Phản hồi đã gửi" kèm cửa sổ xem chi tiết.
-    Đã kết nối MySQL: danh sách sản phẩm và phản hồi đã gửi đọc từ CSDL, gửi phản hồi lưu vào bảng PHAN_HOI.
-    Chưa kết nối: dữ liệu mẫu, nút "Gửi phản hồi" (data-needs-db) chỉ hiện thông báo.
-*@
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Gửi phản hồi về sản phẩm";
     string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
     bool live = Db.IsConnected;
     int customerId = Context.Session.GetInt32("customer_id") ?? 0;
-    // Đã kết nối: chỉ các sản phẩm khách đã mua và nhận hàng (đơn "Đã giao")
     var products = live ? Store.PurchasedProducts(customerId) : StoreData.Products.Select(p => (p.Id, p.Name)).ToList();
     var feedbacks = live ? Store.Feedbacks(customerId) : StoreData.Feedbacks;
 }
@@ -67,7 +60,6 @@
     </div>
 </section>
 
-@* Cửa sổ chi tiết phản hồi *@
 <div class="modal-backdrop" id="fbModal" hidden>
     <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-head"><div><span id="fbId"></span><h2>Chi tiết phản hồi</h2></div><button type="button" id="fbClose" aria-label="Đóng">@Icons.Svg("x", 19)</button></div>
@@ -86,7 +78,6 @@
 
 @section Scripts {
     <script>
-        // ----- Chấm sao (chỉ đổi giao diện) -----
         (function () {
             var stars = document.querySelectorAll('#rating button'), text = document.getElementById('ratingText');
             function paint(n) {
@@ -97,7 +88,6 @@
             stars.forEach(function (b) { b.addEventListener('click', function () { paint(parseInt(b.dataset.star, 10)); }); });
         })();
 
-        // ----- Cửa sổ xem chi tiết phản hồi -----
         (function () {
             var modal = document.getElementById('fbModal');
             function close() { modal.hidden = true; }
@@ -110,7 +100,6 @@
                     var st = document.getElementById('fbStatus');
                     st.querySelector('b').textContent = b.dataset.status;
                     st.className = 'pill ' + (b.dataset.status === 'Đã trả lời' ? 'p-g' : b.dataset.status === 'Đang xử lý' ? 'p-o' : 'p-b');
-                    // Chỉ hiện khung trả lời khi cửa hàng đã trả lời phản hồi
                     document.getElementById('fbReplyText').textContent = b.dataset.reply;
                     document.getElementById('fbReply').hidden = !b.dataset.reply;
                     modal.hidden = false;

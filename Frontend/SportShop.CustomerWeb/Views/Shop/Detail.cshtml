@@ -1,14 +1,9 @@
-@*
-    Chi tiết sản phẩm: ảnh, giá, chọn biến thể (size / màu), số lượng, "Thêm vào giỏ" hoặc "Mua ngay".
-    Mỗi biến thể có ảnh riêng (BIEN_THE_SP.hinh_anh): chọn màu nào thì ảnh lớn đổi theo màu đó.
-*@
 @model (ShopProduct Product, List<ShopVariant> Variants)
 @{
     var p = Model.Product;
     ViewData["Title"] = p.Name;
     var related = (List<ShopProduct>)ViewBag.Related;
     var first = Model.Variants.FirstOrDefault(v => v.Stock > 0);
-    // Ảnh ban đầu: ảnh của biến thể đang chọn sẵn, không có thì dùng ảnh đại diện của sản phẩm
     var image = first?.Image ?? p.Image;
 }
 <section class="shop-page">
@@ -71,7 +66,6 @@
 
 @section Scripts {
     <script>
-        // Đổi phiên bản thì cập nhật ảnh, giá và số lượng tối đa; nút +/- chỉnh số lượng
         (function () {
             var qty = document.getElementById('qty'); if (!qty) return;
             function sync() {

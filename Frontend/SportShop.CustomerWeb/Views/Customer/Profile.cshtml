@@ -1,16 +1,9 @@
-@*
-    Chỉnh sửa thông tin cá nhân: thẻ tóm tắt bên trái, form bên phải
-    (họ tên, tên đăng nhập, email, SĐT, ngày sinh, giới tính, sở thích thể thao).
-    Đã kết nối MySQL: đọc và lưu thông tin thật của khách (KHACH_HANG, TAI_KHOAN, KHACH_HANG_SO_THICH).
-    Chưa kết nối: hiện dữ liệu mẫu, nút "Lưu thay đổi" (data-needs-db) chỉ hiện thông báo.
-*@
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Chỉnh sửa thông tin";
     bool live = Db.IsConnected;
     var me = (live ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
 
-    // Sở thích: đã kết nối thì lấy từ bảng SO_THICH, chưa kết nối thì dùng danh sách mẫu (3 mục đầu được chọn)
     List<string> allInterests; HashSet<string> chosen;
     if (live)
     {
@@ -22,7 +15,6 @@
         allInterests = StoreData.Interests.ToList(); chosen = StoreData.Interests.Take(3).ToHashSet();
     }
 
-    // Mức hoàn thiện hồ sơ: số mục đã điền trong 6 mục
     int filled = new[] { me.FullName, me.Email, me.Phone, me.Birth, me.Gender }.Count(s => !string.IsNullOrWhiteSpace(s)) + (chosen.Count > 0 ? 1 : 0);
     int complete = filled * 100 / 6;
 }
@@ -75,7 +67,6 @@
         </div>
     </form>
 
-    @* Đổi mật khẩu: bấm nút để mở biểu mẫu; mật khẩu mới được lưu ngay vào tài khoản *@
     <section class="card customer-form pw-card">
         <details>
             <summary class="btn btn-secondary pw-toggle">@Icons.Svg("lock", 17) Đổi mật khẩu</summary>
@@ -95,11 +86,9 @@
 
 @section Scripts {
     <script>
-        // Chọn / bỏ chọn sở thích
         document.querySelectorAll('#interests button').forEach(function (b) {
             b.addEventListener('click', function () { b.classList.toggle('selected'); });
         });
-        // Khi lưu: thêm các sở thích đang chọn vào form (mỗi sở thích một ô ẩn tên "interests")
         document.getElementById('profileForm').addEventListener('submit', function () {
             var form = this;
             form.querySelectorAll('input[name="interests"]').forEach(function (i) { i.remove(); });

@@ -3,16 +3,16 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>Quản lý nhân viên (bảng NHAN_VIEN): thêm, sửa, nghỉ việc.</summary>
 public class EmployeesController(ShopData db) : Controller
 {
+    // Quản lý nhân viên: danh sách từ ShopData.Employees (NHAN_VIEN + TAI_KHOAN).
     public IActionResult Index()
     {
         ViewBag.Menu = "employees";
         var rows = db.Employees.Select(e => new Row(
         [
             $"{e.LastName} {e.FirstName}", $"NV{e.Id:D3}", e.Position, Fmt.Money(e.BaseSalary),
-            e.Working ? "[g]Đang làm việc" : "[x]Nghỉ việc"   // PDF: dang_lam / nghi_viec
+            e.Working ? "[g]Đang làm việc" : "[x]Nghỉ việc"
         ], null, e.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage

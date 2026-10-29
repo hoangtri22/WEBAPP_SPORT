@@ -1,62 +1,48 @@
 namespace SportShop.CustomerWeb.Models;
 
-// ============================================================
-//  Dữ liệu mẫu để dựng giao diện khi CHƯA kết nối cơ sở dữ liệu.
-//  Khi đã kết nối MySQL, các trang khách hàng đọc dữ liệu thật qua Services/CustomerStore.
-// ============================================================
 
 public record StoreProduct(int Id, string Name, string Type, string Price, string OldPrice, string Badge, string Image);
 
 public record StoreCategory(string Name, string Sub, string Css, string Icon);
 
-/// <summary>Một phản hồi khách đã gửi. Reply = câu trả lời của cửa hàng (nếu có).</summary>
 public record FeedbackRow(string Id, string Product, string Text, string Date, string Status, string Tone, string? Reply = null);
 
 public record SurveyQuestion(string Title, string Type, string[] Options);
 
-/// <summary>Thông tin khách hàng đang đăng nhập.</summary>
 public record CustomerProfile(string FullName, string Initials, string Username, string Email, string Phone, string Birth, string Gender, string Tier, int Orders, int Points)
 {
-    /// <summary>Tên ngắn hiện trên thanh menu: 2 chữ cuối của họ tên (hoặc cả tên nếu chỉ có 1 chữ).</summary>
     public string ShortName => string.Join(' ', FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2));
 }
 
-/// <summary>Một khảo sát đã gửi đến tài khoản khách (KHAO_SAT + KHAO_SAT_KHACH_HANG).</summary>
 public class SurveyItem
 {
     public int Id { get; set; }
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
     public DateTime Deadline { get; set; }
-    /// <summary>chua_lam / dang_lam / hoan_thanh</summary>
     public string Status { get; set; } = "";
     public DateTime? CompletedAt { get; set; }
     public long IsOpenFlag { get; set; }
     public long QuestionCount { get; set; }
-    /// <summary>Khảo sát đang mở (đã gửi và chưa hết hạn).</summary>
     public bool IsOpen => IsOpenFlag == 1;
     public bool Done => Status == "hoan_thanh";
 }
 
 public record SurveyOption(int Id, string Text);
 
-/// <summary>Câu hỏi khảo sát. Type: one / many / scale / text.</summary>
 public record SurveyQ(int Id, string Title, string Type, bool Required, List<SurveyOption> Options);
 
-/// <summary>Dữ liệu cho trang Khảo sát: danh sách + khảo sát đang làm (nếu có).</summary>
 public class SurveyPageVm
 {
     public List<SurveyItem> Items { get; init; } = [];
     public SurveyItem? Current { get; init; }
     public List<SurveyQ> Questions { get; init; } = [];
-    /// <summary>Vừa gửi khảo sát thành công → hiện màn cảm ơn.</summary>
     public bool JustDone { get; init; }
     public string? Error { get; init; }
 }
 
 public static class StoreData
 {
-    // Ảnh minh họa lấy từ Unsplash (giống bản thiết kế Figma)
     public const string HeroImage = "https://images.unsplash.com/photo-1739138053507-0f312a938451?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=90&w=1400";
     public const string CampaignImage = "https://images.unsplash.com/photo-1772909849803-e1c298df3fd9?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=900";
     public const string AuthImage = "https://images.unsplash.com/photo-1771402899305-2066905a74f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1400";
@@ -89,7 +75,6 @@ public static class StoreData
         new("PH0189", "Túi Nike Brasilia 9.5", "Ngăn đựng rộng và đường may chắc chắn.", "03/05/2025", "Mới", "info"),
     ];
 
-    // Bốn dạng câu hỏi của khảo sát: một lựa chọn, nhiều lựa chọn, thang điểm, văn bản (theo PDF)
     public static readonly List<SurveyQuestion> SurveyQuestions =
     [
         new("Bạn thường mua sắm đồ thể thao với tần suất nào?", "one", ["Hàng tháng", "Mỗi 2–3 tháng", "Mỗi 6 tháng", "Khi có nhu cầu"]),

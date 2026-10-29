@@ -6,25 +6,17 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
-/// <summary>
-/// Đọc / ghi dữ liệu của khách hàng trong MySQL (CSDL sports_shop, script Backend/Database/sports_shop.sql):
-/// đăng nhập, đăng ký, chỉnh sửa thông tin, gửi phản hồi, làm khảo sát.
-/// Chuỗi kết nối: appsettings.json → ConnectionStrings:Default.
-/// Mật khẩu lưu dạng văn bản (theo thiết kế của nhóm), so sánh trực tiếp khi đăng nhập.
-/// </summary>
 public class CustomerStore(IConfiguration config)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
 
     MySqlConnection Open() => new(_cs);
 
-    /// <summary>So sánh mật khẩu theo thời gian không phụ thuộc nội dung, tránh lộ thông tin qua thời gian phản hồi.</summary>
     static bool SamePassword(string stored, string entered)
         => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(entered));
 
-    // ===================== Đăng nhập / đăng ký =====================
 
-    /// <summary>Trả về mã khách hàng nếu đăng nhập đúng, ngược lại trả về thông báo lỗi.</summary>
+    // Đăng nhập: tìm TAI_KHOAN theo tên đăng nhập hoặc email (JOIN VAI_TRO, KHACH_HANG), so mật khẩu bằng SamePassword(); chỉ nhận tài khoản khách đang hoạt động.
     public (int? CustomerId, string? Error) Login(string username, string password)
     {
         using var c = Open();
@@ -47,10 +39,7 @@ public class CustomerStore(IConfiguration config)
         return (r.CustomerId, null);
     }
 
-    /// <summary>
-    /// Tạo tài khoản (TAI_KHOAN, vai trò Khách hàng) và hồ sơ khách hàng (KHACH_HANG).
-    /// Trả về lỗi theo từng ô nhập (khóa: username / email), rỗng nếu thành công.
-    /// </summary>
+    // Đăng ký: kiểm tra trùng tên đăng nhập / email trong TAI_KHOAN, rồi trong một transaction thêm TAI_KHOAN (vai trò "Khách hàng") và KHACH_HANG.
     public Dictionary<string, string> Register(string username, string email, string phone, string password)
     {
         var errors = new Dictionary<string, string>();
@@ -69,7 +58,6 @@ public class CustomerStore(IConfiguration config)
                     (SELECT ma_vai_tro FROM VAI_TRO WHERE ten_vai_tro = 'Khách hàng'), 'hoat_dong');
             SELECT LAST_INSERT_ID();
             """, new { username, email, phone, password }, tx);
-        // Họ tên chưa có lúc đăng ký: tạm lấy tên đăng nhập, khách cập nhật sau ở trang "Chỉnh sửa thông tin"
         c.Execute("""
             INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, so_dien_thoai) VALUES (@accountId, '', @username, @phone)
             """, new { accountId, username, phone }, tx);
@@ -77,16 +65,16 @@ public class CustomerStore(IConfiguration config)
         return errors;
     }
 
-    // ===================== Thông tin cá nhân =====================
 
     CustomerProfile? _current;
-    /// <summary>Khách đang đăng nhập (mã khách lưu trong session lúc đăng nhập); null nếu chưa đăng nhập.</summary>
+    // Hồ sơ khách đang đăng nhập theo customer_id trong Session (gọi GetProfile(), giữ lại trong request).
     public CustomerProfile? Current(ISession session)
     {
         var id = session.GetInt32("customer_id");
         return id == null ? null : _current ??= GetProfile(id.Value);
     }
 
+    // Đọc hồ sơ khách từ KHACH_HANG + TAI_KHOAN: họ tên, email, SĐT, hạng thành viên (MemberTier), điểm và số đơn trong DON_HANG.
     public CustomerProfile? GetProfile(int customerId)
     {
         using var c = Open();
@@ -108,7 +96,7 @@ public class CustomerStore(IConfiguration config)
             r.Birth?.ToString("yyyy-MM-dd") ?? "", r.Gender ?? "", tier, (int)r.Orders, r.Points);
     }
 
-    /// <summary>Tất cả sở thích (SO_THICH) và các sở thích khách đã chọn.</summary>
+    // Lấy toàn bộ sở thích (SO_THICH) và các sở thích khách đã chọn (KHACH_HANG_SO_THICH).
     public (List<string> All, HashSet<string> Selected) Interests(int customerId)
     {
         using var c = Open();
@@ -120,10 +108,9 @@ public class CustomerStore(IConfiguration config)
         return (all, mine);
     }
 
-    /// <summary>Lưu thông tin cá nhân. Trả về thông báo lỗi, hoặc null nếu thành công.</summary>
+    // Cập nhật hồ sơ: kiểm tra email trùng, rồi trong transaction cập nhật KHACH_HANG, TAI_KHOAN và ghi lại KHACH_HANG_SO_THICH.
     public string? UpdateProfile(int customerId, string fullName, string email, string phone, DateTime? birth, string gender, IEnumerable<string> interests)
     {
-        // Tách họ tên: từ cuối là tên, phần trước là họ lót
         var words = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string first = words[^1], last = string.Join(' ', words[..^1]);
 
@@ -150,9 +137,8 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
-    // ===================== Sản phẩm trên trang chủ =====================
 
-    /// <summary>Sản phẩm đang bán mới nhất (kèm ảnh, loại, giá bán thấp nhất của các biến thể) cho mục "Sản phẩm nổi bật".</summary>
+    // Sản phẩm nổi bật cho trang chủ (Views/Home/Index.cshtml): các sản phẩm mới nhất còn hàng từ SAN_PHAM, LOAI_SP, BIEN_THE_SP.
     public List<StoreProduct> FeaturedProducts(int count)
     {
         using var c = Open();
@@ -166,7 +152,7 @@ public class CustomerStore(IConfiguration config)
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
             WHERE sp.trang_thai = 'hien'
             GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai
-            HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0   -- chỉ hiện sản phẩm còn hàng (có tồn kho)
+            HAVING IFNULL(SUM(bt.so_luong_ton), 0) > 0
             ORDER BY sp.ma_san_pham DESC
             LIMIT @count
             """, new { count })
@@ -175,10 +161,8 @@ public class CustomerStore(IConfiguration config)
             .ToList();
     }
 
-    /// <summary>
-    /// Đổi mật khẩu của khách: kiểm tra mật khẩu hiện tại rồi lưu mật khẩu mới vào tài khoản (TAI_KHOAN.mat_khau).
-    /// Trả về thông báo lỗi, hoặc null nếu đổi thành công.
-    /// </summary>
+
+    // Đổi mật khẩu: kiểm tra mật khẩu hiện tại trong TAI_KHOAN rồi cập nhật mật khẩu mới.
     public string? ChangePassword(int customerId, string currentPassword, string newPassword)
     {
         using var c = Open();
@@ -193,16 +177,15 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
-    // ===================== Phản hồi =====================
 
-    /// <summary>Sản phẩm đang bán (để khách chọn khi gửi phản hồi).</summary>
+    // Danh sách sản phẩm đang hiện trong SAN_PHAM (dùng kiểm tra mã sản phẩm khi gửi phản hồi).
     public List<(int Id, string Name)> Products()
     {
         using var c = Open();
         return c.Query<(int, string)>("SELECT ma_san_pham, ten_san_pham FROM SAN_PHAM WHERE trang_thai = 'hien' ORDER BY ten_san_pham").ToList();
     }
 
-    /// <summary>Sản phẩm khách đã mua và nhận hàng (nằm trong đơn "Đã giao"): chỉ những sản phẩm này mới được gửi phản hồi.</summary>
+    // Sản phẩm khách đã mua trong các đơn "da_giao" (DON_HANG, CHI_TIET_DON_HANG, BIEN_THE_SP, SAN_PHAM).
     public List<(int Id, string Name)> PurchasedProducts(int customerId)
     {
         using var c = Open();
@@ -217,6 +200,7 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId }).ToList();
     }
 
+    // Thêm phản hồi đánh giá (loai = danh_gia, trạng thái moi) vào bảng PHAN_HOI.
     public void SendFeedback(int customerId, int productId, int stars, string content)
     {
         using var c = Open();
@@ -226,7 +210,7 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId, productId, stars, content });
     }
 
-    /// <summary>Phản hồi khách đã gửi, mới nhất trước, kèm câu trả lời mới nhất của cửa hàng.</summary>
+    // Lịch sử phản hồi của khách từ PHAN_HOI, kèm câu trả lời mới nhất trong TRA_LOI_PHAN_HOI.
     public List<FeedbackRow> Feedbacks(int customerId)
     {
         using var c = Open();
@@ -251,9 +235,8 @@ public class CustomerStore(IConfiguration config)
             }).ToList();
     }
 
-    // ===================== Khảo sát =====================
 
-    /// <summary>Các khảo sát đã gửi đến tài khoản khách (KHAO_SAT_KHACH_HANG).</summary>
+    // Khảo sát đã gửi đến khách (KHAO_SAT_KHACH_HANG + KHAO_SAT), kèm số câu hỏi và cờ còn hạn.
     public List<SurveyItem> Surveys(int customerId)
     {
         using var c = Open();
@@ -268,7 +251,7 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId }).ToList();
     }
 
-    /// <summary>Câu hỏi và lựa chọn của một khảo sát.</summary>
+    // Câu hỏi (CAU_HOI_KHAO_SAT) và lựa chọn (LUA_CHON_CAU_HOI) của một khảo sát.
     public List<SurveyQ> Questions(int surveyId)
     {
         using var c = Open();
@@ -286,11 +269,7 @@ public class CustomerStore(IConfiguration config)
                 q.Required, options[q.Id].ToList())).ToList();
     }
 
-    /// <summary>
-    /// Lưu câu trả lời khảo sát (TRA_LOI_KHAO_SAT) và đánh dấu khách đã hoàn thành.
-    /// answers: mã câu hỏi → các mã lựa chọn đã chọn, hoặc nội dung văn bản.
-    /// Trả về thông báo lỗi, hoặc null nếu thành công.
-    /// </summary>
+    // Nộp khảo sát: kiểm tra còn hạn và câu bắt buộc; trong transaction ghi TRA_LOI_KHAO_SAT và đánh dấu KHAO_SAT_KHACH_HANG là hoan_thanh.
     public string? SubmitSurvey(int surveyId, int customerId, Dictionary<int, (List<int> Options, string? Text)> answers)
     {
         var survey = Surveys(customerId).FirstOrDefault(s => s.Id == surveyId);
@@ -309,7 +288,6 @@ public class CustomerStore(IConfiguration config)
         foreach (var q in questions)
         {
             if (!answers.TryGetValue(q.Id, out var a)) continue;
-            // Chỉ nhận các lựa chọn thuộc đúng câu hỏi
             var valid = a.Options.Where(o => q.Options.Any(x => x.Id == o)).ToList();
             foreach (var o in valid)
                 c.Execute("""
@@ -328,7 +306,6 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
-    // Lớp đọc kết quả truy vấn
     class PasswordRow { public int AccountId { get; set; } public string Password { get; set; } = ""; }
     class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } }
     class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public decimal Spent { get; set; } public int Points { get; set; } public long Orders { get; set; } }

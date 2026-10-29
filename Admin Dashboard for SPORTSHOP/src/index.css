@@ -191,7 +191,6 @@ tbody tr:hover { background: #fbfdfd; }
   .login-page { display: block; }.login-visual { display: none; }.login-form-wrap { min-height: 100vh; padding: 30px; }.mobile-logo { display: block; margin-bottom: 60px; }
 }
 
-/* Customer storefront */
 .storefront { min-height: 100vh; background: #fff; color: #0f172a; }
 .shop-promo { height: 33px; padding: 0 max(4vw,24px); background: #0b5651; color: #d6efec; display: flex; align-items: center; justify-content: flex-end; gap: 24px; font-size: 9px; }
 .shop-promo span { margin-right: auto; }
@@ -300,7 +299,6 @@ tbody tr:hover { background: #fbfdfd; }
   .shop-mobile-nav { display: flex; position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; height: 67px; background: white; box-shadow: 0 -8px 30px rgba(15,23,42,.1); align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }.shop-mobile-nav button { width: 20%; height: 100%; border: 0; background: transparent; color: #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; }.shop-mobile-nav button.active { color: #0f766e; }.shop-mobile-nav button > span { position: static; width: auto; height: auto; border-radius: 0; background: transparent; color: inherit; font-size: 7px; }.shop-mobile-nav .cart-button i { top: 7px; right: 18px; }
 }
 
-/* Customer account */
 .shop-auth-actions { display: flex; align-items: center; gap: 7px; margin-left: 5px; }
 .shop-auth-actions > button:first-child { border: 0; background: transparent; color: #0f766e; font-size: 10px; font-weight: 700; padding: 0 8px; }
 .shop-auth-actions .btn { width: auto; height: 36px; color: white; }

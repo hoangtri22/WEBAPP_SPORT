@@ -3,22 +3,19 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>Quản lý khách hàng: hồ sơ, hạng thành viên, nhóm khách, lịch sử mua và chăm sóc.</summary>
 public class CustomersController(ShopData db) : Controller
 {
+    // Quản lý khách hàng: danh sách khách, nhóm khách và lịch hẹn liên hệ lại lấy từ ShopData (Customers, CustomerGroups, CareNotes).
     public IActionResult Index()
     {
         ViewBag.Menu = "customers";
 
-        // Bảng chính: danh sách khách hàng, nút con mắt mở hồ sơ + lịch sử mua hàng
         var list = db.Customers.Select(c => new Row(
             [c.FullName, c.Phone, c.Tier, c.Points.ToString("N0"), Fmt.Money(c.TotalSpent), c.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động"],
             Url.Action(nameof(Detail), new { id = c.Id }), c.Id)).ToList();
 
-        // Nhóm khách hàng (NHOM_KHACH_HANG) theo 1 trong 4 tiêu chí, số khách lấy từ KHACH_HANG_NHOM_KH
         var groups = db.CustomerGroups.Select(g => new Row([g.Name, g.Criterion, g.Value, g.Count.ToString()], null, g.Id)).ToList();
 
-        // Lịch hẹn liên hệ lại lấy từ lịch sử chăm sóc
         var followUps = db.CareNotes.Where(n => n.FollowUp != null).OrderBy(n => n.FollowUp)
             .Select(n => new Row([Fmt.Date(n.FollowUp!.Value), db.Customer(n.CustomerId).FullName, Fmt.Channel(n.Channel), n.Content, db.Employee(n.EmployeeId).FirstName])).ToList();
 
@@ -35,7 +32,7 @@ public class CustomersController(ShopData db) : Controller
         });
     }
 
-    /// <summary>Hồ sơ một khách hàng + lịch sử mua hàng + lịch sử chăm sóc.</summary>
+    // Hồ sơ chi tiết một khách hàng (Views/Customers/Detail.cshtml) từ ShopData.Customers.
     public IActionResult Detail(int id)
     {
         ViewBag.Menu = "customers";

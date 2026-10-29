@@ -5,22 +5,16 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
-/// <summary>
-/// Cửa hàng trong MySQL: xem sản phẩm, giỏ hàng, đặt hàng, đơn hàng của tôi.
-/// Chỉ dùng các bảng có sẵn (SAN_PHAM, BIEN_THE_SP, DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN...), không đổi cấu trúc CSDL.
-/// Giỏ hàng lưu theo từng tài khoản trong file (CartStore), không cần thêm bảng trong CSDL: { mã biến thể → số lượng }.
-/// </summary>
 public class ShopStore(IConfiguration config, CartStore carts)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
     MySqlConnection Open() => new(_cs);
 
-    // Đơn từ mức này trở lên được miễn phí giao hàng (khớp dải khuyến mãi "FREESHIP đơn từ 500.000₫")
     public const decimal FreeShipFrom = 500_000;
     public const decimal ShipFee = 30_000;
 
-    // ===================== Danh mục, sản phẩm =====================
 
+    // Danh mục sản phẩm (LOAI_SP) kèm số sản phẩm đang bán còn hàng; bỏ loại lưu trữ Catalog.ArchivedCategory.
     public List<ShopCategory> Categories()
     {
         using var c = Open();
@@ -33,7 +27,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Select(r => new ShopCategory(I(r, "ma_loai"), S(r, "ten_loai"), I(r, "so_sp"))).ToList();
     }
 
-    /// <summary>Sản phẩm đang bán, lọc theo loại và từ khóa. sort: new | price_asc | price_desc | name.</summary>
+    // Tìm kiếm / lọc sản phẩm: theo loại, từ khóa (LIKE tên sản phẩm hoặc tên loại) và kiểu sắp xếp; giá thấp nhất/cao nhất và tồn kho tổng hợp từ BIEN_THE_SP.
     public List<ShopProduct> Products(int? category = null, string? keyword = null, string sort = "new", int? take = null)
     {
         string order = sort switch
@@ -62,6 +56,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Cast<IDictionary<string, object?>>().Select(ToProduct).ToList();
     }
 
+    // Chi tiết một sản phẩm đang hiện và các biến thể (size, màu, giá, tồn kho, ảnh) trong BIEN_THE_SP.
     public (ShopProduct Product, List<ShopVariant> Variants)? Product(int id)
     {
         using var c = Open();
@@ -83,7 +78,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return (ToProduct(r), variants);
     }
 
-    /// <summary>Chương trình khuyến mãi theo voucher đang áp dụng.</summary>
+    // Voucher đang hiệu lực và còn lượt dùng (KM_THEO_VOUCHER JOIN CTKM).
     public List<PromoInfo> Promos()
     {
         using var c = Open();
@@ -97,13 +92,10 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
-    // ===================== Giỏ hàng (lưu theo tài khoản) =====================
-    // Mỗi tài khoản có giỏ riêng, lưu trong file (CartStore) nên đăng xuất hay đăng nhập lại vẫn còn nguyên giỏ.
-    // Chưa đăng nhập thì không có giỏ: phải đăng nhập (hoặc đăng ký) mới thêm được sản phẩm vào giỏ.
 
-    /// <summary>Mã khách hàng đang đăng nhập (lưu trong session lúc đăng nhập); 0 nếu chưa đăng nhập.</summary>
     static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
 
+    // Đọc giỏ hàng {mã biến thể: số lượng} của khách đăng nhập từ CartStore (App_Data/carts.json).
     public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? carts.Get(id) : [];
 
     void SaveCart(ISession s, Dictionary<int, int> cart)
@@ -114,7 +106,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
     public void ClearCart(ISession s) => SaveCart(s, []);
     public int CartCount(ISession s) => GetCart(s).Values.Sum();
 
-    /// <summary>Thêm vào giỏ (cộng dồn). Trả về thông báo lỗi nếu biến thể không bán được hoặc vượt tồn kho.</summary>
+    // Thêm vào giỏ: kiểm tra biến thể đang bán và tồn kho trong BIEN_THE_SP, cộng dồn số lượng rồi lưu qua CartStore.
     public string? AddToCart(ISession s, int variantId, int qty)
     {
         if (CustomerOf(s) == 0) return "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.";
@@ -130,6 +122,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return null;
     }
 
+    // Đặt lại số lượng một dòng giỏ (không quá 0 thì xóa dòng) và lưu qua CartStore.
     public void SetQty(ISession s, int variantId, int qty)
     {
         var cart = GetCart(s);
@@ -137,7 +130,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         SaveCart(s, cart);
     }
 
-    /// <summary>Các dòng giỏ hàng kèm giá và tồn kho hiện tại. Biến thể không còn bán bị loại khỏi giỏ.</summary>
+    // Dựng các dòng giỏ hàng: tên, size, màu, ảnh, giá, tồn kho từ BIEN_THE_SP/SAN_PHAM; tự bỏ biến thể không còn bán.
     public List<CartLine> CartLines(ISession s)
     {
         var cart = GetCart(s);
@@ -151,21 +144,15 @@ public class ShopStore(IConfiguration config, CartStore carts)
             """, new { ids }).Cast<IDictionary<string, object?>>()
             .Select(r => new CartLine(I(r, "ma_bien_the"), I(r, "ma_san_pham"), S(r, "ten_san_pham"), NS(r, "kich_co"), NS(r, "mau_sac"), NS(r, "hinh_anh"),
                 D(r, "gia_ban"), cart[I(r, "ma_bien_the")], I(r, "so_luong_ton"))).OrderBy(l => l.Name).ToList();
-        // Dọn khỏi giỏ những biến thể không còn bán
         if (lines.Count != cart.Count) SaveCart(s, lines.ToDictionary(l => l.VariantId, l => l.Qty));
         return lines;
     }
 
-    // ===================== Thanh toán =====================
 
-    /// <summary>Các phương thức thanh toán giả lập luôn có sẵn cho khách chọn (không cần nhập thông tin thẻ).</summary>
     static readonly string[] DefaultPayMethods =
         ["Thanh toán khi nhận hàng (COD)", "Chuyển khoản ngân hàng", "Ví điện tử (MoMo, ZaloPay)", "Thẻ ATM / Visa / Mastercard"];
 
-    /// <summary>
-    /// Danh sách phương thức thanh toán (giả lập). Đơn hàng bắt buộc tham chiếu bảng PHUONG_THUC_THANH_TOAN,
-    /// nên phương thức nào chưa có trong bảng thì được thêm vào; chọn phương thức nào cũng đặt hàng được.
-    /// </summary>
+    // Phương thức thanh toán: thêm 4 phương thức mặc định vào PHUONG_THUC_THANH_TOAN nếu chưa có, rồi trả về mã và tên.
     public List<PaymentMethod> PaymentMethods()
     {
         using var c = Open();
@@ -183,7 +170,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return list;
     }
 
-    /// <summary>Thông tin nhận hàng điền sẵn: địa chỉ mặc định trong sổ địa chỉ, không có thì lấy tên + SĐT của khách.</summary>
+    // Người nhận mặc định khi thanh toán: lấy từ SO_DIA_CHI (ưu tiên địa chỉ mặc định), không có thì lấy họ tên và SĐT trong KHACH_HANG.
     public ReceiverInfo Receiver(int customerId)
     {
         using var c = Open();
@@ -195,7 +182,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return new ReceiverInfo(k == null ? "" : S(k, "ten"), k == null ? "" : S(k, "so_dien_thoai"), "");
     }
 
-    /// <summary>Tính giảm giá của một mã voucher cho khách + tạm tính. Ném OrderError nếu mã không dùng được.</summary>
+    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, còn lượt và chưa vượt giới hạn mỗi khách; trả về mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
         var km = c.Query("""
@@ -204,7 +191,6 @@ public class ShopStore(IConfiguration config, CartStore carts)
             WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
             """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
-        // Hạng thành viên hiệu lực của khách (chưa chi tiêu thì là hạng thường)
         var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
         string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
         if (NS(km, "hang_ap_dung") is { Length: > 0 } need && need != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {need}.");
@@ -218,27 +204,23 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return (ctId, discount);
     }
 
-    /// <summary>Xem trước mức giảm của mã (ở trang thanh toán). Trả về (giảm, thông báo lỗi).</summary>
+    // Xem trước số tiền giảm ở trang thanh toán (gọi ApplyVoucher(), không ghi CSDL).
     public (decimal Discount, string? Error) PreviewVoucher(int customerId, string code, decimal subtotal)
     {
         try { using var c = Open(); return (ApplyVoucher(c, null, code.Trim(), customerId, subtotal).Discount, null); }
         catch (OrderError e) { return (0, e.Message); }
     }
 
+    // Phí vận chuyển: miễn phí từ FreeShipFrom (500.000đ), còn lại ShipFee (30.000đ).
     public static decimal ShippingFor(decimal subtotal) => subtotal >= FreeShipFrom || subtotal == 0 ? 0 : ShipFee;
 
-    /// <summary>
-    /// Đặt hàng: tạo đơn (khách tự đặt online, chưa có nhân viên, chờ xác nhận, chưa thanh toán),
-    /// trừ tồn kho, ghi vận chuyển và lượt dùng voucher. Mọi bước trong một transaction.
-    /// Hóa đơn và doanh thu được ghi nhận khi admin chuyển đơn sang "Đã giao".
-    /// </summary>
+    // Đặt hàng: kiểm tra người nhận, khóa và kiểm tra tồn kho từng biến thể, áp voucher; trong một transaction ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, trừ tồn kho BIEN_THE_SP và lưu SO_DIA_CHI nếu khách chưa có.
     public (int? OrderId, string? Error) PlaceOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
     {
         if (cart.Count == 0) return (null, "Giỏ hàng đang trống.");
         if (string.IsNullOrWhiteSpace(to.Name) || string.IsNullOrWhiteSpace(to.Phone) || string.IsNullOrWhiteSpace(to.Address))
             return (null, "Vui lòng nhập đủ họ tên, số điện thoại và địa chỉ nhận hàng.");
         if (!System.Text.RegularExpressions.Regex.IsMatch(to.Phone.Trim(), @"^0\d{9}$")) return (null, "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
-        // Thanh toán giả lập: phương thức không hợp lệ thì dùng phương thức đầu tiên (COD), không chặn đặt hàng
         var methods = PaymentMethods();
         if (!methods.Any(m => m.Id == payMethod)) payMethod = methods[0].Id;
         try
@@ -248,7 +230,6 @@ public class ShopStore(IConfiguration config, CartStore carts)
             using var tx = c.BeginTransaction();
             try
             {
-                // Giá lấy tại thời điểm đặt; khóa dòng tồn kho để hai khách không mua trùng hàng cuối
                 decimal subtotal = 0;
                 var priced = new List<(int Variant, int Qty, decimal Price)>();
                 foreach (var (variant, qty) in cart.OrderBy(k => k.Key))
@@ -293,7 +274,6 @@ public class ShopStore(IConfiguration config, CartStore carts)
                     c.Execute("INSERT INTO LUOT_SU_DUNG_KHUYEN_MAI (ma_ctkm, ma_khach_hang, ma_don_hang, so_tien_giam, ngay_su_dung) VALUES (@ctkm, @customerId, @order, @discount, NOW())", new { ctkm, customerId, order, discount }, tx);
                     c.Execute("UPDATE CTKM SET so_luot_da_dung = so_luot_da_dung + 1 WHERE ma_ctkm=@ctkm", new { ctkm }, tx);
                 }
-                // Khách chưa có sổ địa chỉ thì lưu địa chỉ này làm mặc định cho lần sau
                 if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM SO_DIA_CHI WHERE ma_khach_hang=@customerId", new { customerId }, tx) == 0)
                     c.Execute("INSERT INTO SO_DIA_CHI (ma_khach_hang, ten_nguoi_nhan, sdt_nguoi_nhan, dia_chi_chi_tiet, la_mac_dinh) VALUES (@customerId, @name, @phone, @addr, 1)",
                         new { customerId, name = to.Name.Trim(), phone = to.Phone.Trim(), addr = to.Address.Trim() }, tx);
@@ -307,8 +287,8 @@ public class ShopStore(IConfiguration config, CartStore carts)
         catch (MySqlException e) { return (null, "Không đặt hàng được: " + e.Message); }
     }
 
-    // ===================== Đơn hàng của tôi =====================
 
+    // Đơn hàng của khách (DON_HANG, PHUONG_THUC_THANH_TOAN, VAN_CHUYEN, HOA_DON) kèm các dòng CHI_TIET_DON_HANG; truyền orderId để lấy một đơn.
     public List<MyOrder> Orders(int customerId, int? orderId = null)
     {
         using var c = Open();
@@ -345,7 +325,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         }).ToList();
     }
 
-    /// <summary>Khách tự hủy đơn khi còn "Chờ xác nhận": hoàn lại tồn kho. Trả về thông báo lỗi nếu không hủy được.</summary>
+    // Khách hủy đơn: chỉ khi đơn còn cho_xac_nhan; trong transaction cộng lại tồn kho BIEN_THE_SP, chuyển DON_HANG sang da_huy và VAN_CHUYEN sang that_bai.
     public string? CancelOrder(int customerId, int orderId)
     {
         using var c = Open();
@@ -361,7 +341,6 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return null;
     }
 
-    // ===================== Hàm tiện ích =====================
 
     static ShopProduct ToProduct(IDictionary<string, object?> r) =>
         new(I(r, "ma_san_pham"), S(r, "ten_san_pham"), S(r, "ten_loai"), S(r, "don_vi_tinh"), NS(r, "mo_ta"), NS(r, "hinh_anh"), ND(r, "gia_min"), ND(r, "gia_max"), I(r, "ton"));

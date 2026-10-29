@@ -1,10 +1,3 @@
-@*
-    Một "thẻ bảng" dùng lại ở mọi trang danh sách:
-      thanh công cụ (tìm kiếm / bộ lọc / nút thêm mới) + bảng + dòng phân trang.
-    Việc tìm kiếm, lọc và phân trang do wwwroot/js/admin.js xử lý ở phía trình duyệt.
-    ViewData["id"]   : id duy nhất của thẻ
-    ViewData["hint"] : chữ gợi ý trong ô tìm kiếm
-*@
 @model TableSection
 @{
     var id = ViewData["id"] as string ?? "tbl";
@@ -56,7 +49,6 @@
                         {
                             <td>
                                 <div class="actions">
-                                    @* Con mắt: mở trang chi tiết nếu có, không thì xem nhanh trong ngăn bên phải *@
                                     @if (r.Url != null)
                                     {
                                         <a class="act" href="@r.Url" title="Xem chi tiết">@Icons.Svg("eye", 18)</a>

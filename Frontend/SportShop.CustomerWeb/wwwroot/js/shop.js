@@ -1,15 +1,7 @@
-/* =====================================================================
-   SPORTSHOP - web khách hàng: JavaScript giao diện
-   Các khối:
-     1. Thông báo nhỏ (toast)
-     2. Chặn các nút cần cơ sở dữ liệu khi chưa có CSDL
-     3. Thanh tìm kiếm của cửa hàng
-     4. Nút tim, tab sản phẩm
-   ===================================================================== */
 
-/* ---------- 1. Thông báo nhỏ ---------- */
 var DB_MESSAGE = 'Chức năng này sẽ hoạt động khi hệ thống được kết nối cơ sở dữ liệu.';
 var toastTimer;
+// Hiện thông báo nhỏ (toast); không truyền msg thì báo chưa kết nối CSDL.
 function showToast(msg) {
     var t = document.getElementById('toast');
     if (!t) return;
@@ -19,12 +11,8 @@ function showToast(msg) {
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
 }
 
-/* ---------- 2. Nút cần cơ sở dữ liệu ----------
-   Nút/liên kết có thuộc tính data-needs-db:
-     - body[data-db="false"] (chưa kết nối MySQL): chặn thao tác và hiện thông báo
-     - body[data-db="true"]  (đã kết nối MySQL): nút gửi form (Đăng ký, Lưu thay đổi, Gửi phản hồi) chạy bình thường;
-       các nút của chức năng chưa làm (giỏ hàng, sản phẩm, khuyến mãi...) hiện thông báo "đang phát triển" */
 var SOON_MESSAGE = 'Chức năng này đang được phát triển.';
+// Nút có data-needs-db: chưa kết nối CSDL (body data-db) thì báo lỗi; đã kết nối thì chỉ nút submit được chạy, nút khác báo đang phát triển.
 document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-needs-db]');
     if (!el) return;
@@ -35,7 +23,7 @@ document.addEventListener('click', function (e) {
     showToast(connected ? SOON_MESSAGE : DB_MESSAGE);
 }, true);
 
-/* ---------- 3. Thanh tìm kiếm ---------- */
+// Thanh tìm kiếm: mở/đóng bằng nút hoặc Ctrl+K; Enter chuyển đến /Shop?q=... (ShopController.Index).
 (function () {
     var bar = document.getElementById('shopSearch');
     if (!bar) return;
@@ -48,10 +36,8 @@ document.addEventListener('click', function (e) {
         var b = document.getElementById(id);
         if (b) b.addEventListener('click', function () { toggle(); });
     });
-    // Enter trong ô tìm kiếm: tìm sản phẩm cần cơ sở dữ liệu
     input.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter') return;
-        // Đã kết nối: chuyển sang trang cửa hàng với từ khóa; chưa kết nối: báo cần cơ sở dữ liệu
         if (document.body.dataset.db === 'true') { if (input.value.trim()) location.href = '/Shop?q=' + encodeURIComponent(input.value.trim()); }
         else showToast();
     });
@@ -61,7 +47,6 @@ document.addEventListener('click', function (e) {
     });
 })();
 
-/* ---------- 4. Nút tim và tab sản phẩm (chỉ đổi giao diện) ---------- */
 document.querySelectorAll('.heart').forEach(function (b) {
     b.addEventListener('click', function () { b.classList.toggle('liked'); });
 });

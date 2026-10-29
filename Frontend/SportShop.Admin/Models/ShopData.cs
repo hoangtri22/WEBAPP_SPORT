@@ -3,16 +3,11 @@ using MySqlConnector;
 
 namespace SportShop.Admin.Models;
 
-/// <summary>
-/// Đọc dữ liệu từ CSDL MySQL <c>sports_shop</c> (script: Backend/Database/sports_shop.sql).
-/// Chuỗi kết nối: appsettings.json → ConnectionStrings:Default.
-/// Mỗi request có một đối tượng ShopData (đăng ký Scoped trong Program.cs);
-/// mỗi danh sách chỉ được truy vấn khi được dùng lần đầu trong request đó.
-/// </summary>
 public class ShopData
 {
     readonly string _cs;
 
+    // Đọc dữ liệu cho các trang quản trị từ MySQL (ConnectionStrings:Default); mỗi danh sách được nạp bằng hàm Load...() tương ứng khi dùng lần đầu trong request (Lazy).
     public ShopData(IConfiguration config)
     {
         _cs = config.GetConnectionString("Default") ?? "";
@@ -36,7 +31,6 @@ public class ShopData
         _surveys = new(LoadSurveys);
     }
 
-    // ================= Danh sách dùng trong controller / view =================
     readonly Lazy<List<Category>> _categories;
     readonly Lazy<List<Product>> _products;
     readonly Lazy<List<Variant>> _variants;
@@ -54,11 +48,9 @@ public class ShopData
     readonly Lazy<List<Survey>> _surveys;
 
     public List<Category> CategoryList => _categories.Value;
-    /// <summary>Tên các loại sản phẩm (LOAI_SP).</summary>
     public List<string> Categories => _categories.Value.Select(c => c.Name).ToList();
     public List<Product> Products => _products.Value;
     public List<Variant> Variants => _variants.Value;
-    /// <summary>Sản phẩm / biến thể chưa bị xóa (không thuộc loại ẩn "đã xóa"). Dùng khi liệt kê; tra cứu theo mã vẫn dùng Products / Variants để lịch sử đơn hàng hiện đủ tên.</summary>
     public List<Product> ActiveProducts => Products.Where(p => p.Category != Catalog.ArchivedCategory).ToList();
     public List<Variant> ActiveVariants { get { var ids = ActiveProducts.Select(p => p.Id).ToHashSet(); return Variants.Where(v => ids.Contains(v.ProductId)).ToList(); } }
     public List<Employee> Employees => _employees.Value;
@@ -85,7 +77,7 @@ public class ShopData
         return extra.Length == 0 ? Product(v.ProductId).Name : $"{Product(v.ProductId).Name} ({extra})";
     }
 
-    /// <summary>Hiệu quả khuyến mãi trong khoảng ngày: số lượt dùng, tổng tiền giảm, doanh thu các hóa đơn áp dụng.</summary>
+    // Thống kê hiệu quả khuyến mãi trong kỳ: số lượt dùng và tiền giảm (LUOT_SU_DUNG_KHUYEN_MAI), doanh thu các hóa đơn liên quan (HOA_DON).
     public List<(string Name, int Uses, decimal Discount, decimal Revenue)> PromoStats(DateTime from, DateTime to) =>
         Query("""
             SELECT c.ten_ctkm, COUNT(*) AS luot, SUM(l.so_tien_giam) AS giam,
@@ -99,10 +91,7 @@ public class ShopData
             """, new { from, to = to.AddDays(1) })
             .Select(r => (S(r, "ten_ctkm"), I(r, "luot"), M(r, "giam"), M(r, "doanh_thu"))).ToList();
 
-    /// <summary>
-    /// Tìm tài khoản để đăng nhập theo tên đăng nhập hoặc email.
-    /// Mật khẩu lưu dạng văn bản nên so sánh trực tiếp (phân biệt hoa/thường) ở phía C#.
-    /// </summary>
+    // Kiểm tra đăng nhập quản trị: tìm TAI_KHOAN theo tên đăng nhập/email (JOIN VAI_TRO, NHAN_VIEN), so mật khẩu; chỉ nhận tài khoản nhân viên đang hoạt động và đang làm.
     public LoginResult CheckLogin(string username, string password)
     {
         var r = Query("""
@@ -127,8 +116,6 @@ public class ShopData
         return new LoginResult(true, null, I(r, "ma_nhan_vien"), S(r, "ten_dang_nhap"),
             $"{S(r, "ho_lot")} {S(r, "ten")}", S(r, "ten"), S(r, "ten_vai_tro"), S(r, "chuc_vu"));
     }
-
-    // ================= Truy vấn từng bảng =================
 
     List<Category> LoadCategories() =>
         Query("SELECT ma_loai, ten_loai FROM LOAI_SP WHERE ten_loai <> @archived ORDER BY ma_loai", new { archived = Catalog.ArchivedCategory })
@@ -161,6 +148,7 @@ public class ShopData
                 S(r, "chuc_vu"), M(r, "luong_co_ban"), S(r, "trang_thai") == "dang_lam", S(r, "ten_dang_nhap"),
                 S(r, "so_dien_thoai"), S(r, "email"), S(r, "ten_vai_tro"))).ToList();
 
+    // Đọc khách hàng từ KHACH_HANG + TAI_KHOAN kèm sở thích, sổ địa chỉ và nhóm khách.
     List<Customer> LoadCustomers()
     {
         var interests = Query("""
@@ -195,7 +183,6 @@ public class ShopData
                 Email = S(r, "email"),
                 Username = S(r, "ten_dang_nhap"),
                 Password = S(r, "mat_khau"),
-                // Trạng thái khóa nằm ở tài khoản (TAI_KHOAN.trang_thai); khách mua tại quầy chưa có tài khoản thì không bị khóa
                 Locked = S(r, "tk_trang_thai") is "bi_khoa" or "da_xoa",
                 Interests = interests[id].ToArray(),
                 Addresses = addresses[id].ToArray(),
@@ -231,9 +218,9 @@ public class ShopData
             return new CustomerGroup(I(r, "ma_nhom_kh"), S(r, "ten_nhom"), criterion, value, I(r, "so_khach"));
         }).ToList();
 
+    // Đọc đơn hàng từ DON_HANG kèm hóa đơn, phương thức thanh toán, vận chuyển, khuyến mãi và các dòng chi tiết (giá vốn ưu tiên lấy từ CHI_TIET_HOA_DON).
     List<Order> LoadOrders()
     {
-        // Dòng chi tiết: lấy giá bán / giảm giá lưu tại thời điểm đặt; giá vốn lấy từ chi tiết hóa đơn (nếu đã lập hóa đơn)
         var lines = Query("""
             SELECT ct.ma_don_hang, ct.ma_bien_the, ct.so_luong, ct.don_gia, ct.giam_gia,
                    COALESCE(cthd.gia_von, bt.gia_von) AS gia_von
@@ -244,7 +231,6 @@ public class ShopData
             """).ToLookup(r => I(r, "ma_don_hang"),
                 r => new OrderLine(I(r, "ma_bien_the"), I(r, "so_luong"), M(r, "don_gia"), M(r, "giam_gia"), M(r, "gia_von")));
 
-        // Tên các chương trình khuyến mãi đã áp dụng cho từng đơn
         var promos = Query("""
             SELECT l.ma_don_hang, GROUP_CONCAT(DISTINCT c.ten_ctkm ORDER BY c.ma_ctkm SEPARATOR ', ') AS ten
             FROM LUOT_SU_DUNG_KHUYEN_MAI l JOIN CTKM c ON c.ma_ctkm = l.ma_ctkm
@@ -317,7 +303,6 @@ public class ShopData
 
     List<ImportSlip> LoadImports()
     {
-        // Các mặt hàng của từng phiếu (tên đầy đủ kèm size / màu và số lượng), đọc lại từ CSDL mỗi lần nên luôn khớp dữ liệu hiện tại
         var items = Query("""
             SELECT c.ma_phieu_nhap, sp.ten_san_pham, bt.kich_co, bt.mau_sac, c.so_luong
             FROM CHI_TIET_PHIEU_NHAP_HANG c
@@ -343,7 +328,6 @@ public class ShopData
 
     List<Promotion> LoadPromotions()
     {
-        // Mô tả mức giảm lấy từ 3 bảng chi tiết theo loại khuyến mãi
         var bySp = Query("""
             SELECT k.ma_ctkm, sp.ten_san_pham, k.phan_tram_giam FROM KM_THEO_SP k
             JOIN SAN_PHAM sp ON sp.ma_san_pham = k.ma_san_pham
@@ -393,11 +377,7 @@ public class ShopData
             """).Select(r => new Survey(I(r, "ma_khao_sat"), S(r, "tieu_de"), I(r, "so_cau"), I(r, "da_gui"), I(r, "hoan_thanh"),
                 T(r, "ngay_ket_thuc"), S(r, "trang_thai"))).ToList();
 
-
-    /// <summary>
-    /// Thống kê kết quả một khảo sát: số khách đã gửi / hoàn thành, và với mỗi câu hỏi
-    /// số lượt chọn từng đáp án (hoặc danh sách câu trả lời văn bản).
-    /// </summary>
+    // Thống kê một khảo sát: số khách nhận / hoàn thành (KHAO_SAT_KHACH_HANG), số lượt chọn từng lựa chọn và câu trả lời văn bản (TRA_LOI_KHAO_SAT).
     public SurveyStats? SurveyStat(int id)
     {
         var info = Query("SELECT ma_khao_sat, tieu_de, mo_ta, ngay_bat_dau, ngay_ket_thuc, trang_thai FROM KHAO_SAT WHERE ma_khao_sat=@id", new { id }).FirstOrDefault();
@@ -419,7 +399,6 @@ public class ShopData
             I(counts, "gui"), counts["xong"] is null or DBNull ? 0 : Convert.ToInt32(counts["xong"]), questions);
     }
 
-    // ================= Hàm tiện ích =================
 
     List<IDictionary<string, object?>> Query(string sql, object? args = null)
     {
@@ -439,7 +418,6 @@ public class ShopData
     static bool B(IDictionary<string, object?> r, string k) => !IsNull(r[k]) && Convert.ToBoolean(r[k]);
 }
 
-/// <summary>Kết quả kiểm tra đăng nhập.</summary>
 public record LoginResult(bool Ok, string? Error, int EmployeeId, string Username, string FullName, string FirstName, string Role, string Position)
 {
     public static LoginResult Fail(string error) => new(false, error, 0, "", "", "", "", "");

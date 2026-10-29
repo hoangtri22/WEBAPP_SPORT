@@ -1,29 +1,22 @@
-/* =====================================================================
-   SportShop Admin - JavaScript giao diện
-   Các khối:
-     1. Thu gọn / mở sidebar
-     2. Thông báo nhỏ (toast)
-     2b. Thêm / sửa / xem / xóa qua ngăn trượt bên phải (gọi CrudController)
-     3. Bảng dữ liệu: tìm kiếm + bộ lọc + phân trang (.dtable)
-     4. Phím tắt Ctrl+K
-   ===================================================================== */
 
-/* ---------- 1. Thu gọn / mở sidebar ---------- */
 document.querySelectorAll('.js-nav-toggle').forEach(function (btn) {
     btn.addEventListener('click', function () {
-        // Màn hình nhỏ: trượt sidebar ra/vào. Màn hình lớn: thu gọn còn icon.
         if (window.innerWidth <= 900) document.body.classList.toggle('nav-open');
         else document.body.classList.toggle('collapsed');
     });
 });
-// Bấm ra ngoài sidebar (trên điện thoại) thì đóng lại
+document.querySelectorAll('.brand-mark').forEach(function (logo) {
+    logo.addEventListener('click', function () {
+        if (window.innerWidth > 900 && document.body.classList.contains('collapsed')) document.body.classList.remove('collapsed');
+    });
+});
 document.addEventListener('click', function (e) {
     if (document.body.classList.contains('nav-open') && !e.target.closest('.sidebar') && !e.target.closest('.js-nav-toggle'))
         document.body.classList.remove('nav-open');
 });
 
-/* ---------- 2. Thông báo nhỏ (toast) ---------- */
 var toastTimer;
+// Hiện thông báo nhỏ (toast); isError = true thì hiện kiểu lỗi và lâu hơn.
 function showToast(msg, isError) {
     var t = document.getElementById('toast');
     if (!t) return;
@@ -33,18 +26,17 @@ function showToast(msg, isError) {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, isError ? 6000 : 3200);
 }
-// Sau khi thao tác xong trang được tải lại, thông báo kết quả được giữ qua sessionStorage
+// Hiện lại thông báo lưu trong sessionStorage ("flash") sau khi trang tải lại.
 try {
     var flash = sessionStorage.getItem('flash');
     if (flash) { sessionStorage.removeItem('flash'); setTimeout(function () { showToast(flash); }, 150); }
 } catch (e) { }
 
-/* ---------- 2b. Thêm / sửa / xem / xóa (ngăn trượt + gọi server) ---------- */
 function antiToken() {
     var t = document.querySelector('input[name="__RequestVerificationToken"]');
     return t ? t.value : '';
 }
-// Gửi dữ liệu dạng form lên server, nhận JSON { ok, message }
+// Gửi FormData (kèm token chống giả mạo) đến các action của CrudController bằng fetch, nhận JSON {ok, message}.
 function postForm(url, data) {
     if (!data.has('__RequestVerificationToken')) data.append('__RequestVerificationToken', antiToken());
     return fetch(url, { method: 'POST', body: data, credentials: 'same-origin' })
@@ -57,7 +49,7 @@ function postForm(url, data) {
             return { ok: false, message: 'Không kết nối được máy chủ, vui lòng thử lại.' };
         });
 }
-// Thành công thì tải lại trang để thấy dữ liệu mới; thất bại thì báo lỗi
+// Xử lý JSON trả về: thành công thì lưu thông báo vào sessionStorage và tải lại trang, thất bại thì hiện lỗi.
 function handleResult(res, onFail) {
     if (res.ok) {
         try { sessionStorage.setItem('flash', res.message); } catch (e) { }
@@ -76,6 +68,7 @@ function closeDrawer() {
         drawer.hidden = true; backdrop.hidden = true; drawer.innerHTML = '';
     }, 200);
 }
+// Mở ngăn trượt biểu mẫu: tải HTML từ /Crud/Form (CrudController.Form) rồi khởi tạo bằng initForm().
 function openDrawer(entity, id, parent, mode) {
     if (!drawer) return;
     var q = 'entity=' + encodeURIComponent(entity) + '&id=' + (id || 0) + '&parent=' + (parent || 0) + '&mode=' + (mode || 'create');
@@ -93,7 +86,7 @@ function openDrawer(entity, id, parent, mode) {
 if (backdrop) backdrop.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
 
-// Nút trên trang: thêm / xem / sửa / xóa và các thao tác nhanh
+// Nút data-crud (thêm/sửa/xem → openDrawer(), xóa → /Crud/Delete), data-act (→ /Crud/Act) và data-quick (→ /Crud/Save).
 document.addEventListener('click', function (e) {
     if (e.target.closest('.js-drawer-close')) { closeDrawer(); return; }
 
@@ -101,7 +94,6 @@ document.addEventListener('click', function (e) {
     if (crud) {
         var d = crud.dataset;
         if (d.crud === 'delete') {
-            // Có cảnh báo hệ quả (ví dụ xóa loại sản phẩm) thì hiện thêm trong hộp xác nhận
             var warn = d.warn ? '\n\n' + d.warn : '';
             if (!confirm('Bạn chắc chắn muốn xóa "' + (d.name || 'mục này') + '"?' + warn)) return;
             var fd = new FormData(); fd.append('entity', d.entity); fd.append('id', d.id);
@@ -116,7 +108,6 @@ document.addEventListener('click', function (e) {
     if (act) {
         if (act.dataset.confirm && !confirm(act.dataset.confirm)) return;
         var f = new FormData(); f.append('action', act.dataset.act); f.append('id', act.dataset.id);
-        // Trả lời phản hồi: lấy nội dung trong khung trả lời gần nhất
         if (act.dataset.act === 'feedback_reply') {
             var box = act.closest('.reply-box'), ta = box && box.querySelector('textarea');
             f.append('noi_dung', ta ? ta.value : '');
@@ -125,7 +116,6 @@ document.addEventListener('click', function (e) {
         return;
     }
 
-    // Đổi nhanh một trường (ví dụ trạng thái đơn hàng ở trang chi tiết)
     var quick = e.target.closest('[data-quick]');
     if (quick) {
         var q = new FormData();
@@ -134,12 +124,11 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// Dựng hành vi cho biểu mẫu vừa tải: hiện/ẩn ô theo điều kiện, dòng hàng, câu hỏi khảo sát, gửi form
+// Khởi tạo biểu mẫu trong ngăn trượt: ẩn/hiện ô theo data-showwhen, dòng hàng của đơn / phiếu nhập và tính tổng, dòng biến thể, câu hỏi khảo sát, xem trước ảnh; submit gửi đến /Crud/Save (CrudController.Save).
 function initForm(form) {
     if (!form) return;
     var err = form.querySelector('.form-error');
 
-    // Ô chỉ hiện khi ô khác có giá trị nhất định (data-showwhen="tên=giá_trị1|giá_trị2")
     function applyShowWhen() {
         form.querySelectorAll('[data-showwhen]:not([data-showwhen=""])').forEach(function (w) {
             var p = w.dataset.showwhen.split('='), src = form.elements[p[0]];
@@ -151,11 +140,9 @@ function initForm(form) {
     form.addEventListener('change', applyShowWhen);
     applyShowWhen();
 
-    // Khối nhiều dòng hàng: đơn hàng (giá bán, tồn) và phiếu nhập (đơn giá nhập)
     form.querySelectorAll('.lines').forEach(function (box) {
         var kind = box.dataset.kind, body = box.querySelector('.lines-body'),
             tpl = box.querySelector('.line-tpl'), totalEl = box.querySelector('.js-lines-total');
-        // Thông tin biến thể đang chọn: "giá bán|tồn kho|giá vốn"
         function info(line) {
             var o = line.querySelector('.js-variant').selectedOptions[0], p = ((o && o.dataset.info) || '').split('|');
             return { price: parseFloat(p[0]) || 0, stock: parseInt(p[1], 10) || 0, cost: parseFloat(p[2]) || 0, isNew: p[3] === 'new' };
@@ -178,7 +165,6 @@ function initForm(form) {
             line.querySelector('.js-variant').addEventListener('change', function () {
                 if (kind === 'import') {
                     line.querySelector('.js-cost').value = info(line).cost || '';
-                    // Sản phẩm chưa có biến thể: hiện ô nhập giá bán để hệ thống tự tạo biến thể mặc định khi lưu phiếu
                     var sell = line.querySelector('.js-sell');
                     sell.hidden = !info(line).isNew;
                     if (sell.hidden) sell.value = '';
@@ -197,13 +183,39 @@ function initForm(form) {
         add();
     });
 
-    // Đơn hàng: chưa thanh toán thì chọn được chờ xác nhận / đang chuẩn bị / đang giao; "Đã giao" và "Đã hủy" chỉ mở sau khi chọn "Đã thanh toán"
+    form.querySelectorAll('.vlines').forEach(function (box) {
+        var body = box.querySelector('.vlines-body'), tpl = box.querySelector('.vline-tpl'), seq = 0;
+        function add() {
+            body.appendChild(tpl.content.cloneNode(true));
+            var line = body.lastElementChild, no = ++seq;
+            var noInput = line.querySelector('.js-vline-no'), file = line.querySelector('.js-vline-file'), preview = line.querySelector('.vline-preview');
+            noInput.value = no; file.name = 'bt_hinh_anh_file_' + no;
+            file.addEventListener('change', function () {
+                var f = file.files[0];
+                if (!f) { preview.hidden = true; return; }
+                if (!/^image\//.test(f.type) || f.size > 5 * 1024 * 1024) {
+                    showToast('Chỉ nhận ảnh JPG, PNG, WEBP, GIF tối đa 5 MB.', true);
+                    file.value = ''; preview.hidden = true; return;
+                }
+                preview.src = URL.createObjectURL(f); preview.hidden = false;
+            });
+            line.querySelector('.js-remove-vline').addEventListener('click', function () {
+                if (body.children.length > 1) line.remove();
+                else {
+                    line.querySelectorAll('input:not(.js-vline-no), select').forEach(function (i) { i.value = ''; });
+                    preview.hidden = true;
+                }
+            });
+        }
+        box.querySelector('.js-add-vline').addEventListener('click', add);
+        add();
+    });
+
     var stSel = form.elements['trang_thai_don_hang'], paySel = form.elements['trang_thai_thanh_toan'];
     if (form.dataset.entity === 'order' && stSel && paySel) {
         function syncStatus() {
             var unpaid = paySel.value !== 'da_thanh_toan';
             Array.prototype.forEach.call(stSel.options, function (o) { o.disabled = unpaid && (o.value === 'da_giao' || o.value === 'da_huy'); });
-            // Đang chọn "Đã giao" / "Đã hủy" mà đổi về chưa thanh toán thì đưa về "Chờ xác nhận"
             if (stSel.selectedOptions[0] && stSel.selectedOptions[0].disabled) stSel.value = 'cho_xac_nhan';
             applyShowWhen();
         }
@@ -211,7 +223,6 @@ function initForm(form) {
         syncStatus();
     }
 
-    // Chọn khách hàng thì tự điền thông tin người nhận (tên | số điện thoại | địa chỉ mặc định)
     var cust = form.elements['ma_khach_hang'];
     if (cust && form.dataset.entity === 'order') cust.addEventListener('change', function () {
         var p = ((cust.selectedOptions[0] && cust.selectedOptions[0].dataset.info) || '').split('|');
@@ -220,14 +231,12 @@ function initForm(form) {
         });
     });
 
-    // Câu hỏi khảo sát: thêm / bỏ câu hỏi
     form.querySelectorAll('.questions').forEach(function (qs) {
         var body = qs.querySelector('.q-body'), tpl = qs.querySelector('.q-tpl'), addBtn = qs.querySelector('.js-add-q');
         function bind(row) {
             row.querySelector('.js-remove-q').addEventListener('click', function () { row.remove(); });
         }
         body.querySelectorAll('.qrow').forEach(bind);
-        // Khảo sát đã có người trả lời: khóa phần câu hỏi
         if (qs.dataset.locked === '1') {
             qs.querySelectorAll('input,select,textarea,button').forEach(function (i) { i.disabled = true; });
             return;
@@ -239,7 +248,6 @@ function initForm(form) {
         if (!body.children.length && addBtn) addBtn.click();
     });
 
-    // Ảnh sản phẩm: chọn file từ thiết bị thì hiện ảnh xem trước (kiểm tra loại và dung lượng trước khi gửi)
     var imageFile = form.querySelector('.js-image-file');
     if (imageFile) imageFile.addEventListener('change', function () {
         var preview = form.querySelector('.img-preview'), file = imageFile.files[0];
@@ -251,11 +259,9 @@ function initForm(form) {
         preview.src = URL.createObjectURL(file); preview.hidden = false;
     });
 
-    // Gửi biểu mẫu
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (form.dataset.mode === 'view') return;
-        // Ô "Bắt buộc" của câu hỏi: giá trị = số thứ tự câu hỏi
         form.querySelectorAll('.qrow').forEach(function (row, i) {
             var c = row.querySelector('input[type=checkbox]');
             if (c) c.value = i;
@@ -269,7 +275,7 @@ function initForm(form) {
     });
 }
 
-/* ---------- 3. Bảng dữ liệu: tìm kiếm + lọc + phân trang ---------- */
+// Bảng dữ liệu (.dtable): tìm kiếm, lọc theo trạng thái (pill) và phân trang ngay trên trình duyệt, không gọi máy chủ.
 document.querySelectorAll('.dtable').forEach(function (card) {
     var pageSize = parseInt(card.dataset.pagesize, 10) || 8;
     var rows = Array.prototype.slice.call(card.querySelectorAll('tbody tr'));
@@ -280,10 +286,8 @@ document.querySelectorAll('.dtable').forEach(function (card) {
     var pagerEl = card.querySelector('.pager');
     var state = { q: '', filter: '', page: 1 };
 
-    // Danh sách thao tác (chỉ chạy khi thẻ có thanh công cụ/phân trang)
     if (!pagerEl) return;
 
-    // Dựng menu bộ lọc từ các trạng thái (pill) có trong bảng
     var values = [];
     rows.forEach(function (tr) {
         var p = tr.querySelector('.pill');
@@ -311,7 +315,6 @@ document.querySelectorAll('.dtable').forEach(function (card) {
 
     if (search) search.addEventListener('input', function () { state.q = search.value.trim().toLowerCase(); state.page = 1; render(); });
 
-    // Áp dụng tìm kiếm + lọc, rồi hiển thị đúng trang hiện tại
     function render() {
         var matched = rows.filter(function (tr) {
             var okQ = !state.q || tr.textContent.toLowerCase().indexOf(state.q) >= 0;
@@ -327,7 +330,6 @@ document.querySelectorAll('.dtable').forEach(function (card) {
         var shownTo = Math.min(matched.length, from + pageSize);
         countEl.textContent = matched.length === 0 ? 'Không có kết quả' : 'Hiển thị ' + (from + 1) + '–' + shownTo + ' trong ' + matched.length + ' kết quả';
 
-        // Vẽ các nút trang: ‹ 1 2 3 ›
         pagerEl.innerHTML = '';
         function add(label, page, disabled, on) {
             var b = document.createElement('button'); b.type = 'button'; b.innerHTML = label; b.disabled = disabled;
@@ -342,7 +344,6 @@ document.querySelectorAll('.dtable').forEach(function (card) {
     render();
 });
 
-/* ---------- 4. Phím tắt Ctrl+K: nhảy vào ô tìm kiếm đầu tiên ---------- */
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         var s = document.querySelector('.search input');

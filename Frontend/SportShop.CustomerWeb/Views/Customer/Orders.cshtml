@@ -1,6 +1,3 @@
-@*
-    Đơn hàng của tôi: trạng thái đơn (do admin duyệt và cập nhật), tiến trình giao hàng, chi tiết, hủy đơn khi còn chờ xác nhận.
-*@
 @model List<MyOrder>
 @{
     Layout = "_CustomerLayout";
@@ -46,7 +43,6 @@
                 </div>
             }
         </div>
-        @* Đơn đã giao: khách đánh giá các sản phẩm trong đơn này (chỉ hiện tên sản phẩm của đơn) *@
         @if (o.Status == "da_giao")
         {
             <details class="review-box">
@@ -90,7 +86,7 @@
 
 @section Scripts {
     <script>
-        // Khi một đơn đang theo dõi vừa chuyển sang "Đã giao": báo cho khách rồi quay về trang chủ cửa hàng
+        // Theo dõi đơn: 8 giây gọi /Customer/OrderStatuses (CustomerController.OrderStatuses) một lần, đơn nào vừa sang "Đã giao" thì báo và về trang chủ.
         (function () {
             var known = @Json.Serialize(Model.ToDictionary(o => o.Id.ToString(), o => o.Status));
             setInterval(function () {
@@ -106,7 +102,6 @@
             }, 8000);
         })();
 
-        // Chấm sao ở form đánh giá của từng đơn: bấm sao thứ n thì tô n sao đầu và ghi số sao vào ô ẩn
         document.querySelectorAll('[data-rating]').forEach(function (box) {
             var stars = box.querySelectorAll('button'), label = box.querySelector('span'), value = box.parentNode.querySelector('input[name=stars]');
             var words = ['Chọn số sao', 'Rất tệ', 'Chưa tốt', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];

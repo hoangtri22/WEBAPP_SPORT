@@ -1,26 +1,11 @@
 namespace SportShop.Admin.Models;
 
-// ============================================================
-//  Định nghĩa các biểu mẫu thêm / sửa / xem trong web admin.
-//  Mỗi thực thể (khách hàng, nhân viên, sản phẩm...) là một EntityDef gồm danh sách ô nhập (Field).
-//  Biểu mẫu được dựng tự động từ định nghĩa này (Views/Crud/_Form.cshtml),
-//  việc lưu vào MySQL nằm ở ShopCommands.
-// ============================================================
 
-/// <summary>
-/// Một ô trong biểu mẫu.
-/// Type: text, email, password, number, date, datetime, textarea, select, interests (nhiều ô tích sở thích),
-///       orderlines / importlines / questions / promodetail (khối đặc biệt, xem _Form.cshtml).
-/// Options: "a|Chữ A;b|Chữ B" (danh sách cố định) hoặc "lookup:tên" (lấy từ CSDL, xem ShopCommands.Options).
-/// Show: "both" (cả thêm và sửa), "create" (chỉ khi thêm), "edit" (chỉ khi sửa).
-/// ShowWhen: "tên_ô=giá_trị1|giá_trị2" - chỉ hiện ô khi ô kia đang có giá trị này (xử lý bằng JavaScript).
-/// </summary>
 public record Field(
     string Name, string Label, string Type = "text", bool Required = false,
     string? Options = null, string? Hint = null, string Show = "both",
     string? ShowWhen = null, string? Placeholder = null, bool Wide = false);
 
-/// <summary>Một thực thể có biểu mẫu. AdminOnly = chỉ tài khoản vai trò "Quản lý" được thao tác.</summary>
 public record EntityDef(string Key, string Title, Field[] Fields, bool AdminOnly = false);
 
 public static class CrudDefs
@@ -30,7 +15,6 @@ public static class CrudDefs
 
     public static readonly Dictionary<string, EntityDef> All = new[]
     {
-        // ---------- Tài khoản & phân quyền (TAI_KHOAN) ----------
         new EntityDef("account", "tài khoản",
         [
             new("ten_dang_nhap", "Tên đăng nhập", Required: true, Show: "create", Placeholder: "ví dụ: nguyenvana"),
@@ -41,7 +25,6 @@ public static class CrudDefs
             new("trang_thai", "Trạng thái", "select", false, Status3, "Khóa tài khoản: không đăng nhập được nhưng dữ liệu vẫn được giữ lại.", Show: "edit"),
         ], AdminOnly: true),
 
-        // ---------- Khách hàng (KHACH_HANG) ----------
         new EntityDef("customer", "khách hàng",
         [
             new("ho_lot", "Họ lót", Required: true),
@@ -57,7 +40,6 @@ public static class CrudDefs
             new("mat_khau", "Mật khẩu (nếu tạo tài khoản)", "password", Show: "create", Hint: "Tối thiểu 6 ký tự."),
         ]),
 
-        // ---------- Nhóm khách hàng (NHOM_KHACH_HANG) ----------
         new EntityDef("group", "nhóm khách hàng",
         [
             new("ten_nhom", "Tên nhóm", Required: true),
@@ -69,7 +51,6 @@ public static class CrudDefs
             new("ma_so_thich", "Sở thích", "select", false, "lookup:sothich", ShowWhen: "loai_tieu_chi=so_thich"),
         ]),
 
-        // ---------- Ghi chú chăm sóc khách hàng (LICH_SU_CHAM_SOC) ----------
         new EntityDef("care", "ghi chú chăm sóc",
         [
             new("hinh_thuc", "Hình thức", "select", true, "goi_dien|Gọi điện;email|Email;tin_nhan|Tin nhắn;gap_truc_tiep|Gặp trực tiếp"),
@@ -77,7 +58,6 @@ public static class CrudDefs
             new("ngay_hen_lien_he_lai", "Hẹn liên hệ lại", "date", Hint: "Không bắt buộc."),
         ]),
 
-        // ---------- Nhân viên (NHAN_VIEN) ----------
         new EntityDef("employee", "nhân viên",
         [
             new("ho_lot", "Họ lót", Required: true),
@@ -94,10 +74,8 @@ public static class CrudDefs
             new("ma_vai_tro", "Vai trò", "select", true, "lookup:vaitro_nv", Show: "create"),
         ], AdminOnly: true),
 
-        // ---------- Loại sản phẩm (LOAI_SP) ----------
         new EntityDef("category", "loại sản phẩm", [new("ten_loai", "Tên loại sản phẩm", Required: true, Wide: true)]),
 
-        // ---------- Sản phẩm (SAN_PHAM) ----------
         new EntityDef("product", "sản phẩm",
         [
             new("ma_loai", "Loại sản phẩm", "select", true, "lookup:loai"),
@@ -105,9 +83,10 @@ public static class CrudDefs
             new("don_vi_tinh", "Đơn vị tính", Required: true, Placeholder: "cái, đôi, bộ..."),
             new("trang_thai", "Hiển thị", "select", false, "hien|Đang bán;an|Đang ẩn"),
             new("mo_ta", "Mô tả", "textarea", Wide: true),
+            new("bien_the", "Biến thể sản phẩm (size / màu)", "variantlines", Show: "create", Wide: true,
+                Hint: "Không bắt buộc. Mỗi dòng là một biến thể; dòng để trống sẽ bỏ qua. Tồn kho bắt đầu từ 0 và được cộng khi lập phiếu nhập. Thêm / sửa biến thể sau ở trang Quản lý sản phẩm."),
         ]),
 
-        // ---------- Biến thể sản phẩm (BIEN_THE_SP) ----------
         new EntityDef("variant", "biến thể sản phẩm",
         [
             new("ma_san_pham", "Sản phẩm", "select", true, "lookup:sanpham", Wide: true),
@@ -120,7 +99,6 @@ public static class CrudDefs
             new("hinh_anh", "Hình ảnh", "select", false, "lookup:images", "Ảnh của biến thể (theo màu): chọn ảnh có sẵn hoặc tải ảnh mới từ thiết bị lên bên dưới (nếu chọn file thì dùng file). Ảnh biến thể đầu tiên làm ảnh đại diện của sản phẩm.", Wide: true),
         ]),
 
-        // ---------- Nhà cung cấp (NHA_CUNG_CAP) ----------
         new EntityDef("supplier", "nhà cung cấp",
         [
             new("ten_ncc", "Tên nhà cung cấp", Required: true, Wide: true),
@@ -130,7 +108,6 @@ public static class CrudDefs
             new("trang_thai", "Trạng thái", "select", false, "hop_tac|Đang hợp tác;ngung_hop_tac|Ngừng hợp tác"),
         ]),
 
-        // ---------- Phiếu nhập hàng (PHIEU_NHAP_HANG): chỉ thêm và xem ----------
         new EntityDef("import", "phiếu nhập hàng",
         [
             new("ma_ncc", "Nhà cung cấp", "select", true, "lookup:ncc"),
@@ -138,7 +115,6 @@ public static class CrudDefs
             new("dong", "Các dòng hàng nhập", "importlines", Wide: true),
         ]),
 
-        // ---------- Đơn hàng / hóa đơn (DON_HANG): thêm mới tại quầy, đổi trạng thái ----------
         new EntityDef("order", "đơn hàng",
         [
             new("ma_khach_hang", "Khách hàng", "select", true, "lookup:khach", Show: "create", Wide: true),
@@ -156,7 +132,6 @@ public static class CrudDefs
             new("ma_van_don", "Mã vận đơn"),
         ]),
 
-        // ---------- Khuyến mãi (CTKM) ----------
         new EntityDef("promotion", "chương trình khuyến mãi",
         [
             new("ten_ctkm", "Tên chương trình", Required: true, Wide: true),
@@ -171,7 +146,6 @@ public static class CrudDefs
             new("gioi_han_khach_hang", "Tối đa mỗi khách (lần)", "number"),
         ]),
 
-        // ---------- Chiến dịch thông báo (CHIEN_DICH_THONG_BAO) ----------
         new EntityDef("campaign", "chiến dịch thông báo",
         [
             new("tieu_de", "Tiêu đề", Required: true, Wide: true),
@@ -182,7 +156,6 @@ public static class CrudDefs
             new("trang_thai", "Trạng thái", "select", false, "nhap|Nháp;da_gui|Đã gửi", "Chọn \"Đã gửi\" để ghi nhận chiến dịch đã gửi cho nhóm khách."),
         ]),
 
-        // ---------- Khảo sát (KHAO_SAT + câu hỏi + lựa chọn) ----------
         new EntityDef("survey", "khảo sát",
         [
             new("tieu_de", "Tiêu đề khảo sát", Required: true, Wide: true),
@@ -193,7 +166,6 @@ public static class CrudDefs
             new("cau_hoi", "Các câu hỏi", "questions", Wide: true),
         ]),
 
-        // ---------- Gửi khảo sát đến khách hàng (KHAO_SAT_KHACH_HANG) ----------
         new EntityDef("survey_send", "gửi khảo sát",
         [
             new("ma_nhom_kh", "Gửi cho", "select", false, "lookup:nhom", "Chọn một nhóm khách hàng, hoặc để \"Tất cả khách\". Chỉ gửi cho khách có tài khoản đang hoạt động; khách đã nhận rồi sẽ không bị gửi lại.", Wide: true),

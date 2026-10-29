@@ -4,23 +4,19 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-/// <summary>
-/// Giỏ hàng và đặt hàng. Giỏ lưu trong session; thanh toán cần đăng nhập.
-/// Thanh toán được giả lập: đơn tạo ra ở trạng thái "Chờ xác nhận / Chưa thanh toán",
-/// admin duyệt và đổi trạng thái; đơn "Đã giao" thì hóa đơn và doanh thu được ghi nhận.
-/// </summary>
 public class CartController(DbStatus db, ShopStore shop) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
     bool LoggedIn => !string.IsNullOrEmpty(HttpContext.Session.GetString("customer")) && CustomerId > 0;
 
+    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở App_Data/carts.json, giá và tồn kho đọc từ BIEN_THE_SP); chưa đăng nhập thì chuyển sang trang đăng nhập.
     public IActionResult Index()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
         return LoggedIn ? View(shop.CartLines(HttpContext.Session)) : LoginRequired("xem giỏ hàng");
     }
 
-    // Thêm vào giỏ (từ trang chi tiết sản phẩm). buyNow = true: thêm xong chuyển thẳng sang thanh toán.
+    // Thêm vào giỏ: gọi ShopStore.AddToCart() kiểm tra tồn kho trong BIEN_THE_SP và lưu giỏ qua CartStore; buyNow = true thì chuyển thẳng sang Checkout.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Add(int variantId, int qty = 1, bool buyNow = false, string? back = null)
     {
@@ -33,6 +29,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return Url.IsLocalUrl(back) ? Redirect(back) : RedirectToAction(nameof(Index));
     }
 
+    // Sửa số lượng một dòng giỏ: giới hạn theo tồn kho rồi gọi ShopStore.SetQty().
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Update(int variantId, int qty)
     {
@@ -47,6 +44,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // Bỏ một sản phẩm khỏi giỏ: gọi ShopStore.SetQty() với số lượng 0.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Remove(int variantId)
     {
@@ -55,8 +53,8 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ----- Thanh toán -----
 
+    // Trang thanh toán: lấy giỏ hàng và người nhận mặc định qua ShopStore.Receiver() (SO_DIA_CHI/KHACH_HANG), dựng dữ liệu bằng BuildCheckout().
     public IActionResult Checkout()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
@@ -66,6 +64,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return View(BuildCheckout(lines, shop.Receiver(CustomerId), 0, null));
     }
 
+    // Đặt hàng: nút "Áp dụng" (apply) chỉ tính lại mã giảm giá; ngược lại gọi ShopStore.PlaceOrder() ghi đơn vào MySQL, xóa giỏ rồi chuyển sang trang Done.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Checkout(string name, string phone, string address, int payMethod, string? voucher, string? apply)
     {
@@ -75,7 +74,6 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         if (lines.Count == 0) return RedirectToAction(nameof(Index));
         var to = new ReceiverInfo(name ?? "", phone ?? "", address ?? "");
 
-        // Nút "Áp dụng" chỉ tính lại mức giảm, chưa đặt hàng
         if (apply != null)
         {
             var vm = BuildCheckout(lines, to, payMethod, voucher);
@@ -98,7 +96,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return RedirectToAction(nameof(Done), new { id = orderId });
     }
 
-    /// <summary>Màn hình đặt hàng thành công.</summary>
+    // Trang đặt hàng thành công: đọc lại đơn vừa đặt qua ShopStore.Orders(customerId, id).
     public IActionResult Done(int id)
     {
         if (!LoggedIn) return RedirectToAction("Login", "Account");
@@ -107,13 +105,13 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return View(order);
     }
 
-    /// <summary>Chưa đăng nhập: chuyển sang trang đăng nhập kèm lời nhắc (chưa có tài khoản thì đăng ký).</summary>
     IActionResult LoginRequired(string action)
     {
         TempData["LoginNotice"] = $"Vui lòng đăng nhập để {action}. Nếu chưa có tài khoản, hãy đăng ký.";
         return RedirectToAction("Login", "Account");
     }
 
+    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
     CheckoutVm BuildCheckout(List<CartLine> lines, ReceiverInfo to, int payMethod, string? voucher)
     {
         decimal subtotal = lines.Sum(l => l.Amount), discount = 0; string? voucherError = null;
@@ -126,7 +124,6 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     }
 }
 
-/// <summary>Dữ liệu trang thanh toán.</summary>
 public class CheckoutVm
 {
     public List<CartLine> Lines { get; init; } = [];

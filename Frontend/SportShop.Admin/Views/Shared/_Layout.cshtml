@@ -1,20 +1,9 @@
-@*
-    Khung chung của toàn bộ web admin:
-      - Sidebar bên trái (logo, menu, hộp "Cần hỗ trợ?")
-      - Thanh trên cùng (lời chào, chuông, tài khoản, đăng xuất)
-      - Vùng nội dung @RenderBody()
-    Trang đăng nhập đặt ViewBag.Bare = true để ẩn sidebar và thanh trên.
-*@
 @{
     string menu = ViewBag.Menu as string ?? "";
     bool bare = ViewBag.Bare == true;
 
-    // Số phản hồi chưa trả lời, hiện thành huy hiệu cam cạnh mục "Phản hồi khách hàng"
-    // (trang đăng nhập không cần, nên không truy vấn CSDL)
     int unanswered = bare ? 0 : Data.FeedbackItems.Count(f => !f.Answered);
 
-    // Tên người đăng nhập: tài khoản "admin" luôn hiện là "Admin"; tài khoản khác lấy mới từ hồ sơ nhân viên (NHAN_VIEN)
-    // mỗi lần tải trang, nên sửa tên nhân viên là thấy đổi ngay
     bool isAdminAccount = string.Equals(User.FindFirst("username")?.Value, "admin", StringComparison.OrdinalIgnoreCase);
     int employeeId = int.TryParse(User.FindFirst("employee_id")?.Value, out var eid) ? eid : 0;
     var self = bare || isAdminAccount ? null : Data.Employees.FirstOrDefault(e => e.Id == employeeId);
@@ -25,20 +14,21 @@
     var nameParts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
     string initials = nameParts.Length == 0 ? "?" : (nameParts[^1][..1] + (nameParts.Length > 1 ? nameParts[0][..1] : "")).ToUpper();
 
-    // Danh sách menu theo đúng các module trong PDF: (khóa, chữ, controller, action, icon)
     (string key, string text, string controller, string action, string icon)[] items =
     [
         ("home", "Tổng quan", "Home", "Index", "layout-dashboard"),
         ("account", "Tài khoản & Phân quyền", "Account", "Index", "shield-check"),
-        ("customers", "Quản lý khách hàng", "Customers", "Index", "users"),
         ("employees", "Quản lý nhân viên", "Employees", "Index", "user"),
+        ("customers", "Quản lý khách hàng", "Customers", "Index", "users"),
         ("categories", "Quản lý loại sản phẩm", "Products", "Categories", "boxes"),
         ("products", "Quản lý sản phẩm", "Products", "Index", "package"),
-        ("orders", "Quản lý hóa đơn", "Orders", "Index", "file-text"),
+        ("suppliers", "Quản lý nhà cung cấp", "Suppliers", "Index", "store"),
+        ("imports", "Quản lý nhập hàng", "Imports", "Index", "layers"),
         ("promotions", "Khuyến mãi & Marketing", "Promotions", "Index", "badge-percent"),
+        ("orders", "Quản lý đơn đặt hàng và giao hàng", "Orders", "Index", "shopping-cart"),
+        ("invoices", "Quản lý hóa đơn", "Orders", "Invoices", "file-text"),
         ("feedback", "Phản hồi khách hàng", "Feedback", "Index", "message-square"),
         ("surveys", "Khảo sát", "Feedback", "Surveys", "clipboard-list"),
-        ("imports", "Quản lý nhập hàng", "Imports", "Index", "layers"),
         ("reports", "Báo cáo thống kê", "Reports", "Index", "bar-chart"),
     ];
 }
@@ -62,9 +52,8 @@ else
 {
     <aside class="sidebar" id="sidebar">
         <div class="brand">
-            @* Nút 3 gạch: ngoài cùng bên trái của logo, bấm để thu gọn / mở sidebar *@
             <button type="button" class="icon-btn js-nav-toggle" aria-label="Thu gọn / mở menu">@Icons.Svg("menu", 22)</button>
-            <span class="brand-mark">@Icons.Svg("activity", 24)</span>
+            <span class="brand-mark" title="Mở rộng menu">@Icons.Svg("activity", 24)</span>
             <span class="brand-name">SPORT<b>SHOP</b></span>
         </div>
         <nav class="nav">
@@ -88,14 +77,12 @@ else
 
     <div class="main">
         <header class="topbar">
-            @* Chỉ hiện trên màn hình nhỏ (điện thoại), vì lúc đó sidebar bị ẩn *@
             <button type="button" class="icon-btn mobile-only js-nav-toggle" aria-label="Mở menu">@Icons.Svg("menu", 22)</button>
             <div class="hello"><small>Chào mừng trở lại,</small><strong>@role @firstName</strong></div>
             <div class="topbar-right">
                 <div class="user">
                     <span class="avatar">@initials</span>
                     <div class="user-info"><strong>@fullName</strong><small>@empCode</small></div>
-                    @Icons.Svg("chevron-down", 16)
                 </div>
                 <a class="btn-outline logout" asp-controller="Account" asp-action="Logout">@Icons.Svg("log-out", 18) <span>Đăng xuất</span></a>
             </div>
@@ -105,9 +92,7 @@ else
         </main>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    @* Token chống giả mạo yêu cầu: JavaScript gửi kèm khi thêm / sửa / xóa *@
     @Html.AntiForgeryToken()
-    @* Ngăn trượt bên phải chứa biểu mẫu thêm / sửa / xem (nội dung tải từ CrudController.Form) *@
     <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
     <aside class="drawer" id="drawer" hidden aria-label="Biểu mẫu"></aside>
 }

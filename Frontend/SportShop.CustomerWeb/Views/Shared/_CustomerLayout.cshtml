@@ -1,10 +1,5 @@
-@*
-    Khung của khu vực khách hàng đã đăng nhập (chỉnh sửa thông tin, phản hồi, khảo sát):
-    thanh menu riêng + tên khách + nút đăng xuất, chân trang gọn.
-*@
 @{
     string active = ViewData["Active"] as string ?? "";
-    // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
     var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
 }
 <!DOCTYPE html>
@@ -47,7 +42,6 @@
     <script src="~/js/shop.js" asp-append-version="true"></script>
     @if (TempData["Notice"] is string notice)
     {
-        @* Thông báo sau khi lưu / gửi (ví dụ "Đã lưu thông tin cá nhân") *@
         <script>showToast(@Json.Serialize(notice));</script>
     }
     @await RenderSectionAsync("Scripts", required: false)

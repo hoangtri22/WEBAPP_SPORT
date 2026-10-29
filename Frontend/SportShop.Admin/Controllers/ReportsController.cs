@@ -4,25 +4,19 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>So sánh với kỳ trước: Text hiển thị, Up = tăng (xanh) hay giảm (đỏ).</summary>
 public record Delta(string Text, bool Up);
 
-/// <summary>Một cột trong biểu đồ cột "Sản phẩm bán chạy".</summary>
 public record BarCol(string Label, int Qty, int Percent, bool Highlight);
 
-/// <summary>Một phần của biểu đồ tròn "Nhóm khách hàng".</summary>
 public record DonutPart(string Label, int Count, decimal Percent, string Color);
 
-/// <summary>Một dòng trong "Hiệu suất nhân viên".</summary>
 public record StaffRow(string Initials, string Name, string Detail, int Score);
 
-/// <summary>Dữ liệu cho trang Báo cáo thống kê.</summary>
 public class ReportsVm
 {
     public DateTime From { get; init; }
     public DateTime To { get; init; }
 
-    // 4 thẻ số liệu
     public decimal Revenue { get; init; }
     public Delta RevenueDelta { get; init; } = new("", true);
     public int Orders { get; init; }
@@ -31,7 +25,6 @@ public class ReportsVm
     public Delta AverageDelta { get; init; } = new("", true);
     public decimal Profit { get; init; }
 
-    // Biểu đồ vùng "Doanh thu theo tuần" (đã tính sẵn toạ độ SVG)
     public string LinePath { get; init; } = "";
     public string AreaPath { get; init; } = "";
     public List<(double X, double Y, string Tip)> Dots { get; init; } = [];
@@ -43,29 +36,22 @@ public class ReportsVm
     public int CustomerTotal { get; init; }
     public List<StaffRow> Staff { get; init; } = [];
 
-    // Bảng chi tiết bổ sung theo PDF
     public List<Row> ProfitByProduct { get; init; } = [];
     public List<Row> HighStock { get; init; } = [];
     public List<Row> Promos { get; init; } = [];
-    /// <summary>Báo cáo sở thích: số khách theo từng môn thể thao và độ tuổi trung bình của họ.</summary>
     public List<Row> Interests { get; init; } = [];
 }
 
 public class ReportsController(ShopData db) : Controller
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
-    static string F(double v) => v.ToString("0.##", Inv);   // số thực → chuỗi cho SVG
+    static string F(double v) => v.ToString("0.##", Inv);
 
-    /// <summary>
-    /// Báo cáo theo khoảng thời gian tùy chọn (from → to). Mặc định 30 ngày gần nhất.
-    /// Doanh thu / lợi nhuận chỉ tính từ các đơn đã có hóa đơn (đã thanh toán), theo mục 3.1.9.
-    /// </summary>
+    // Báo cáo thống kê trong khoảng from–to (mặc định 30 ngày): doanh thu, số đơn, giá trị TB, lợi nhuận so với kỳ trước, biểu đồ doanh thu, sản phẩm bán chạy, nhóm tuổi khách, hiệu suất nhân viên; dữ liệu từ ShopData (Orders, Customers, Employees, PromoStats()).
     public IActionResult Index(DateTime? from, DateTime? to)
     {
         ViewBag.Menu = "reports";
 
-        // ----- Xác định khoảng thời gian và kỳ trước có cùng độ dài -----
-        // Không chọn ngày thì lấy 30 ngày gần nhất; nếu trong 30 ngày đó chưa có hóa đơn nào (ví dụ đã chỉnh giờ máy) thì lấy đến ngày có hóa đơn mới nhất
         var end = (to ?? DefaultEndDate()).Date;
         var start = (from ?? end.AddDays(-29)).Date;
         if (start > end) (start, end) = (end, start);
@@ -73,10 +59,8 @@ public class ReportsController(ShopData db) : Controller
         var prevEnd = start.AddDays(-1);
         var prevStart = prevEnd.AddDays(-(days - 1));
 
-        // Các đơn đã lập hóa đơn trong một khoảng ngày
         List<Order> Done(DateTime a, DateTime b) => db.Orders
             .Where(o => o.Invoiced && o.Date.Date >= a && o.Date.Date <= b).ToList();
-        // Doanh thu thuần của hóa đơn = tiền hàng sau giảm giá (chưa tính phí ship)
         decimal Rev(Order o) => o.Subtotal - o.Discount;
 
         var cur = Done(start, end);
@@ -85,10 +69,8 @@ public class ReportsController(ShopData db) : Controller
         decimal avg = cur.Count == 0 ? 0 : revenue / cur.Count;
         decimal prevAvg = prev.Count == 0 ? 0 : prevRevenue / prev.Count;
 
-        // ----- Biểu đồ vùng: doanh thu theo tuần (đơn vị triệu đồng) -----
-        // Kỳ ngắn (≤ 12 tuần): mỗi mốc đúng 1 tuần. Kỳ dài hơn: chia đều thành 12 mốc.
-        int n = days <= 84 ? Math.Max(2, (int)Math.Ceiling(days / 7.0)) : 12;   // số mốc
-        int bucketLen = days <= 84 ? 7 : (int)Math.Ceiling(days / 12.0);        // số ngày mỗi mốc
+        int n = days <= 84 ? Math.Max(2, (int)Math.Ceiling(days / 7.0)) : 12;
+        int bucketLen = days <= 84 ? 7 : (int)Math.Ceiling(days / 12.0);
         var buckets = new double[n];
         foreach (var o in cur)
         {
@@ -101,7 +83,6 @@ public class ReportsController(ShopData db) : Controller
         var pts = buckets.Select((v, i) => (X: padL + i * plotW / (n - 1), Y: padT + plotH * (1 - v / max))).ToList();
         string unit = bucketLen == 7 ? "Tuần" : "Kỳ";
 
-        // ----- Biểu đồ cột: sản phẩm bán chạy theo số lượng đã bán -----
         var qty = cur.SelectMany(o => o.Lines)
             .GroupBy(l => db.Variant(l.VariantId).ProductId)
             .Select(g => (Name: db.Product(g.Key).Name, Qty: g.Sum(l => l.Qty)))
@@ -109,7 +90,6 @@ public class ReportsController(ShopData db) : Controller
         int maxQty = qty.Count == 0 ? 1 : qty.Max(x => x.Qty);
         var bars = qty.Select(x => new BarCol(x.Name, x.Qty, Math.Max(6, x.Qty * 100 / maxQty), x.Qty == maxQty)).ToList();
 
-        // ----- Biểu đồ tròn: nhóm khách hàng theo độ tuổi (tính từ ngày sinh) -----
         var cust = db.Customers;
         int g1 = cust.Count(c => c.Age <= 25), g2 = cust.Count(c => c.Age is >= 26 and <= 35), g3 = cust.Count(c => c.Age > 35);
         decimal P(int x) => cust.Count == 0 ? 0 : Math.Round(x * 100m / cust.Count, 0);
@@ -120,12 +100,10 @@ public class ReportsController(ShopData db) : Controller
             new("Trên 35 tuổi", g3, P(g3), "#d6ebe7"),
         };
 
-        // ----- Báo cáo sở thích: số khách theo từng môn và độ tuổi trung bình (yêu cầu CRM: báo cáo tuổi + sở thích) -----
         var interests = cust.SelectMany(c => c.Interests.Select(i => (Name: i, c.Age)))
             .GroupBy(x => x.Name).OrderByDescending(g => g.Count())
             .Select(g => new Row([g.Key, g.Count().ToString(), g.Any(x => x.Age.HasValue) ? g.Where(x => x.Age.HasValue).Average(x => x.Age!.Value).ToString("0.#") + " tuổi" : "-"])).ToList();
 
-        // ----- Hiệu suất nhân viên: số hóa đơn lập + lần chăm sóc + phản hồi đã trả lời -----
         var staffRaw = db.Employees.Where(e => e.Working).Select(e =>
         {
             int inv = db.Orders.Count(o => o.EmployeeId == e.Id && o.Invoiced);
@@ -138,21 +116,18 @@ public class ReportsController(ShopData db) : Controller
             Initials(x.E.FirstName, x.E.LastName), $"{x.E.LastName} {x.E.FirstName}",
             $"{x.Inv} hóa đơn · {x.Care} lần chăm sóc · {x.Rep} phản hồi", x.Total * 100 / topTotal)).ToList();
 
-        // ----- Lợi nhuận theo sản phẩm = thành tiền (sau giảm giá dòng) - giá vốn -----
         var profit = cur.SelectMany(o => o.Lines)
             .GroupBy(l => db.Variant(l.VariantId).ProductId)
             .Select(g =>
             {
-                decimal rev = g.Sum(l => l.Amount);          // doanh thu sau giảm giá của dòng
-                decimal cost = g.Sum(l => l.Cost * l.Qty);   // giá vốn tại thời điểm bán
+                decimal rev = g.Sum(l => l.Amount);
+                decimal cost = g.Sum(l => l.Cost * l.Qty);
                 return new Row([db.Product(g.Key).Name, g.Sum(l => l.Qty).ToString(), Fmt.Money(rev), Fmt.Money(cost), Fmt.Money(rev - cost)]);
             }).ToList();
 
-        // Sản phẩm tồn kho nhiều (báo cáo "sản phẩm tồn kho" trong PDF)
         var high = db.ActiveVariants.OrderByDescending(v => v.Stock).Take(5)
             .Select(v => new Row([db.VariantName(v.Id), v.Stock.ToString()])).ToList();
 
-        // Hiệu quả khuyến mãi trong kỳ: số lượt dùng, tổng tiền giảm, doanh thu các hóa đơn áp dụng
         var promos = db.PromoStats(start, end)
             .Select(p => new Row([p.Name, p.Uses.ToString(), Fmt.Money(p.Discount), Fmt.Money(p.Revenue)])).ToList();
 
@@ -173,7 +148,6 @@ public class ReportsController(ShopData db) : Controller
         });
     }
 
-    /// <summary>Làm tròn lên mốc "đẹp" (1, 2, 5 x 10^k) để chia 4 vạch trục tung.</summary>
     static double NiceMax(double v)
     {
         if (v <= 0) return 4;
@@ -183,7 +157,6 @@ public class ReportsController(ShopData db) : Controller
         return 10 * pow;
     }
 
-    /// <summary>Đường cong mượt đi qua các điểm (Catmull-Rom chuyển sang Bezier).</summary>
     static string SmoothPath(List<(double X, double Y)> p)
     {
         var sb = new System.Text.StringBuilder($"M{F(p[0].X)},{F(p[0].Y)}");
@@ -195,8 +168,6 @@ public class ReportsController(ShopData db) : Controller
         return sb.ToString();
     }
 
-    /// <summary>% thay đổi so với kỳ trước (không có dữ liệu kỳ trước thì báo "Chưa có dữ liệu kỳ trước").</summary>
-    /// <summary>Ngày kết thúc mặc định của báo cáo: hôm nay, hoặc ngày có hóa đơn mới nhất nếu 30 ngày gần đây không có hóa đơn.</summary>
     DateTime DefaultEndDate()
     {
         var today = DateTime.Today;

@@ -1,17 +1,9 @@
-﻿@*
-    Khung chung của cửa hàng (trang chủ): dải khuyến mãi, thanh menu, nội dung, chân trang,
-    thanh điều hướng dưới cùng trên điện thoại. Giao diện theo bản thiết kế Figma.
-    Mọi nút cần cơ sở dữ liệu đều có thuộc tính data-needs-db: chưa có CSDL thì bấm chỉ hiện thông báo.
-*@
-@inject ShopStore Shop
+﻿@inject ShopStore Shop
 @{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
-    // Khách đang đăng nhập: đọc từ MySQL khi đã kết nối, chưa kết nối thì dùng dữ liệu mẫu
     var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
     string adminUrl = Config["Links:AdminUrl"] ?? "#";
-    // Số sản phẩm trong giỏ của tài khoản đang đăng nhập hiện trên biểu tượng giỏ hàng
     int cartCount = Db.IsConnected ? Shop.CartCount(Context.Session) : 0;
-    // Mục menu đang mở (gạch chân đúng trang): Trang chủ / Sản phẩm / Khuyến mãi
     string controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string actionName = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
     bool onHome = controllerName == "Home" && actionName == "Index";
@@ -34,7 +26,6 @@
     <div class="shop-promo">
         <span>FREESHIP toàn quốc cho đơn từ 500.000₫</span>
         <a asp-controller="Customer" asp-action="Orders">Theo dõi đơn hàng</a>
-        @* Chuyển sang web quản trị (không sửa gì bên web quản trị, chỉ trỏ link sang) *@
         <a href="@adminUrl">Trang quản trị</a>
     </div>
 
@@ -76,7 +67,6 @@
         </div>
     </header>
 
-    @* Thanh tìm kiếm trượt xuống khi bấm kính lúp *@
     <div class="shop-search" id="shopSearch" hidden>
         @Icons.Svg("search", 20)
         <input id="shopSearchInput" placeholder="Bạn đang tìm sản phẩm nào?" autocomplete="off" />
@@ -116,7 +106,6 @@
         </div>
     </footer>
 
-    @* Thanh điều hướng dưới cùng, chỉ hiện trên điện thoại *@
     <nav class="shop-mobile-nav">
         <a class="@(onHome ? "active" : "")" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
         <button type="button" id="searchToggleMobile">@Icons.Svg("search", 20)<span>Tìm kiếm</span></button>

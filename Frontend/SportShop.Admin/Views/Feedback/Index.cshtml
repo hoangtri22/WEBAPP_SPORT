@@ -1,18 +1,9 @@
-@*
-    Phản hồi khách hàng: hộp thư 2 cột.
-      - Tab "Chưa trả lời" / "Đã trả lời"
-      - Cột trái: danh sách phản hồi (có tìm kiếm)
-      - Cột phải: nội dung phản hồi + khung trả lời (chưa trả lời) hoặc câu trả lời (đã trả lời)
-    Việc chuyển tab / chọn phản hồi xử lý bằng JavaScript ở cuối file.
-*@
 @model List<FeedbackItem>
 @{
     ViewData["Title"] = "Phản hồi khách hàng";
     var pending = Model.Where(f => !f.Answered).ToList();
     var answered = Model.Where(f => f.Answered).ToList();
 
-    // Chữ viết tắt cho avatar (vd "Nguyễn Minh Anh" -> "NA": chữ đầu họ + chữ đầu tên)
-    // Chữ viết tắt cho avatar; khách đăng ký qua web có thể thiếu họ lót hoặc tên nên lấy chữ cái đầu của phần nào có
     string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
     string StatusPill(FeedbackItem f) => f.Answered ? "[g]Đã trả lời" : f.Status == "dang_xu_ly" ? "[b]Đang xử lý" : "[o]Chưa trả lời";
 }
@@ -30,7 +21,6 @@
 </div>
 
 <div class="inbox card">
-    @* ----- Cột trái: danh sách ----- *@
     <div class="inbox-list">
         <label class="search">
             @Icons.Svg("search", 18)
@@ -56,7 +46,6 @@
         <div class="empty" id="fbEmpty" hidden>Không có phản hồi nào</div>
     </div>
 
-    @* ----- Cột phải: chi tiết từng phản hồi ----- *@
     <div class="inbox-detail">
         @foreach (var f in Model)
         {
@@ -113,19 +102,17 @@
 
 @section Scripts {
     <script>
-        // ----- Hộp thư phản hồi: chuyển tab, chọn phản hồi, tìm kiếm -----
+        // Hộp thư phản hồi: chuyển tab, chọn phản hồi, tìm kiếm trên trình duyệt; nút "Gửi trả lời" (data-act="feedback_reply") gửi qua admin.js đến /Crud/Act.
         (function () {
             var items = Array.prototype.slice.call(document.querySelectorAll('#fbItems .msg'));
             var details = Array.prototype.slice.call(document.querySelectorAll('.inbox-detail .detail'));
             var tab = 'pending';
 
-            // Hiện chi tiết của phản hồi có id tương ứng
             function select(id) {
                 items.forEach(function (m) { m.classList.toggle('active', m.dataset.id === id); });
                 details.forEach(function (d) { d.hidden = d.dataset.id !== id; });
             }
 
-            // Lọc danh sách theo tab hiện tại và từ khóa; tự chọn phản hồi đầu tiên còn hiển thị
             function render() {
                 var q = document.getElementById('fbSearch').value.trim().toLowerCase();
                 var first = null;

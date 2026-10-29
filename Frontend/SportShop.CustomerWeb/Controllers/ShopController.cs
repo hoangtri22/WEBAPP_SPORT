@@ -3,10 +3,9 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-/// <summary>Cửa hàng: danh sách sản phẩm (lọc theo loại, tìm kiếm, sắp xếp), chi tiết sản phẩm, khuyến mãi. Cần đã kết nối MySQL.</summary>
 public class ShopController(DbStatus db, ShopStore shop) : Controller
 {
-    /// <summary>Danh sách sản phẩm. cat = mã loại, q = từ khóa, sort = new | price_asc | price_desc | name.</summary>
+    // Danh sách / tìm kiếm sản phẩm: lọc theo loại (cat), từ khóa (q) và sắp xếp (sort) qua ShopStore.Products(); danh mục lấy từ ShopStore.Categories().
     public IActionResult Index(int? cat, string? q, string sort = "new")
     {
         if (!db.IsConnected) return View("NoDb");
@@ -15,6 +14,7 @@ public class ShopController(DbStatus db, ShopStore shop) : Controller
         return View(shop.Products(cat, q, sort));
     }
 
+    // Chi tiết sản phẩm: lấy sản phẩm và biến thể qua ShopStore.Product(id), kèm tối đa 4 sản phẩm cùng loại.
     public IActionResult Detail(int id)
     {
         if (!db.IsConnected) return View("NoDb");
@@ -24,7 +24,7 @@ public class ShopController(DbStatus db, ShopStore shop) : Controller
         return View(p.Value);
     }
 
-    /// <summary>Các mã giảm giá đang áp dụng (dùng ở bước thanh toán).</summary>
+    // Trang khuyến mãi: lấy các voucher đang hiệu lực qua ShopStore.Promos().
     public IActionResult Promotions()
     {
         if (!db.IsConnected) return View("NoDb");

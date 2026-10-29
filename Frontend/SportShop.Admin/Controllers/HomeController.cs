@@ -7,7 +7,7 @@ namespace SportShop.Admin.Controllers;
 
 public class HomeController : Controller
 {
-    /// <summary>Trang Tổng quan hệ thống (số liệu tính trong view từ dữ liệu MySQL).</summary>
+    // Trang Tổng quan: view Home/Index.cshtml tự tính thống kê trong ngày từ ShopData.
     public IActionResult Index()
     {
         ViewBag.Menu = "home";

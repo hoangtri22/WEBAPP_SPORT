@@ -3,20 +3,16 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>Phản hồi khách hàng (đánh giá / góp ý / khiếu nại) và khảo sát.</summary>
 public class FeedbackController(ShopData db) : Controller
 {
-    /// <summary>
-    /// Hộp thư phản hồi: 2 tab "Chưa trả lời" / "Đã trả lời",
-    /// danh sách bên trái, nội dung + khung trả lời bên phải (xử lý bằng JS trong view).
-    /// </summary>
+    // Hộp thư phản hồi từ ShopData.FeedbackItems (PHAN_HOI + TRA_LOI_PHAN_HOI); trả lời gửi qua CrudController.Act với action "feedback_reply".
     public IActionResult Index()
     {
         ViewBag.Menu = "feedback";
         return View(db.FeedbackItems.OrderByDescending(f => f.Id).ToList());
     }
 
-    /// <summary>Danh sách khảo sát (KHAO_SAT): nháp / đã gửi (đang thu thập) / đã đóng.</summary>
+    // Danh sách khảo sát từ ShopData.Surveys kèm số câu hỏi và số khách hoàn thành.
     public IActionResult Surveys()
     {
         ViewBag.Menu = "surveys";
@@ -35,7 +31,7 @@ public class FeedbackController(ShopData db) : Controller
         });
     }
 
-    /// <summary>Thống kê kết quả một khảo sát (số khách hoàn thành, số lượt chọn từng đáp án) + nút gửi / đóng khảo sát.</summary>
+    // Thống kê kết quả một khảo sát qua ShopData.SurveyStat().
     public IActionResult SurveyResult(int id)
     {
         ViewBag.Menu = "surveys";

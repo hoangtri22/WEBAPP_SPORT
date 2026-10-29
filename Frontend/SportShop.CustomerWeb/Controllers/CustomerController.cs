@@ -6,20 +6,14 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-/// <summary>
-/// Khu vực của khách hàng đã đăng nhập: chỉnh sửa thông tin, gửi phản hồi, làm khảo sát.
-/// Đã kết nối MySQL: đọc / ghi dữ liệu thật của khách đang đăng nhập.
-/// Chưa kết nối: hiện dữ liệu mẫu (StoreData), các nút lưu / gửi chỉ hiện thông báo.
-/// </summary>
 public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop, LoginThrottle throttle) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
 
-    /// <summary>Chưa đăng nhập thì chuyển về trang đăng nhập.</summary>
+    // Chặn mọi trang khu vực khách hàng khi chưa đăng nhập (kiểm tra Session), chuyển về Account/Login.
     public override void OnActionExecuting(ActionExecutingContext context)
     {
         bool loggedIn = !string.IsNullOrEmpty(HttpContext.Session.GetString("customer"));
-        // Đã có CSDL nhưng phiên đăng nhập cũ không có mã khách hàng (đăng nhập lúc chưa có CSDL) → đăng nhập lại
         if (loggedIn && db.IsConnected && CustomerId == 0)
         {
             HttpContext.Session.Remove("customer");
@@ -29,10 +23,11 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         base.OnActionExecuting(context);
     }
 
-    // ===================== Chỉnh sửa thông tin =====================
 
+    // Trang hồ sơ: view Profile.cshtml tự đọc dữ liệu qua CustomerStore.Current() và CustomerStore.Interests().
     public IActionResult Profile() { ViewData["Active"] = "profile"; return View(); }
 
+    // Cập nhật hồ sơ: kiểm tra họ tên, email, SĐT, giới tính, ngày sinh rồi gọi CustomerStore.UpdateProfile() ghi vào KHACH_HANG, TAI_KHOAN, KHACH_HANG_SO_THICH.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Profile(string fullName, string email, string phone, DateTime? birth, string gender, string[] interests)
     {
@@ -51,12 +46,8 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Profile));
     }
 
-    // ===================== Đổi mật khẩu =====================
 
-    /// <summary>
-    /// Khách tự đổi mật khẩu: nhập mật khẩu hiện tại, mật khẩu mới và nhập lại. Nhập sai mật khẩu hiện tại nhiều lần thì bị khóa tạm
-    /// (giống đăng nhập). Mật khẩu mới được lưu ngay vào tài khoản nên web quản trị thấy giá trị mới khi mở lại hồ sơ khách.
-    /// </summary>
+    // Đổi mật khẩu: kiểm tra dữ liệu, giới hạn nhập sai qua LoginThrottle, gọi CustomerStore.ChangePassword() cập nhật TAI_KHOAN.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult ChangePassword(string currentPassword, string newPassword, string confirmPassword)
     {
@@ -83,11 +74,11 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Profile));
     }
 
-    // ===================== Phản hồi về sản phẩm =====================
 
+    // Trang phản hồi: view Feedback.cshtml đọc sản phẩm đã mua (CustomerStore.PurchasedProducts()) và phản hồi đã gửi (CustomerStore.Feedbacks()).
     public IActionResult Feedback() { ViewData["Active"] = "feedback"; return View(); }
 
-    /// <summary>Gửi phản hồi sản phẩm. Có order (gửi từ trang "Đơn hàng của tôi") thì chỉ nhận sản phẩm nằm trong đơn đã giao đó.</summary>
+    // Gửi phản hồi sản phẩm: kiểm tra khách đã nhận hàng (HasReceivedProduct()), số sao, nội dung rồi gọi CustomerStore.SendFeedback() thêm vào bảng PHAN_HOI.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Feedback(int product, int stars, string content, int? order = null)
     {
@@ -102,18 +93,15 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         if (error == null) store.SendFeedback(CustomerId, product, stars, content);
 
         TempData["Notice"] = error ?? "Cảm ơn bạn! Phản hồi đã được gửi đến SPORTSHOP.";
-        // Gửi từ trang đơn hàng thì quay lại trang đơn hàng, gửi từ trang phản hồi thì ở lại trang phản hồi
         return order.HasValue ? RedirectToAction(nameof(Orders)) : RedirectToAction(nameof(Feedback));
     }
 
-    /// <summary>Khách đã nhận sản phẩm này chưa: trong đơn đã giao được chỉ định (nếu có), hoặc trong bất kỳ đơn đã giao nào.</summary>
     bool HasReceivedProduct(int product, int? order) => order is int orderId
         ? shop.Orders(CustomerId, orderId).Any(o => o.Status == "da_giao" && o.Lines.Any(l => l.ProductId == product))
         : store.PurchasedProducts(CustomerId).Any(p => p.Id == product);
 
-    // ===================== Khảo sát =====================
 
-    /// <summary>Danh sách khảo sát; có id thì mở khảo sát đó để làm; done=true hiện màn cảm ơn.</summary>
+    // Khảo sát: lấy danh sách qua CustomerStore.Surveys() và câu hỏi qua CustomerStore.Questions(); chưa kết nối CSDL thì dùng dữ liệu mẫu SampleSurveys().
     public IActionResult Surveys(int? id, bool done = false)
     {
         ViewData["Active"] = "surveys";
@@ -131,12 +119,12 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         });
     }
 
+    // Nộp khảo sát: đọc câu trả lời q{mã câu hỏi} từ form và gọi CustomerStore.SubmitSurvey() lưu vào TRA_LOI_KHAO_SAT.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Surveys(int id)
     {
         if (!db.IsConnected) return RedirectToAction(nameof(Surveys));
 
-        // Mỗi câu hỏi gửi lên dưới tên "q{mã câu hỏi}": mã lựa chọn (radio / checkbox) hoặc nội dung văn bản
         var answers = new Dictionary<int, (List<int>, string?)>();
         foreach (var q in store.Questions(id))
         {
@@ -154,7 +142,6 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Surveys), new { id = (int?)null, done = true });
     }
 
-    /// <summary>Dữ liệu mẫu cho chế độ xem giao diện (chưa có CSDL).</summary>
     static SurveyPageVm SampleSurveys(int? id)
     {
         var items = new List<SurveyItem>
@@ -170,9 +157,8 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return new SurveyPageVm { Items = items, Current = id == 1 ? items[0] : null, Questions = id == 1 ? questions : [] };
     }
 
-    // ===================== Đơn hàng của tôi =====================
 
-    /// <summary>Danh sách đơn hàng của khách kèm trạng thái do cửa hàng cập nhật (chờ xác nhận → đang chuẩn bị → đang giao → đã giao).</summary>
+    // Đơn hàng của tôi: lấy đơn và chi tiết đơn qua ShopStore.Orders().
     public IActionResult Orders()
     {
         ViewData["Active"] = "orders";
@@ -180,6 +166,7 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return View(shop.Orders(CustomerId));
     }
 
+    // Khách tự hủy đơn: gọi ShopStore.CancelOrder() (chỉ khi đơn còn chờ xác nhận).
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult CancelOrder(int id)
     {
@@ -188,7 +175,7 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Orders));
     }
 
-    /// <summary>Trạng thái hiện tại các đơn của khách (JSON), trang "Đơn hàng của tôi" hỏi định kỳ để biết đơn nào vừa được giao.</summary>
+    // Trả JSON trạng thái các đơn (id, code, status) cho script theo dõi đơn trong Views/Customer/Orders.cshtml gọi định kỳ.
     [HttpGet]
     public IActionResult OrderStatuses()
     {

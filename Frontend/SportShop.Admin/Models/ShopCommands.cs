@@ -6,34 +6,21 @@ using MySqlConnector;
 
 namespace SportShop.Admin.Models;
 
-// ============================================================
-//  Ghi dữ liệu vào MySQL cho web admin: thêm, sửa, xóa, đổi trạng thái.
-//  (Việc ĐỌC dữ liệu để hiển thị nằm ở ShopData.)
-//  Mỗi thao tác chạy trong một transaction: lỗi giữa chừng thì hoàn tác toàn bộ.
-//  Lỗi nghiệp vụ (nhập thiếu, không đủ tồn kho...) ném UserError, lỗi MySQL được dịch ra tiếng Việt.
-// ============================================================
-
-/// <summary>Kết quả một thao tác ghi: Ok = thành công, Message = nội dung báo cho người dùng.</summary>
 public record Result(bool Ok, string Message);
 
-/// <summary>Người đang thao tác (lấy từ cookie đăng nhập), dùng để ghi "nhân viên thực hiện" và chặn tự khóa mình.</summary>
 public record Ctx(int EmployeeId, string Username, string Role)
 {
     public bool IsManager => Role == "Quản lý";
 }
 
-/// <summary>Một lựa chọn trong ô select. Data là thông tin phụ (ví dụ giá và tồn của biến thể) cho JavaScript.</summary>
 public record Opt(string Value, string Label, string? Data = null);
 
-/// <summary>Lỗi nghiệp vụ: nội dung được hiện nguyên văn cho người dùng.</summary>
 public class UserError(string message) : Exception(message);
 
-/// <summary>Đọc dữ liệu gửi lên từ biểu mẫu.</summary>
 public class Form(IFormCollection f)
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     public string S(string k) => f[k].ToString().Trim();
-    /// <summary>File người dùng chọn tải lên (ví dụ ảnh sản phẩm); null nếu không chọn.</summary>
     public IFormFile? File(string k) => f.Files.GetFile(k);
     public string? N(string k) { var v = S(k); return v.Length == 0 ? null : v; }
     public int I(string k) => int.TryParse(S(k), NumberStyles.Integer, Inv, out var n) ? n : 0;
@@ -42,7 +29,6 @@ public class Form(IFormCollection f)
     public decimal? ND(string k) => decimal.TryParse(S(k).Replace(',', '.'), NumberStyles.Number, Inv, out var d) ? d : null;
     public DateTime? Date(string k) => DateTime.TryParse(S(k), Inv, DateTimeStyles.None, out var d) ? d : null;
     public string[] Many(string k) => f[k].Select(v => (v ?? "").Trim()).Where(v => v.Length > 0).ToArray();
-    /// <summary>Các ô lặp (nhiều dòng) gửi lên cùng tên: lấy theo thứ tự.</summary>
     public string[] All(string k) => f[k].Select(v => (v ?? "").Trim()).ToArray();
 }
 
@@ -56,15 +42,9 @@ public class ShopCommands
     {
         _cs = config.GetConnectionString("Default") ?? "";
         _imagesDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Images"] ?? "../../Backend/Images"));
-        // Ảnh sản phẩm tải lên từ thiết bị lưu ở Frontend/Uploads, cả hai web cùng phục vụ tại đường dẫn /uploads
         _uploadsDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Uploads"] ?? "../Uploads"));
     }
-
-    // ============================================================
-    //  Danh sách lựa chọn cho các ô select
-    // ============================================================
-
-    /// <summary>Lấy danh sách lựa chọn từ chuỗi "a|Chữ A;b|Chữ B" hoặc "lookup:tên".</summary>
+    // Lựa chọn cho ô select của biểu mẫu: chuỗi cố định "giá trị|nhãn;..." hoặc "lookup:..." đọc từ MySQL (vai trò, loại, sản phẩm, NCC, khách, biến thể...) hay thư mục ảnh (ImageOptions()).
     public List<Opt> Options(string? spec)
     {
         if (string.IsNullOrEmpty(spec)) return [];
@@ -90,7 +70,6 @@ public class ShopCommands
             "ctkm" => Q("SELECT ma_ctkm v, ten_ctkm l FROM CTKM ORDER BY ngay_bat_dau DESC", "v", "l", blank: true),
             "nhom" => [new Opt("", "Tất cả khách"), .. Q("SELECT ma_nhom_kh v, ten_nhom l FROM NHOM_KHACH_HANG ORDER BY ten_nhom", "v", "l")],
             "pttt" => Q("SELECT ma_phuong_thuc_thanh_toan v, ten_phuong_thuc_thanh_toan l FROM PHUONG_THUC_THANH_TOAN WHERE trang_thai = 'hoat_dong' ORDER BY 1", "v", "l"),
-            // Khách hàng: Data = "tên|sđt|địa chỉ mặc định" để tự điền thông tin người nhận
             "khach" => Q("""
                 SELECT kh.ma_khach_hang v, CONCAT(kh.ho_lot, ' ', kh.ten, ' - ', IFNULL(kh.so_dien_thoai, '')) l,
                        CONCAT(kh.ho_lot, ' ', kh.ten, '|', IFNULL(kh.so_dien_thoai, ''), '|',
@@ -98,7 +77,6 @@ public class ShopCommands
                                       ORDER BY d.la_mac_dinh DESC, d.ma_dia_chi LIMIT 1), '')) d
                 FROM KHACH_HANG kh ORDER BY kh.ten, kh.ho_lot
                 """, "v", "l", "d"),
-            // Biến thể: Data = "giá bán|tồn kho|giá vốn"
             "bienthe" => Q($"""
                 SELECT bt.ma_bien_the v,
                        CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) l,
@@ -107,8 +85,6 @@ public class ShopCommands
                 JOIN LOAI_SP lo ON lo.ma_loai = sp.ma_loai AND lo.ten_loai <> '{Catalog.ArchivedCategory}'
                 ORDER BY sp.ten_san_pham, bt.kich_co
                 """, "v", "l", "d"),
-            // Dòng phiếu nhập: các biến thể, cộng thêm các sản phẩm CHƯA có biến thể nào (giá trị "p<mã sản phẩm>", Data = "0|0|0|new")
-            // để sản phẩm vừa thêm có ngay trong danh sách; sản phẩm bị xóa thì tự mất khỏi danh sách
             "bienthe_nhap" => Q($"""
                 SELECT CAST(bt.ma_bien_the AS CHAR) v,
                        CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) l,
@@ -126,7 +102,6 @@ public class ShopCommands
         };
     }
 
-    /// <summary>Danh sách ảnh để chọn: ảnh có sẵn trong Backend/Images ("/images/tên-file") và ảnh đã tải lên từ thiết bị ("/uploads/tên-file").</summary>
     List<Opt> ImageOptions()
     {
         var list = new List<Opt> { new("", "(Chưa có ảnh)") };
@@ -142,10 +117,7 @@ public class ShopCommands
 
     const long MaxUploadBytes = 5 * 1024 * 1024;
 
-    /// <summary>
-    /// Lưu ảnh sản phẩm tải lên từ thiết bị vào thư mục Uploads với tên ngẫu nhiên, trả về đường dẫn "/uploads/tên-file".
-    /// Chỉ nhận ảnh JPG, PNG, WEBP, GIF tối đa 5 MB; kiểm tra cả phần đầu file để chắc đó đúng là ảnh.
-    /// </summary>
+    // Lưu ảnh tải lên: kiểm tra đuôi file, dung lượng tối đa 5 MB và chữ ký ảnh, ghi vào thư mục Uploads, trả về đường dẫn /uploads/...
     string SaveUploadedImage(IFormFile file)
     {
         string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -154,10 +126,10 @@ public class ShopCommands
 
         byte[] head = new byte[12];
         using (var s = file.OpenReadStream()) s.ReadExactly(head, 0, (int)Math.Min(head.Length, file.Length));
-        bool isImage = head is [0xFF, 0xD8, 0xFF, ..]                                   // JPEG
-                    || head is [0x89, 0x50, 0x4E, 0x47, ..]                            // PNG
-                    || head is [0x47, 0x49, 0x46, 0x38, ..]                            // GIF
-                    || head is [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50]; // WEBP
+        bool isImage = head is [0xFF, 0xD8, 0xFF, ..]
+                    || head is [0x89, 0x50, 0x4E, 0x47, ..]
+                    || head is [0x47, 0x49, 0x46, 0x38, ..]
+                    || head is [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50];
         if (!isImage) throw new UserError("File tải lên không phải là ảnh hợp lệ.");
 
         Directory.CreateDirectory(_uploadsDir);
@@ -166,10 +138,7 @@ public class ShopCommands
         return "/uploads/" + name;
     }
 
-    // ============================================================
-    //  Nạp giá trị hiện có để điền sẵn vào biểu mẫu sửa / xem
-    // ============================================================
-
+    // Đọc một bản ghi theo entity để điền sẵn biểu mẫu sửa / xem (gọi từ CrudController.Form).
     public Dictionary<string, string> Load(string entity, int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -207,7 +176,6 @@ public class ShopCommands
                     ? d.ToString("yyyy-MM-dd") : d.ToString("yyyy-MM-ddTHH:mm"))
                     : v is decimal m ? m.ToString("0.##", CultureInfo.InvariantCulture) : Convert.ToString(v, CultureInfo.InvariantCulture)!;
 
-        // Chi tiết mức giảm của khuyến mãi (theo loại)
         if (entity == "promotion")
         {
             var sp = One(c, "SELECT ma_san_pham, phan_tram_giam FROM KM_THEO_SP WHERE ma_ctkm=@id LIMIT 1", new { id });
@@ -220,14 +188,12 @@ public class ShopCommands
         return values;
     }
 
-    /// <summary>Sở thích đã chọn của một khách hàng (mã SO_THICH).</summary>
     public HashSet<string> CustomerInterests(int customerId)
     {
         using var c = new MySqlConnection(_cs);
         return c.Query<int>("SELECT ma_so_thich FROM KHACH_HANG_SO_THICH WHERE ma_khach_hang=@customerId", new { customerId }).Select(i => i.ToString()).ToHashSet();
     }
 
-    /// <summary>Các dòng của một phiếu nhập (để xem chi tiết).</summary>
     public List<(string Name, int Qty, decimal Price, decimal Amount)> ImportLines(int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -240,7 +206,6 @@ public class ShopCommands
             .Select(r => (S(r, "ten"), int.Parse(S(r, "so_luong")), decimal.Parse(Dec(r, "don_gia"), CultureInfo.InvariantCulture), decimal.Parse(Dec(r, "thanh_tien"), CultureInfo.InvariantCulture))).ToList();
     }
 
-    /// <summary>Các câu hỏi của khảo sát để điền sẵn khi sửa: (nội dung, loại, bắt buộc, các lựa chọn mỗi dòng một cái).</summary>
     public List<(string Text, string Type, bool Required, string Options)> SurveyQuestions(int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -253,17 +218,14 @@ public class ShopCommands
             .Select(r => (S(r, "noi_dung"), S(r, "loai_cau_hoi"), S(r, "bat_buoc") is "1" or "True", string.Join("\n", opts[S(r, "ma_cau_hoi")]))).ToList();
     }
 
-    /// <summary>Khảo sát đã có khách trả lời thì không đổi được câu hỏi.</summary>
     public bool SurveyHasAnswers(int id)
     {
         using var c = new MySqlConnection(_cs);
         return c.ExecuteScalar<int>("SELECT COUNT(*) FROM KHAO_SAT_KHACH_HANG WHERE ma_khao_sat=@id AND trang_thai <> 'chua_lam'", new { id }) > 0;
     }
 
-    // ============================================================
-    //  Lưu (thêm mới / sửa)
-    // ============================================================
 
+    // Thêm/sửa theo entity: gọi hàm Save...() tương ứng trong một transaction qua Run(). Gọi từ CrudController.Save.
     public Result Save(string entity, int id, Form f, Ctx me) => Run((c, tx) => entity switch
     {
         "account" => SaveAccount(c, tx, id, f, me),
@@ -284,7 +246,7 @@ public class ShopCommands
         _ => throw new UserError("Không hỗ trợ thao tác này."),
     });
 
-    // ---------- Tài khoản ----------
+    // Thêm/sửa tài khoản trong TAI_KHOAN (kiểm tra tên đăng nhập, email, SĐT, mật khẩu; không cho khóa tài khoản đang đăng nhập).
     string SaveAccount(MySqlConnection c, MySqlTransaction tx, int id, Form f, Ctx me)
     {
         string email = f.S("email"), phone = f.S("so_dien_thoai"), pw = f.S("mat_khau");
@@ -311,7 +273,7 @@ public class ShopCommands
         return "Đã cập nhật tài khoản " + username + ".";
     }
 
-    // ---------- Khách hàng ----------
+    // Thêm/sửa khách hàng trong KHACH_HANG (kèm TAI_KHOAN nếu nhập tên đăng nhập), cập nhật email / địa chỉ qua UpdateCustomerAccountAndAddress() và ghi lại KHACH_HANG_SO_THICH.
     string SaveCustomer(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string last = f.S("ho_lot"), first = f.S("ten"), phone = f.S("so_dien_thoai");
@@ -351,20 +313,14 @@ public class ShopCommands
             UpdateCustomerAccountAndAddress(c, tx, id, f, last, first, phone);
         }
 
-        // Sở thích: thay toàn bộ bằng các ô được tích
         c.Execute("DELETE FROM KHACH_HANG_SO_THICH WHERE ma_khach_hang=@id", new { id }, tx);
         foreach (var s in f.Many("so_thich").Select(v => int.TryParse(v, out var n) ? n : 0).Where(n => n > 0).Distinct())
             c.Execute("INSERT INTO KHACH_HANG_SO_THICH (ma_khach_hang, ma_so_thich) VALUES (@id, @s)", new { id, s }, tx);
         return $"Đã lưu khách hàng {last} {first}.";
     }
 
-    /// <summary>
-    /// Sửa thông tin khách ngoài hồ sơ: email và số điện thoại của tài khoản (giống khi khách tự sửa ở web khách) và địa chỉ giao hàng mặc định.
-    /// Không bao giờ đổi mật khẩu: mật khẩu do khách tự đổi, web admin chỉ xem lại giá trị hiện có trong CSDL.
-    /// </summary>
     void UpdateCustomerAccountAndAddress(MySqlConnection c, MySqlTransaction tx, int id, Form f, string last, string first, string phone)
     {
-        // Email và số điện thoại của tài khoản đăng nhập (khách mua tại quầy chưa có tài khoản thì bỏ qua)
         int? accountId = c.ExecuteScalar<int?>("SELECT ma_tai_khoan FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx);
         string email = f.S("email");
         if (accountId != null)
@@ -376,7 +332,6 @@ public class ShopCommands
             c.Execute("UPDATE TAI_KHOAN SET email=@email, so_dien_thoai=@phone WHERE ma_tai_khoan=@accountId", new { email, phone = phone.NullIfEmpty(), accountId }, tx);
         }
 
-        // Địa chỉ giao hàng mặc định: sửa địa chỉ mặc định hiện có, chưa có thì thêm mới (để trống thì giữ nguyên)
         string address = f.S("dia_chi");
         if (address.Length == 0) return;
         if (address.Length > 255) throw new UserError("Địa chỉ tối đa 255 ký tự.");
@@ -391,7 +346,7 @@ public class ShopCommands
         }
     }
 
-    // ---------- Nhóm khách hàng ----------
+    // Thêm/sửa nhóm khách (NHOM_KHACH_HANG) theo tiêu chí tuổi / chi tiêu / giới tính / sở thích, rồi tính lại thành viên nhóm trong KHACH_HANG_NHOM_KH.
     string SaveGroup(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string name = f.S("ten_nhom"), criterion = f.S("loai_tieu_chi");
@@ -422,7 +377,6 @@ public class ShopCommands
                        gioi_tinh=@gender, ma_so_thich=@interest WHERE ma_nhom_kh=@id
                 """, p, tx);
 
-        // Xếp lại thành viên của nhóm theo tiêu chí vừa lưu
         c.Execute("DELETE FROM KHACH_HANG_NHOM_KH WHERE ma_nhom_kh=@id", new { id }, tx);
         string where = criterion switch
         {
@@ -435,7 +389,7 @@ public class ShopCommands
         return $"Đã lưu nhóm \"{name}\" ({n} khách thuộc nhóm).";
     }
 
-    // ---------- Ghi chú chăm sóc ----------
+    // Thêm ghi chú chăm sóc khách vào LICH_SU_CHAM_SOC (nhân viên đang đăng nhập, ngày hẹn liên hệ lại).
     string SaveCare(MySqlConnection c, MySqlTransaction tx, Form f, Ctx me)
     {
         int customer = f.I("parent");
@@ -449,7 +403,7 @@ public class ShopCommands
         return "Đã thêm ghi chú chăm sóc.";
     }
 
-    // ---------- Nhân viên ----------
+    // Thêm nhân viên (tạo TAI_KHOAN + NHAN_VIEN) hoặc sửa thông tin, trạng thái trong NHAN_VIEN.
     string SaveEmployee(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string last = f.S("ho_lot"), first = f.S("ten");
@@ -480,7 +434,7 @@ public class ShopCommands
         return $"Đã cập nhật nhân viên {last} {first}.";
     }
 
-    // ---------- Loại sản phẩm ----------
+    // Thêm/sửa loại sản phẩm trong LOAI_SP.
     string SaveCategory(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string name = f.S("ten_loai");
@@ -490,7 +444,7 @@ public class ShopCommands
         return $"Đã lưu loại sản phẩm \"{name}\".";
     }
 
-    // ---------- Sản phẩm ----------
+    // Thêm/sửa sản phẩm trong SAN_PHAM; khi thêm mới đọc các dòng biến thể bt_* từ _Form.cshtml và thêm vào BIEN_THE_SP (ảnh tải lên lưu qua SaveUploadedImage()).
     string SaveProduct(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string name = f.S("ten_san_pham"), unit = f.S("don_vi_tinh");
@@ -498,21 +452,50 @@ public class ShopCommands
         if (cat == 0) throw new UserError("Vui lòng chọn loại sản phẩm.");
         if (name.Length == 0 || unit.Length == 0) throw new UserError("Vui lòng nhập tên sản phẩm và đơn vị tính.");
         string status = f.S("trang_thai") == "an" ? "an" : "hien";
-        // Ảnh nằm ở từng biến thể (BIEN_THE_SP.hinh_anh), không lưu ở sản phẩm
         var p = new { cat, name, unit, desc = f.N("mo_ta"), status, id };
-        if (id == 0) c.Execute("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai) VALUES (@cat, @name, @unit, @desc, @status)", p, tx);
-        else c.Execute("UPDATE SAN_PHAM SET ma_loai=@cat, ten_san_pham=@name, don_vi_tinh=@unit, mo_ta=@desc, trang_thai=@status WHERE ma_san_pham=@id", p, tx);
-        return $"Đã lưu sản phẩm \"{name}\".";
+        if (id > 0)
+        {
+            c.Execute("UPDATE SAN_PHAM SET ma_loai=@cat, ten_san_pham=@name, don_vi_tinh=@unit, mo_ta=@desc, trang_thai=@status WHERE ma_san_pham=@id", p, tx);
+            return $"Đã lưu sản phẩm \"{name}\".";
+        }
+
+        string[] sizes = f.All("bt_kich_co"), colors = f.All("bt_mau_sac"), prices = f.All("bt_gia_ban"), costs = f.All("bt_gia_von"), imgs = f.All("bt_hinh_anh"), nos = f.All("bt_dong");
+        var variants = new List<(string? Size, string? Color, decimal Price, decimal Cost, string? Img, IFormFile? Upload)>();
+        for (int i = 0; i < sizes.Length; i++)
+        {
+            string size = sizes[i], color = At(colors, i), price = At(prices, i), cost = At(costs, i), img = At(imgs, i);
+            var upload = At(nos, i) is { Length: > 0 } no && f.File("bt_hinh_anh_file_" + no) is { Length: > 0 } up ? up : null;
+            if (size == "" && color == "" && price == "" && cost == "" && img == "" && upload == null) continue;
+            int row = variants.Count + 1;
+            if (!decimal.TryParse(price, NumberStyles.Number, CultureInfo.InvariantCulture, out var pr) || pr <= 0)
+                throw new UserError($"Biến thể dòng {row}: giá bán phải lớn hơn 0.");
+            decimal co = 0;
+            if (cost != "" && (!decimal.TryParse(cost, NumberStyles.Number, CultureInfo.InvariantCulture, out co) || co < 0))
+                throw new UserError($"Biến thể dòng {row}: giá vốn không hợp lệ.");
+            if (variants.Any(v => string.Equals(v.Size ?? "", size, StringComparison.OrdinalIgnoreCase) && string.Equals(v.Color ?? "", color, StringComparison.OrdinalIgnoreCase)))
+                throw new UserError($"Biến thể dòng {row}: trùng kích cỡ và màu sắc với một dòng phía trên.");
+            variants.Add((size.NullIfEmpty(), color.NullIfEmpty(), pr, co, img.NullIfEmpty(), upload));
+        }
+
+        int newId = c.ExecuteScalar<int>("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai) VALUES (@cat, @name, @unit, @desc, @status); SELECT LAST_INSERT_ID();", p, tx);
+        foreach (var v in variants)
+        {
+            string? img = v.Upload != null ? SaveUploadedImage(v.Upload) : v.Img;
+            c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai, hinh_anh) VALUES (@newId, @Size, @Color, @Price, @Cost, 0, 'hien', @img)",
+                new { newId, v.Size, v.Color, v.Price, v.Cost, img }, tx);
+        }
+        return variants.Count == 0 ? $"Đã lưu sản phẩm \"{name}\"." : $"Đã lưu sản phẩm \"{name}\" kèm {variants.Count} biến thể.";
     }
 
-    // ---------- Biến thể ----------
+    static string At(string[] a, int i) => i < a.Length ? a[i] : "";
+
+    // Thêm/sửa biến thể sản phẩm (size, màu, giá, tồn kho, ảnh) trong BIEN_THE_SP.
     string SaveVariant(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         int product = f.I("ma_san_pham"); decimal price = f.D("gia_ban"), cost = f.D("gia_von"); int stock = f.I("so_luong_ton");
         if (product == 0) throw new UserError("Vui lòng chọn sản phẩm.");
         if (price <= 0) throw new UserError("Giá bán phải lớn hơn 0.");
         if (cost < 0 || stock < 0) throw new UserError("Giá vốn và số lượng tồn không được âm.");
-        // Có chọn ảnh từ thiết bị thì dùng ảnh đó, không thì dùng ảnh chọn trong danh sách (ảnh theo màu của biến thể)
         string? img = f.File("hinh_anh_file") is { Length: > 0 } upload ? SaveUploadedImage(upload) : f.N("hinh_anh");
         var p = new { product, size = f.N("kich_co"), color = f.N("mau_sac"), price, cost, stock, status = f.S("trang_thai") == "an" ? "an" : "hien", img, id };
         if (id == 0) c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai, hinh_anh) VALUES (@product, @size, @color, @price, @cost, @stock, @status, @img)", p, tx);
@@ -520,7 +503,7 @@ public class ShopCommands
         return "Đã lưu biến thể sản phẩm.";
     }
 
-    // ---------- Nhà cung cấp ----------
+    // Thêm/sửa nhà cung cấp trong NHA_CUNG_CAP.
     string SaveSupplier(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string name = f.S("ten_ncc"), email = f.S("email");
@@ -533,17 +516,16 @@ public class ShopCommands
         return $"Đã lưu nhà cung cấp \"{name}\".";
     }
 
-    // ---------- Phiếu nhập hàng: cộng tồn kho, cập nhật giá vốn theo đơn giá nhập (PDF 3.1.10) ----------
+    // Lập phiếu nhập: ghi PHIEU_NHAP_HANG, CHI_TIET_PHIEU_NHAP_HANG, cộng tồn kho và cập nhật giá vốn BIEN_THE_SP (tự tạo biến thể cho sản phẩm chưa có); phiếu đã lập không sửa được.
     string SaveImport(MySqlConnection c, MySqlTransaction tx, int id, Form f, Ctx me)
     {
         if (id != 0) throw new UserError("Phiếu nhập đã cập nhật tồn kho nên không sửa được.");
         int supplier = f.I("ma_ncc"); var date = f.Date("ngay_nhap") ?? DateTime.Now;
         if (supplier == 0) throw new UserError("Vui lòng chọn nhà cung cấp.");
 
-        // Các dòng: biến thể + số lượng + đơn giá (bỏ qua dòng bỏ trống, gộp dòng trùng biến thể)
         var v = f.All("dong_bien_the"); var q = f.All("dong_so_luong"); var pr = f.All("dong_don_gia"); var sell = f.All("dong_gia_ban");
         var lines = new Dictionary<int, (int Qty, decimal Price)>();
-        var createdVariants = new Dictionary<int, int>();   // mã sản phẩm → biến thể mặc định vừa tạo trong phiếu này
+        var createdVariants = new Dictionary<int, int>();
         for (int i = 0; i < v.Length; i++)
         {
             int variant;
@@ -552,7 +534,6 @@ public class ShopCommands
             decimal price = Num(pr);
             if (v[i].StartsWith('p') && int.TryParse(v[i][1..], out int productId))
             {
-                // Sản phẩm chưa có biến thể: tự tạo biến thể mặc định (không size, không màu) với giá bán nhập ở dòng này
                 if (!createdVariants.TryGetValue(productId, out variant))
                 {
                     decimal sellPrice = Num(sell);
@@ -577,14 +558,13 @@ public class ShopCommands
             decimal amount = qty * price; total += amount;
             c.Execute("INSERT INTO CHI_TIET_PHIEU_NHAP_HANG (ma_phieu_nhap, ma_bien_the, so_luong, don_gia, thanh_tien) VALUES (@slip, @variant, @qty, @price, @amount)",
                 new { slip, variant, qty, price, amount }, tx);
-            // Tồn tăng theo số nhập, giá vốn lấy theo đơn giá nhập gần nhất
             c.Execute("UPDATE BIEN_THE_SP SET so_luong_ton = so_luong_ton + @qty, gia_von = @price WHERE ma_bien_the = @variant", new { qty, price, variant }, tx);
         }
         c.Execute("UPDATE PHIEU_NHAP_HANG SET tong_tien=@total WHERE ma_phieu_nhap=@slip", new { total, slip }, tx);
         return $"Đã lập phiếu nhập PN{slip:D3}: {lines.Count} mặt hàng, tổng {total:N0}đ. Tồn kho và giá vốn đã được cập nhật.";
     }
 
-    // ---------- Đơn hàng: lập mới tại quầy ----------
+    // Tạo đơn tại quầy: tính tiền theo giá BIEN_THE_SP, áp voucher, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string CreateOrder(MySqlConnection c, MySqlTransaction tx, Form f, Ctx me)
     {
         int customer = f.I("ma_khach_hang");
@@ -592,14 +572,12 @@ public class ShopCommands
         int pay = f.I("ma_phuong_thuc_thanh_toan"); decimal ship = f.D("phi_van_chuyen");
         string status = f.S("trang_thai_don_hang"); if (status is not ("cho_xac_nhan" or "dang_chuan_bi" or "dang_giao" or "da_giao")) status = "cho_xac_nhan";
         string paid = f.S("trang_thai_thanh_toan") == "da_thanh_toan" ? "da_thanh_toan" : "chua_thanh_toan";
-        // Đơn chưa thanh toán chuyển được sang đang chuẩn bị / đang giao; muốn "Đã giao" thì phải thanh toán trước
         if (paid == "chua_thanh_toan" && status == "da_giao") throw new UserError("Đơn chưa thanh toán chưa chuyển được sang \"Đã giao\". Chọn \"Đã thanh toán\" nếu khách đã trả tiền.");
         if (customer == 0) throw new UserError("Vui lòng chọn khách hàng.");
         if (name.Length == 0 || phone.Length == 0 || addr.Length == 0) throw new UserError("Vui lòng nhập đủ thông tin người nhận.");
         if (pay == 0) throw new UserError("Vui lòng chọn phương thức thanh toán.");
         if (ship < 0) throw new UserError("Phí vận chuyển không được âm.");
 
-        // Gộp các dòng sản phẩm
         var v = f.All("dong_bien_the"); var q = f.All("dong_so_luong");
         var lines = new Dictionary<int, int>();
         for (int i = 0; i < v.Length; i++)
@@ -611,7 +589,6 @@ public class ShopCommands
         }
         if (lines.Count == 0) throw new UserError("Đơn hàng cần có ít nhất một sản phẩm.");
 
-        // Giá bán lấy tại thời điểm đặt
         decimal subtotal = 0;
         var priced = new List<(int Variant, int Qty, decimal Price)>();
         foreach (var (variant, qty) in lines)
@@ -621,7 +598,6 @@ public class ShopCommands
             priced.Add((variant, qty, price)); subtotal += qty * price;
         }
 
-        // Voucher (nếu có): kiểm tra thời hạn, trạng thái, hạng, số lượt dùng (PDF 3.1.7)
         int? ctkm = null; decimal discount = 0;
         string code = f.S("ma_voucher");
         if (code.Length > 0)
@@ -654,7 +630,6 @@ public class ShopCommands
 
         foreach (var (variant, qty, price) in priced)
         {
-            // Trừ tồn kho; không đủ hàng thì báo lỗi (hoàn tác cả đơn)
             if (c.Execute("UPDATE BIEN_THE_SP SET so_luong_ton = so_luong_ton - @qty WHERE ma_bien_the=@variant AND so_luong_ton >= @qty", new { qty, variant }, tx) == 0)
                 throw new UserError("Không đủ tồn kho cho: " + c.ExecuteScalar<string>("SELECT CONCAT(sp.ten_san_pham, IF(CONCAT_WS('', bt.kich_co, bt.mau_sac) = '', '', CONCAT(' (', CONCAT_WS(' / ', bt.kich_co, bt.mau_sac), ')'))) FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE bt.ma_bien_the=@variant", new { variant }, tx) + ".");
             c.Execute("INSERT INTO CHI_TIET_DON_HANG (ma_don_hang, ma_bien_the, so_luong, don_gia, giam_gia, thanh_tien) VALUES (@order, @variant, @qty, @price, 0, @amount)",
@@ -674,7 +649,7 @@ public class ShopCommands
         return $"Đã tạo đơn hàng DH{order:D5}, tổng thanh toán {total:N0}đ." + extra;
     }
 
-    // ---------- Đơn hàng: đổi trạng thái, hủy (hoàn tồn kho), thanh toán (lập hóa đơn), vận chuyển ----------
+    // Cập nhật trạng thái đơn / thanh toán / vận chuyển: hủy đơn thì hoàn tồn kho và hoàn tiền (RefundInvoice()); đơn đã giao và đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string UpdateOrder(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         var o = One(c, "SELECT trang_thai_don_hang, trang_thai_thanh_toan FROM DON_HANG WHERE ma_don_hang=@id FOR UPDATE", new { id }, tx)
@@ -683,30 +658,24 @@ public class ShopCommands
         string status = f.S("trang_thai_don_hang"), pay = f.S("trang_thai_thanh_toan"), reason = f.S("ly_do_huy");
         if (status is not ("cho_xac_nhan" or "dang_chuan_bi" or "dang_giao" or "da_giao" or "da_huy")) status = oldStatus;
         if (pay is not ("chua_thanh_toan" or "da_thanh_toan")) pay = oldPay;
-        // Đơn đã hủy hoặc đã giao là trạng thái cuối: không đổi được nữa
         if (oldStatus == "da_huy") throw new UserError("Đơn hàng đã hủy, không thể thay đổi trạng thái.");
         if (oldStatus == "da_giao") throw new UserError("Đơn hàng đã giao, không thể thay đổi trạng thái.");
         if (oldPay == "da_thanh_toan" && pay == "chua_thanh_toan") throw new UserError("Đơn đã thanh toán và lập hóa đơn, không chuyển lại \"Chưa thanh toán\".");
-        // Đơn chưa thanh toán chuyển được sang đang chuẩn bị / đang giao; "Đã giao" và "Đã hủy" chỉ mở khi đã thanh toán
         if (pay == "chua_thanh_toan" && status is "da_giao" or "da_huy") throw new UserError("Đơn chưa thanh toán chưa chuyển được sang \"Đã giao\" hoặc \"Đã hủy\". Vui lòng chuyển sang \"Đã thanh toán\" trước.");
 
         string msg = "Đã cập nhật đơn hàng.";
         if (status == "da_huy")
         {
             if (reason.Length == 0) throw new UserError("Vui lòng nhập lý do hủy.");
-            // Hủy đơn: hoàn lại số lượng vào tồn kho
             c.Execute("UPDATE BIEN_THE_SP bt JOIN CHI_TIET_DON_HANG ct ON ct.ma_bien_the = bt.ma_bien_the SET bt.so_luong_ton = bt.so_luong_ton + ct.so_luong WHERE ct.ma_don_hang = @id", new { id }, tx);
             msg = "Đã hủy đơn hàng và hoàn lại tồn kho.";
-            // Đơn đã thanh toán / lập hóa đơn: hoàn tiền cho khách, không tính vào doanh thu và tổng chi tiêu
             decimal refunded = RefundInvoice(c, tx, id);
-            // Đã thanh toán nhưng chưa giao (chưa có hóa đơn): vẫn hoàn lại số tiền khách đã trả
             if (refunded == 0 && oldPay == "da_thanh_toan") refunded = c.ExecuteScalar<decimal>("SELECT tong_thanh_toan FROM DON_HANG WHERE ma_don_hang=@id", new { id }, tx);
             if (refunded > 0) { pay = "chua_thanh_toan"; msg = $"Đã hủy đơn hàng, hoàn lại tồn kho và hoàn {refunded:N0}đ cho khách (không tính vào doanh thu và tổng chi tiêu)."; }
         }
         c.Execute("UPDATE DON_HANG SET trang_thai_don_hang=@status, ly_do_huy=@reason, trang_thai_thanh_toan=@pay WHERE ma_don_hang=@id",
             new { status, reason = status == "da_huy" ? reason : null, pay, id }, tx);
 
-        // Vận chuyển: lưu đơn vị + mã vận đơn, trạng thái giao theo trạng thái đơn
         string carrier = f.S("ten_don_vi_van_chuyen");
         string shipStatus = status switch { "dang_giao" => "dang_giao", "da_giao" => "da_giao", _ => "cho_lay_hang" };
         if (carrier.Length > 0)
@@ -719,16 +688,12 @@ public class ShopCommands
         else
             c.Execute("UPDATE VAN_CHUYEN SET trang_thai=@shipStatus, ngay_giao_thuc_te = IF(@shipStatus = 'da_giao', CURDATE(), NULL) WHERE ma_don_hang=@id", new { shipStatus, id }, tx);
 
-        // Đơn đã thanh toán và giao thành công: lập hóa đơn, cộng doanh thu, điểm tích lũy / tổng chi tiêu, xét lại hạng thành viên
         if (status == "da_giao" && pay == "da_thanh_toan" && c.ExecuteScalar<int>("SELECT COUNT(*) FROM HOA_DON WHERE ma_don_hang=@id", new { id }, tx) == 0)
             msg = "Đơn đã giao: lập hóa đơn " + CreateInvoice(c, tx, id) + ", cộng doanh thu và điểm tích lũy cho khách.";
         return msg;
     }
 
-    /// <summary>
-    /// Hoàn tiền một đơn đã lập hóa đơn mà bị hủy: xóa hóa đơn (không còn tính vào doanh thu), trừ số tiền đó khỏi tổng chi tiêu
-    /// và điểm tích lũy của khách, hạ hạng thành viên nếu tổng chi tiêu không còn đạt mốc. Trả về số tiền đã hoàn (0 nếu đơn chưa có hóa đơn).
-    /// </summary>
+    // Hủy hóa đơn của đơn bị hủy: xóa HOA_DON, CHI_TIET_HOA_DON và trừ lại tổng chi tiêu, điểm tích lũy, hạng thành viên trong KHACH_HANG.
     decimal RefundInvoice(MySqlConnection c, MySqlTransaction tx, int order)
     {
         var inv = One(c, "SELECT h.ma_hoa_don, h.tong_thanh_toan, d.ma_khach_hang FROM HOA_DON h JOIN DON_HANG d ON d.ma_don_hang = h.ma_don_hang WHERE h.ma_don_hang=@order", new { order }, tx);
@@ -742,7 +707,6 @@ public class ShopCommands
         decimal spent = Math.Max(0, decimal.Parse(Dec(kh, "tong_chi_tieu"), CultureInfo.InvariantCulture) - total);
         int points = Math.Max(0, int.Parse(S(kh, "diem_tich_luy")) - (int)Math.Floor(total / 10000));
         string[] tiers = ["thuong", "bac", "vang", "VIP"];
-        // Hạng hiện tại tính theo tổng chi tiêu trước khi hoàn (khách chưa chi tiêu thì là hạng thường)
         string currentTier = MemberTier.Effective(S(kh, "hang_thanh_vien"), spent + total);
         int oldRank = Math.Max(0, Array.IndexOf(tiers, currentTier));
         int rankBySpent = spent >= 10_000_000 ? 3 : spent >= 5_000_000 ? 2 : spent >= 2_000_000 ? 1 : 0;
@@ -751,10 +715,7 @@ public class ShopCommands
         return total;
     }
 
-    /// <summary>
-    /// Dọn dữ liệu cũ khi web admin khởi động: đơn đã hủy mà vẫn còn hóa đơn (hủy trước khi có chức năng hoàn tiền)
-    /// thì hoàn tiền lại cho khách. Trả về số đơn đã xử lý; lỗi kết nối được bỏ qua.
-    /// </summary>
+    // Chạy khi khởi động (Program.cs): hoàn hóa đơn cho các đơn đã hủy nhưng vẫn còn hóa đơn.
     public int ReconcileCancelled()
     {
         try
@@ -774,10 +735,7 @@ public class ShopCommands
         catch { return 0; }
     }
 
-    /// <summary>
-    /// Lập hóa đơn cho đơn đã thanh toán: lưu giá vốn tại thời điểm bán, cộng 1 điểm / 10.000đ và tổng chi tiêu cho khách,
-    /// nâng hạng thành viên theo mốc chi tiêu (Bạc từ 2 triệu, Vàng từ 5 triệu, VIP từ 10 triệu; chỉ nâng, không hạ). Trả về số hóa đơn.
-    /// </summary>
+    // Lập hóa đơn: ghi HOA_DON, CHI_TIET_HOA_DON (lưu giá vốn lúc bán), cộng tổng chi tiêu, điểm tích lũy (1 điểm / 10.000đ) và nâng hạng thành viên trong KHACH_HANG.
     string CreateInvoice(MySqlConnection c, MySqlTransaction tx, int order)
     {
         var d = One(c, "SELECT ma_khach_hang, ma_phuong_thuc_thanh_toan, tam_tinh, tong_tien_giam_gia, tong_thanh_toan FROM DON_HANG WHERE ma_don_hang=@order", new { order }, tx)!;
@@ -799,7 +757,6 @@ public class ShopCommands
         var kh = One(c, "SELECT tong_chi_tieu, hang_thanh_vien FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx)!;
         decimal spent = decimal.Parse(Dec(kh, "tong_chi_tieu"), CultureInfo.InvariantCulture) + total;
         string[] tiers = ["thuong", "bac", "vang", "VIP"];
-        // Hạng hiện tại tính theo tổng chi tiêu trước khi cộng đơn này (khách chưa chi tiêu thì là hạng thường)
         int oldRank = Math.Max(0, Array.IndexOf(tiers, MemberTier.Effective(S(kh, "hang_thanh_vien"), spent - total)));
         int newRank = Math.Max(oldRank, spent >= 10_000_000 ? 3 : spent >= 5_000_000 ? 2 : spent >= 2_000_000 ? 1 : 0);
         c.Execute("UPDATE KHACH_HANG SET tong_chi_tieu=@spent, diem_tich_luy = diem_tich_luy + @pts, hang_thanh_vien=@tier WHERE ma_khach_hang=@customer",
@@ -807,7 +764,7 @@ public class ShopCommands
         return number;
     }
 
-    // ---------- Khuyến mãi ----------
+    // Thêm/sửa chương trình khuyến mãi CTKM và chi tiết theo loại: KM_THEO_SP, KM_THEO_DH hoặc KM_THEO_VOUCHER.
     string SavePromotion(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string name = f.S("ten_ctkm"), type = f.S("loai_khuyen_mai"), status = f.S("trang_thai");
@@ -818,7 +775,6 @@ public class ShopCommands
         if (end <= start) throw new UserError("Ngày kết thúc phải sau ngày bắt đầu.");
         if (status is not ("hoat_dong" or "ngung" or "het_han")) status = "hoat_dong";
 
-        // Mức giảm chi tiết (một dòng) theo loại
         decimal pct = f.D("d_phan_tram");
         if (pct <= 0 || pct > 100) throw new UserError("Phần trăm giảm phải lớn hơn 0 và không quá 100.");
         int product = f.I("d_san_pham"); decimal threshold = f.D("d_muc_tien"); string voucher = f.S("d_voucher");
@@ -848,7 +804,7 @@ public class ShopCommands
         return $"Đã lưu chương trình khuyến mãi \"{name}\".";
     }
 
-    // ---------- Chiến dịch thông báo ----------
+    // Thêm/sửa chiến dịch thông báo trong CHIEN_DICH_THONG_BAO (kênh email / sms / app, nhóm khách, khuyến mãi gắn kèm).
     string SaveCampaign(MySqlConnection c, MySqlTransaction tx, int id, Form f, Ctx me)
     {
         string title = f.S("tieu_de"), content = f.S("noi_dung"), channel = f.S("kenh_gui"), status = f.S("trang_thai") == "da_gui" ? "da_gui" : "nhap";
@@ -868,7 +824,7 @@ public class ShopCommands
         return $"Đã lưu chiến dịch \"{title}\".";
     }
 
-    // ---------- Khảo sát ----------
+    // Thêm/sửa khảo sát KHAO_SAT cùng câu hỏi CAU_HOI_KHAO_SAT và lựa chọn LUA_CHON_CAU_HOI (giữ nguyên câu hỏi nếu đã có người trả lời).
     string SaveSurvey(MySqlConnection c, MySqlTransaction tx, int id, Form f, Ctx me)
     {
         string title = f.S("tieu_de"); var start = f.Date("ngay_bat_dau"); var end = f.Date("ngay_ket_thuc");
@@ -877,7 +833,6 @@ public class ShopCommands
         if (start == null || end == null) throw new UserError("Vui lòng nhập thời gian khảo sát.");
         if (end <= start) throw new UserError("Ngày kết thúc phải sau ngày bắt đầu.");
 
-        // Đọc các câu hỏi gửi lên (lặp theo thứ tự)
         var texts = f.All("q_noi_dung"); var types = f.All("q_loai"); var opts = f.All("q_lua_chon"); var req = f.Many("q_bat_buoc");
         var questions = new List<(string Text, string Type, bool Required, string[] Options)>();
         for (int i = 0; i < texts.Length; i++)
@@ -902,7 +857,6 @@ public class ShopCommands
         else
         {
             c.Execute("UPDATE KHAO_SAT SET tieu_de=@title, mo_ta=@desc, ngay_bat_dau=@start, ngay_ket_thuc=@end, trang_thai=@status WHERE ma_khao_sat=@id", p, tx);
-            // Đã có khách làm khảo sát thì giữ nguyên câu hỏi để không mất kết quả
             replaceQuestions = c.ExecuteScalar<int>("SELECT COUNT(*) FROM TRA_LOI_KHAO_SAT WHERE ma_khao_sat=@id", new { id }, tx) == 0 && questions.Count > 0;
             if (replaceQuestions)
             {
@@ -924,7 +878,7 @@ public class ShopCommands
         return $"Đã lưu khảo sát \"{title}\"" + (replaceQuestions ? $" ({questions.Count} câu hỏi)." : ". Khảo sát đã có người trả lời nên giữ nguyên câu hỏi.");
     }
 
-    /// <summary>Gửi khảo sát đến tài khoản khách hàng (tất cả hoặc theo nhóm); mỗi khách chỉ nhận một lần.</summary>
+    // Gửi khảo sát: thêm vào KHAO_SAT_KHACH_HANG cho mọi khách có tài khoản hoạt động hoặc khách trong một nhóm, chuyển khảo sát sang da_gui.
     string SendSurvey(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         var s = One(c, "SELECT trang_thai FROM KHAO_SAT WHERE ma_khao_sat=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy khảo sát.");
@@ -941,10 +895,8 @@ public class ShopCommands
         return n == 0 ? "Không có khách mới để gửi (các khách đủ điều kiện đều đã nhận khảo sát này)." : $"Đã gửi khảo sát đến {n} khách hàng.";
     }
 
-    // ============================================================
-    //  Xóa
-    // ============================================================
 
+    // Xóa theo entity (gọi từ CrudController.Delete): dữ liệu đã phát sinh lịch sử thì chuyển trạng thái (đã xóa, nghỉ việc, ngừng hợp tác, ngừng...) hoặc báo lỗi thay vì xóa hẳn.
     public Result Delete(string entity, int id, Ctx me) => Run((c, tx) =>
     {
         switch (entity)
@@ -953,7 +905,6 @@ public class ShopCommands
                 {
                     var u = c.ExecuteScalar<string>("SELECT ten_dang_nhap FROM TAI_KHOAN WHERE ma_tai_khoan=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy tài khoản.");
                     if (u == me.Username) throw new UserError("Không thể xóa tài khoản đang đăng nhập.");
-                    // Xóa mềm: chuyển sang "đã xóa", dữ liệu liên quan (hóa đơn, phản hồi...) được giữ lại
                     c.Execute("UPDATE TAI_KHOAN SET trang_thai='da_xoa' WHERE ma_tai_khoan=@id", new { id }, tx);
                     return $"Đã xóa tài khoản {u} (chuyển sang trạng thái \"đã xóa\", dữ liệu liên quan vẫn được giữ).";
                 }
@@ -995,8 +946,6 @@ public class ShopCommands
                     {
                         if (ProductHasHistory(c, tx, product))
                         {
-                            // Đã có đơn hàng / phiếu nhập / khuyến mãi / phản hồi: giữ lại để lịch sử không mất,
-                            // nhưng ẩn khỏi cửa hàng và chuyển sang loại ẩn "[Đã xóa]" (không hiện ở admin và web khách)
                             archiveId ??= ArchivedCategoryId(c, tx);
                             c.Execute("UPDATE SAN_PHAM SET trang_thai='an', ma_loai=@archiveId WHERE ma_san_pham=@product", new { archiveId, product }, tx);
                             kept++;
@@ -1069,15 +1018,12 @@ public class ShopCommands
         }
     });
 
-    // ============================================================
-    //  Các thao tác nhanh (nút bấm không cần biểu mẫu)
-    // ============================================================
 
+    // Thao tác riêng (gọi từ CrudController.Act): khóa / mở khóa tài khoản khách, trả lời phản hồi (TRA_LOI_PHAN_HOI), ẩn / hiện phản hồi, đóng khảo sát.
     public Result Act(string action, int id, Form f, Ctx me) => Run((c, tx) =>
     {
         switch (action)
         {
-            // Khóa / mở khóa tài khoản của khách hàng (id = mã khách hàng)
             case "lock_customer":
                 {
                     var acc = One(c, "SELECT tk.ma_tai_khoan, tk.trang_thai FROM KHACH_HANG kh JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan WHERE kh.ma_khach_hang=@id", new { id }, tx)
@@ -1086,7 +1032,6 @@ public class ShopCommands
                     c.Execute("UPDATE TAI_KHOAN SET trang_thai=@now WHERE ma_tai_khoan=@a", new { now, a = int.Parse(S(acc, "ma_tai_khoan")) }, tx);
                     return now == "bi_khoa" ? "Đã khóa tài khoản khách hàng (không đăng nhập được, dữ liệu vẫn được giữ)." : "Đã mở khóa tài khoản khách hàng.";
                 }
-            // Trả lời phản hồi của khách (id = mã phản hồi)
             case "feedback_reply":
                 {
                     string text = f.S("noi_dung");
@@ -1097,13 +1042,11 @@ public class ShopCommands
                     c.Execute("UPDATE PHAN_HOI SET trang_thai='da_tra_loi' WHERE ma_phan_hoi=@id", new { id }, tx);
                     return "Đã gửi câu trả lời cho khách hàng.";
                 }
-            // Ẩn / hiện phản hồi (nội dung không phù hợp)
             case "feedback_toggle":
                 {
                     c.Execute("UPDATE PHAN_HOI SET an_hien = IF(an_hien = 1, 0, 1) WHERE ma_phan_hoi=@id", new { id }, tx);
                     return "Đã đổi trạng thái hiển thị của phản hồi.";
                 }
-            // Đóng khảo sát (id = mã khảo sát)
             case "survey_close":
                 {
                     c.Execute("UPDATE KHAO_SAT SET trang_thai='da_dong' WHERE ma_khao_sat=@id", new { id }, tx);
@@ -1114,11 +1057,8 @@ public class ShopCommands
         }
     });
 
-    // ============================================================
-    //  Hàm tiện ích
-    // ============================================================
 
-    /// <summary>Chạy một thao tác trong transaction; lỗi nghiệp vụ / lỗi MySQL được đổi thành thông báo tiếng Việt.</summary>
+    // Chạy thao tác ghi trong một transaction MySQL; lỗi nghiệp vụ (UserError) hoặc lỗi MySQL được đổi thành Result(false, thông báo).
     Result Run(Func<MySqlConnection, MySqlTransaction, string> work)
     {
         try
@@ -1133,8 +1073,6 @@ public class ShopCommands
         catch (MySqlException e) { return new Result(false, Friendly(e)); }
     }
 
-
-    /// <summary>Sản phẩm đã gắn với dữ liệu khác (đơn hàng, hóa đơn, phiếu nhập, khuyến mãi theo sản phẩm, phản hồi) nên không được xóa hẳn.</summary>
     static bool ProductHasHistory(MySqlConnection c, MySqlTransaction tx, int product) => c.ExecuteScalar<int>("""
         SELECT (SELECT COUNT(*) FROM CHI_TIET_DON_HANG x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
              + (SELECT COUNT(*) FROM CHI_TIET_HOA_DON x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
@@ -1143,7 +1081,6 @@ public class ShopCommands
              + (SELECT COUNT(*) FROM PHAN_HOI WHERE ma_san_pham = @product)
         """, new { product }, tx) > 0;
 
-    /// <summary>Mã của loại ẩn "[Đã xóa]" (tạo nếu chưa có), nơi giữ các sản phẩm đã có lịch sử khi xóa loại sản phẩm.</summary>
     static int ArchivedCategoryId(MySqlConnection c, MySqlTransaction tx)
     {
         var id = c.ExecuteScalar<int?>("SELECT ma_loai FROM LOAI_SP WHERE ten_loai=@name", new { name = Catalog.ArchivedCategory }, tx);

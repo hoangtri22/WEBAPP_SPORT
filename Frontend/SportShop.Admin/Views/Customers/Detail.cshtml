@@ -1,7 +1,3 @@
-@*
-    Hồ sơ khách hàng: thông tin cá nhân, hạng thành viên, sổ địa chỉ,
-    lịch sử mua hàng và lịch sử chăm sóc (yêu cầu trong PDF mục 3.1.2).
-*@
 @model Customer
 @{
     ViewData["Title"] = Model.FullName;
@@ -25,7 +21,6 @@
     <section class="card pad">
         <div class="card-h-row">
             <h3 class="card-h">Thông tin khách hàng</h3>
-            @* Sửa mọi thông tin của khách (họ tên, giới tính, ngày sinh, điện thoại, email, địa chỉ, sở thích) trừ mật khẩu: mật khẩu do khách tự đổi *@
             <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 16) Chỉnh sửa thông tin</button>
         </div>
         <dl class="kv">

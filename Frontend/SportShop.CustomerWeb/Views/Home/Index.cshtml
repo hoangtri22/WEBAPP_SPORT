@@ -37,7 +37,6 @@
         <a class="heading-link" asp-controller="Shop" asp-action="Index">Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</a>
     </div>
     <div class="shop-category-grid">
-        @* Đã kết nối MySQL: danh mục lấy từ bảng loại sản phẩm, số sản phẩm là số sản phẩm đang bán (admin thêm / đổi thì tự cập nhật); chưa kết nối: dữ liệu mẫu *@
         @if (Db.IsConnected)
         {
             string[] styles = ["running", "men", "women", "gear"], icons = ["zap", "user", "sparkles", "activity"];
@@ -81,11 +80,9 @@
         {
             <article class="shop-product-card">
                 <div class="shop-product-image">
-                    @* Bấm vào hình sản phẩm cũng mở trang chi tiết, giống nút "Chọn mua" *@
                     <a class="image-link" asp-controller="Shop" asp-action="Detail" asp-route-id="@p.Id" aria-label="@p.Name"></a>
                     <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.style.visibility='hidden'" />
                     @if (!string.IsNullOrEmpty(p.Badge)) { <span class="badge @(p.Badge == "Mới" ? "new" : "")">@p.Badge</span> }
-                    @* Nút tim: chỉ đổi màu trên giao diện *@
                     <button type="button" class="heart" aria-label="Yêu thích">@Icons.Svg("heart", 18)</button>
                     <a class="quick-add" asp-controller="Shop" asp-action="Detail" asp-route-id="@p.Id">@Icons.Svg("shopping-bag", 16) Chọn mua</a>
                 </div>

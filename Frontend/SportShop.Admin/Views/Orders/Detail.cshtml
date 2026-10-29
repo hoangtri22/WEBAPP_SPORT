@@ -1,16 +1,18 @@
-@*
-    Chi tiết một hóa đơn: thông tin, người nhận, vận chuyển (đơn vị, mã vận đơn, phí ship),
-    cập nhật trạng thái và các dòng sản phẩm (PDF mục 3.1.5).
-*@
 @model Order
 @{
     ViewData["Title"] = Model.Code;
     var c = Data.Customer(Model.CustomerId);
     var emp = Model.EmployeeId.HasValue ? Data.Employee(Model.EmployeeId.Value).FirstName : "Khách tự đặt online";
-    // Các trạng thái đơn hàng (DON_HANG.trang_thai_don_hang)
     var statuses = new[] { ("cho_xac_nhan", "Chờ xác nhận"), ("dang_chuan_bi", "Đang chuẩn bị"), ("dang_giao", "Đang giao"), ("da_giao", "Đã giao"), ("da_huy", "Đã hủy") };
 }
-<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách hóa đơn</a>
+@if (ViewBag.Menu == "invoices")
+{
+    <a class="back" asp-action="Invoices">@Icons.Svg("arrow-left", 16) Danh sách hóa đơn</a>
+}
+else
+{
+    <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách đơn hàng</a>
+}
 <div class="page-head">
     <div>
         <div class="eyebrow">@(Model.Invoiced ? "HÓA ĐƠN" : "ĐƠN HÀNG (CHƯA LẬP HÓA ĐƠN)")</div>

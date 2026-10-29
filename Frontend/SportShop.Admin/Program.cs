@@ -7,16 +7,12 @@ using SportShop.Admin.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// appsettings.Local.json (nếu có) ghi đè cấu hình từng máy, ví dụ mật khẩu MySQL; file này không đưa lên GitHub
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-builder.Configuration.AddEnvironmentVariables();   // biến môi trường vẫn được ưu tiên cao nhất
+builder.Configuration.AddEnvironmentVariables();
 
-// Đọc dữ liệu từ MySQL (chuỗi kết nối: appsettings.json → ConnectionStrings:Default)
 builder.Services.AddScoped<ShopData>();
-// Ghi dữ liệu (thêm / sửa / xóa) vào MySQL
 builder.Services.AddSingleton<ShopCommands>();
 
-// Đăng nhập bằng cookie: chưa đăng nhập thì mọi trang đều chuyển về màn hình đăng nhập "/"
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -28,10 +24,8 @@ builder.Services.AddControllersWithViews(o => o.Filters.Add(new AuthorizeFilter(
 
 var app = builder.Build();
 
-// Dọn dữ liệu cũ: đơn đã hủy nhưng còn hóa đơn thì hoàn tiền lại cho khách (không tính vào tổng chi tiêu)
 app.Services.GetRequiredService<ShopCommands>().ReconcileCancelled();
 
-// Không kết nối được MySQL (hoặc chưa điền chuỗi kết nối) → hiện trang hướng dẫn thay vì lỗi 500 khó hiểu
 app.Use(async (ctx, next) =>
 {
     try { await next(); }
@@ -57,25 +51,20 @@ app.Use(async (ctx, next) =>
     }
 });
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 
-// Ảnh sản phẩm: thư mục Backend/Images được phục vụ tại đường dẫn /images
-// (khớp cột BIEN_THE_SP.hinh_anh = "/images/ten-anh.jpg"). Đổi thư mục ở appsettings.json → Paths:Images nếu cần.
 var imagesDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, app.Configuration["Paths:Images"] ?? "../../Backend/Images"));
 if (Directory.Exists(imagesDir))
     app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(imagesDir), RequestPath = "/images" });
 else
     app.Logger.LogWarning("Không tìm thấy thư mục ảnh sản phẩm: {Dir}", imagesDir);
 
-// Ảnh sản phẩm tải lên từ thiết bị (do web admin lưu) ở Frontend/Uploads, phục vụ tại đường dẫn /uploads
 var uploadsDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, app.Configuration["Paths:Uploads"] ?? "../Uploads"));
 Directory.CreateDirectory(uploadsDir);
 app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(uploadsDir), RequestPath = "/uploads" });
@@ -87,7 +76,6 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
-// Trang gốc "/" là màn hình đăng nhập
 app.MapControllerRoute(
     name: "root",
     pattern: "",

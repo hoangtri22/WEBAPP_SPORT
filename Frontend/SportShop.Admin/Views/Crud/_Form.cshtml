@@ -1,8 +1,3 @@
-@*
-    Biểu mẫu thêm / sửa / xem hiện trong ngăn trượt bên phải (tải bằng Fetch từ CrudController.Form).
-    Các ô được dựng tự động từ định nghĩa trong Models/CrudDefs.cs.
-    Việc hiện / ẩn ô theo điều kiện (ShowWhen), thêm bớt dòng hàng và gửi biểu mẫu do wwwroot/js/admin.js xử lý.
-*@
 @using SportShop.Admin.Controllers
 @model FormModel
 @{
@@ -16,7 +11,6 @@
         _ => verb + " " + def.Title
     };
     string submit = def.Key == "survey_send" ? "Gửi khảo sát" : "Lưu";
-    // Ô nào hiện ở chế độ nào: Show = both / create / edit
     bool Visible(Field f) => f.Show == "both" || (creating ? f.Show == "create" : f.Show == "edit");
     string[] questionTypes = ["mot_lua_chon|Một lựa chọn", "nhieu_lua_chon|Nhiều lựa chọn", "thang_diem|Thang điểm", "van_ban|Văn bản"];
 }
@@ -32,7 +26,7 @@
             @foreach (var f in def.Fields.Where(Visible))
             {
                 string val = Model.Val(f.Name);
-                bool wide = f.Wide || f.Type is "textarea" or "interests" or "orderlines" or "importlines" or "questions" or "promodetail";
+                bool wide = f.Wide || f.Type is "textarea" or "interests" or "orderlines" or "importlines" or "variantlines" or "questions" or "promodetail";
                 <div class="fld @(wide ? "wide" : "")" data-field="@f.Name" data-showwhen="@f.ShowWhen">
                     @switch (f.Type)
                     {
@@ -96,6 +90,32 @@
                                         <input type="number" name="dong_don_gia" class="js-cost" min="0" step="1000" placeholder="Đơn giá nhập" aria-label="Đơn giá nhập" />
                                         <button type="button" class="act js-remove-line" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
                                         <input type="number" name="dong_gia_ban" class="js-sell" min="1" step="1000" placeholder="Giá bán (sản phẩm chưa có biến thể)" aria-label="Giá bán" hidden />
+                                    </div>
+                                </template>
+                            </div>
+                            break;
+
+                        case "variantlines":
+                            <label>@f.Label</label>
+                            <div class="vlines">
+                                <div class="vlines-body"></div>
+                                <button type="button" class="btn-outline js-add-vline">@Icons.Svg("plus", 16) Thêm biến thể</button>
+                                <template class="vline-tpl">
+                                    <div class="vline">
+                                        <input type="hidden" name="bt_dong" class="js-vline-no" />
+                                        <input type="text" name="bt_kich_co" placeholder="Kích cỡ (S, M, 41...)" aria-label="Kích cỡ" />
+                                        <input type="text" name="bt_mau_sac" placeholder="Màu sắc" aria-label="Màu sắc" />
+                                        <input type="number" name="bt_gia_ban" min="0" step="1000" placeholder="Giá bán (đ) *" aria-label="Giá bán" />
+                                        <input type="number" name="bt_gia_von" min="0" step="1000" placeholder="Giá vốn (đ)" aria-label="Giá vốn" />
+                                        <button type="button" class="act js-remove-vline" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
+                                        <select name="bt_hinh_anh" aria-label="Hình ảnh">
+                                            <option value="">-- Hình ảnh (không bắt buộc) --</option>
+                                            @foreach (var o in Model.Cmd.Options("lookup:images").Where(o => o.Value != "")) { <option value="@o.Value">@o.Label</option> }
+                                        </select>
+                                        <div class="vline-upload">
+                                            <input type="file" class="js-vline-file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="Tải ảnh từ máy" title="Hoặc tải ảnh từ máy (ưu tiên hơn ảnh chọn ở trên)" />
+                                            <img class="vline-preview" alt="Ảnh xem trước" hidden />
+                                        </div>
                                     </div>
                                 </template>
                             </div>
@@ -176,7 +196,6 @@
                             </select>
                             @if (f.Name == "hinh_anh")
                             {
-                                @* Tải ảnh mới từ thiết bị: file được gửi kèm biểu mẫu và lưu vào thư mục Uploads *@
                                 <input type="file" name="hinh_anh_file" class="js-image-file" accept="image/png,image/jpeg,image/webp,image/gif" />
                                 <img class="img-preview" alt="Ảnh xem trước" hidden />
                             }

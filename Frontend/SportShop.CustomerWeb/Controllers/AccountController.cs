@@ -5,7 +5,6 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-/// <summary>Đăng nhập, đăng ký, đăng xuất của khách hàng.</summary>
 public class AccountController : Controller
 {
     readonly DbStatus _db;
@@ -13,22 +12,19 @@ public class AccountController : Controller
     readonly LoginThrottle _throttle;
     public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle) { _db = db; _store = store; _throttle = throttle; }
 
+    // Hiển thị trang đăng nhập (Views/Account/Auth.cshtml); nhận thông báo từ TempData["LoginNotice"] do CartController.LoginRequired() gửi sang.
     [HttpGet]
     public IActionResult Login()
     {
-        // Lời nhắc khi bị chuyển sang đây vì chưa đăng nhập (ví dụ bấm thêm vào giỏ hàng)
         var notice = TempData["LoginNotice"] as string;
         return View("Auth", new AuthVm { IsRegister = false, Notice = notice, NoticeIsError = notice != null });
     }
 
+    // Hiển thị trang đăng ký (dùng chung view Auth.cshtml với IsRegister = true).
     [HttpGet]
     public IActionResult Register() => View("Auth", new AuthVm { IsRegister = true });
 
-    /// <summary>
-    /// Đăng nhập. Kiểm tra dữ liệu nhập giống bản thiết kế Figma.
-    /// Đã kết nối MySQL: kiểm tra tài khoản khách hàng trong bảng TAI_KHOAN.
-    /// Chưa kết nối: chế độ xem giao diện, nhập hợp lệ là vào được.
-    /// </summary>
+    // Đăng nhập khách hàng: kiểm tra form bằng Validate(), chặn sai nhiều lần qua LoginThrottle, gọi CustomerStore.Login() đối chiếu TAI_KHOAN/KHACH_HANG trong MySQL rồi lưu customer_id và customer vào Session.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Login(string username, string password)
     {
@@ -38,7 +34,6 @@ public class AccountController : Controller
 
         if (_db.IsConnected)
         {
-            // Sai mật khẩu quá nhiều lần thì khóa tạm thời để chống dò mật khẩu
             string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
             int minutesLeft = _throttle.MinutesLeft(username!, ip);
             if (minutesLeft > 0)
@@ -64,10 +59,7 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    /// <summary>
-    /// Đăng ký: tạo tài khoản khách hàng (TAI_KHOAN + KHACH_HANG).
-    /// Chưa kết nối CSDL thì chỉ kiểm tra dữ liệu và hiện thông báo.
-    /// </summary>
+    // Đăng ký khách hàng: kiểm tra form bằng Validate(), gọi CustomerStore.Register() thêm TAI_KHOAN và KHACH_HANG vào MySQL; thành công thì quay về form đăng nhập.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Register(string username, string email, string phone, string password)
     {
@@ -89,10 +81,10 @@ public class AccountController : Controller
             return View("Auth", vm);
         }
 
-        // Đăng ký xong chuyển sang trang đăng nhập, điền sẵn tên đăng nhập
         return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Bạn có thể đăng nhập ngay." });
     }
 
+    // Đăng xuất: xóa customer và customer_id khỏi Session rồi về trang chủ.
     public IActionResult Logout()
     {
         HttpContext.Session.Remove("customer");
@@ -100,7 +92,7 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    /// <summary>Các quy tắc kiểm tra giống Figma: tên đăng nhập bắt buộc, email đúng dạng, SĐT 10 số, mật khẩu từ 6 ký tự.</summary>
+    // Kiểm tra dữ liệu form đăng nhập/đăng ký (tên đăng nhập, email, SĐT 10 số, mật khẩu từ 6 ký tự); lỗi ghi vào vm.Errors.
     static void Validate(AuthVm vm, string? username, string? email, string? phone, string? password)
     {
         if (string.IsNullOrWhiteSpace(username)) vm.Errors["username"] = "Vui lòng nhập tên đăng nhập.";

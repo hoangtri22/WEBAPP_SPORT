@@ -1,13 +1,7 @@
-@*
-    Quản lý sản phẩm: thẻ sản phẩm dạng LƯỚI hoặc DANH SÁCH (đổi bằng 2 nút góc phải),
-    tìm theo tên / lọc theo loại, và bảng biến thể (size, màu, giá bán, giá vốn, tồn).
-    Phần đổi chế độ xem + lọc nằm ở khối @section Scripts bên dưới.
-*@
 @{
     ViewData["Title"] = "Quản lý sản phẩm";
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
-    // Dữ liệu biến thể → bảng ở cuối trang (dùng lại partial _Section)
     var variants = Data.ActiveVariants.Select(v => new Row(
         [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], null, v.Id)).ToList();
     var variantSection = new TableSection
@@ -47,7 +41,6 @@
         <button type="button" class="btn-primary" data-crud="create" data-entity="product">@Icons.Svg("plus", 18) Thêm sản phẩm</button>
     </div>
 
-    @* ----- Dạng lưới ----- *@
     <div class="prod-grid" id="prodGrid">
         @foreach (var p in Data.ActiveProducts)
         {
@@ -56,9 +49,9 @@
             <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
                     <span>@p.Name.Substring(0, 1)</span>
-                    @* Ảnh đại diện (ảnh của biến thể đầu tiên, BIEN_THE_SP.hinh_anh); không tải được ảnh thì hiện chữ cái đầu phía sau *@
                     @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.remove()" /> }
                     <button type="button" class="dots light" data-crud="edit" data-entity="product" data-id="@p.Id" aria-label="Chỉnh sửa sản phẩm">@Icons.Svg("more", 18)</button>
+                    <button type="button" class="dots light prod-del" data-crud="delete" data-entity="product" data-id="@p.Id" data-name="@p.Name" title="Xóa sản phẩm" aria-label="Xóa sản phẩm">@Icons.Svg("trash", 18)</button>
                 </div>
                 <div class="prod-body">
                     <div class="prod-top"><small>@p.Category</small>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</div>
@@ -70,7 +63,6 @@
         }
     </div>
 
-    @* ----- Dạng danh sách (ẩn mặc định) ----- *@
     <div class="table-wrap" id="prodList" hidden>
         <table class="tbl">
             <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Loại</th><th>ĐVT</th><th>Giá bán</th><th>Tồn</th><th>Hiển thị</th><th>Thao tác</th></tr></thead>
@@ -99,14 +91,13 @@
 
 @section Scripts {
     <script>
-        // ----- Quản lý sản phẩm: đổi dạng xem + tìm kiếm + lọc theo loại -----
+        // Đổi dạng lưới / danh sách và lọc sản phẩm theo từ khóa, loại ngay trên trình duyệt.
         (function () {
             var grid = document.getElementById('prodGrid'), list = document.getElementById('prodList');
             var btnGrid = document.getElementById('viewGrid'), btnList = document.getElementById('viewList');
             var search = document.getElementById('prodSearch'), cat = document.getElementById('prodCat');
             var empty = document.getElementById('prodEmpty');
 
-            // Đổi giữa dạng lưới và dạng danh sách
             function setView(isGrid) {
                 grid.hidden = !isGrid; list.hidden = isGrid;
                 btnGrid.classList.toggle('active', isGrid); btnList.classList.toggle('active', !isGrid);
@@ -114,7 +105,6 @@
             btnGrid.onclick = function () { setView(true); };
             btnList.onclick = function () { setView(false); };
 
-            // Ẩn/hiện từng sản phẩm theo từ khóa và loại đang chọn
             function apply() {
                 var q = search.value.trim().toLowerCase(), c = cat.value, shown = 0;
                 document.querySelectorAll('#prodGrid .prod, #prodList tbody tr').forEach(function (el) {

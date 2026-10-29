@@ -2,8 +2,6 @@
 @using SportShop.CustomerWeb.Models
 @using SportShop.CustomerWeb.Services
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-@* Cờ "đã kết nối cơ sở dữ liệu chưa" và cấu hình dùng được ở mọi view *@
 @inject DbStatus Db
-@* Dữ liệu khách hàng trong MySQL (dùng khi Db.IsConnected) *@
 @inject CustomerStore Store
 @inject IConfiguration Config

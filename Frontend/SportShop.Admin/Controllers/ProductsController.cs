@@ -3,10 +3,9 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-/// <summary>Quản lý loại sản phẩm và quản lý sản phẩm (kèm biến thể size, màu).</summary>
 public class ProductsController(ShopData db) : Controller
 {
-    /// <summary>Loại sản phẩm (bảng LOAI_SP): quần áo, giày, vợt cầu lông, phụ kiện.</summary>
+    // Quản lý loại sản phẩm: danh sách từ ShopData.CategoryList, số sản phẩm đếm từ ShopData.Products.
     public IActionResult Categories()
     {
         ViewBag.Menu = "categories";
@@ -21,10 +20,7 @@ public class ProductsController(ShopData db) : Controller
         });
     }
 
-    /// <summary>
-    /// Danh sách sản phẩm dạng lưới/danh sách (đổi bằng 2 nút góc phải)
-    /// và bảng biến thể (size, màu, giá bán, giá vốn, tồn).
-    /// </summary>
+    // Quản lý sản phẩm: view Products/Index.cshtml tự đọc sản phẩm và biến thể từ ShopData (inject trong _ViewImports.cshtml).
     public IActionResult Index()
     {
         ViewBag.Menu = "products";

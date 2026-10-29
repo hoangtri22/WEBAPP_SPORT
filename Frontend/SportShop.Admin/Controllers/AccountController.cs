@@ -9,7 +9,7 @@ namespace SportShop.Admin.Controllers;
 
 public class AccountController(ShopData db) : Controller
 {
-    // GET /  : màn hình đăng nhập (không có sidebar)
+    // Trang đăng nhập quản trị (Views/Account/Login.cshtml); đã đăng nhập thì về trang Tổng quan.
     [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl)
     {
@@ -19,7 +19,7 @@ public class AccountController(ShopData db) : Controller
         return View();
     }
 
-    // POST: chỉ tài khoản quản lý / nhân viên đang hoạt động mới vào được trang quản trị
+    // Đăng nhập quản trị: gọi ShopData.CheckLogin() kiểm tra TAI_KHOAN/NHAN_VIEN trong MySQL; đúng thì tạo cookie đăng nhập kèm claim họ tên, vai trò, employee_id.
     [HttpPost, AllowAnonymous, ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(string username, string password, string? returnUrl)
     {
@@ -48,17 +48,14 @@ public class AccountController(ShopData db) : Controller
         return Url.IsLocalUrl(returnUrl) ? Redirect(returnUrl) : RedirectToAction("Index", "Home");
     }
 
-    // Đăng xuất: xóa cookie đăng nhập, quay về màn hình đăng nhập
+    // Đăng xuất: xóa cookie đăng nhập rồi về trang Login.
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction(nameof(Login));
     }
 
-    /// <summary>
-    /// Danh sách tài khoản (bảng TAI_KHOAN).
-    /// Vai trò: Quản lý / Nhân viên / Khách hàng. Trạng thái: hoạt động / bị khóa / đã xóa.
-    /// </summary>
+    // Tài khoản & phân quyền: danh sách từ ShopData.Accounts, hiển thị bằng Views/Shared/Table.cshtml; thêm/sửa/xóa qua CrudController với entity "account".
     public IActionResult Index()
     {
         ViewBag.Menu = "account";

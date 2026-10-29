@@ -1,12 +1,9 @@
 namespace SportShop.CustomerWeb.Models;
 
-/// <summary>Một mục trong trang thông tin: tiêu đề nhỏ và các đoạn chữ.</summary>
 public record InfoSection(string Heading, string[] Paragraphs);
 
-/// <summary>Trang thông tin tĩnh ở chân trang cửa hàng (chính sách, hướng dẫn, giới thiệu).</summary>
 public record InfoPage(string Eyebrow, string Title, string Intro, InfoSection[] Sections);
 
-/// <summary>Nội dung các trang thông tin, tra theo mã trang (phần cuối đường dẫn /Info/{mã}).</summary>
 public static class InfoPages
 {
     public static readonly Dictionary<string, InfoPage> All = new()

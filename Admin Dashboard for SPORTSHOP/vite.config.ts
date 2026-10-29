@@ -6,9 +6,7 @@ import path from 'node:path'
 import siteConfiguration from './.figma/make/site.json'
 
 
-// Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
 
   return {
@@ -74,7 +72,6 @@ type FigmaSiteConfiguration = {
   }
 }
 
-/** Applies /.figma/make/site.json to the generated document shell. */
 function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   function sanitizeHtmlValue(value: string | undefined): string {
     return value?.replace(/[^a-zA-Z0-9_-]/g, '') || ''
@@ -217,19 +214,6 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   }
 }
 
-/**
- * Replay the most recent build error to clients that connect after
- * it was first broadcast. Vite buffers an error payload only while
- * no clients are connected and clears the buffer on the first
- * reconnect (see `bufferedMessage` in `createWebSocketServer`), so
- * if the preview iframe reloads after Vite already delivered an
- * error to a live socket, the new socket misses the payload and
- * the overlay stays hidden even though the build is still broken.
- * We intercept `ws.send` to remember the latest error and replay
- * it on every new connection; the cache clears on a successful
- * `update` or `full-reload` so a stale overlay can't survive a
- * fixed build.
- */
 function figmaErrorOverlayReplay(): Plugin {
   return {
     name: 'figma-error-overlay-replay',
@@ -260,18 +244,6 @@ function figmaErrorOverlayReplay(): Plugin {
   }
 }
 
-/**
- * Reload when a module that previously defined a React Refresh boundary stops
- * defining one. This happens when an agent moves a component into a new file
- * and replaces the old module with a re-export:
- *
- *   export { default } from './app/App'
- *
- * Vite otherwise accepts the update using the previous module's HMR boundary,
- * but the re-export-only transform no longer registers a replacement for the
- * mounted component family. React reports a successful refresh while leaving
- * the old tree mounted until the page is reloaded.
- */
 function figmaReactRefreshBoundaryFallback(): Plugin {
   type ModuleNode = import('vite').ModuleNode
   const hadRefreshBoundary = new Map<string, boolean>()
@@ -327,17 +299,6 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
   }
 }
 
-/**
- * Serves a blank render-target page at /.figma/make/kit.html that
- * the Figma preview script drives directly. The page exposes a
- * registry of every file matching `storiesGlob` on
- * window.__FIGMA__.stories so the design surface can dynamically
- * import + mount each entry into its own grid view.
- *
- * Dev-only: `apply: 'serve'` gates the plugin to `vite dev`. Prod
- * builds (`vite build`) skip it entirely so the route doesn't leak
- * into shipped bundles.
- */
 function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin {
   const storiesGlob = Array.isArray(options.storiesGlob) ? options.storiesGlob : [options.storiesGlob]
   const ROUTE = '/.figma/make/kit.html'

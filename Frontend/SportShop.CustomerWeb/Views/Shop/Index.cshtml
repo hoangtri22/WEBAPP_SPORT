@@ -1,13 +1,8 @@
-@*
-    Danh sách sản phẩm: lọc theo loại, tìm theo tên, sắp xếp theo mới nhất / giá / tên.
-    Dữ liệu từ MySQL (SAN_PHAM, LOAI_SP, BIEN_THE_SP).
-*@
 @model List<ShopProduct>
 @{
     ViewData["Title"] = "Sản phẩm";
     var cats = (List<ShopCategory>)ViewBag.Categories;
     int? cat = ViewBag.Cat; string q = ViewBag.Q ?? ""; string sort = ViewBag.Sort ?? "new";
-    // Đang tìm kiếm theo từ khóa: chỉ hiện kết quả, không hiện thanh lọc loại / tìm kiếm / sắp xếp
     bool searching = !string.IsNullOrWhiteSpace(q);
 }
 <section class="shop-page">

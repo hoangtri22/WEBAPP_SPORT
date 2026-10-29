@@ -120,7 +120,31 @@ document.addEventListener('click', function (e) {
     if (quick) {
         var q = new FormData();
         q.append(quick.dataset.field, document.querySelector(quick.dataset.from).value);
+        if (quick.dataset.field2) q.append(quick.dataset.field2, document.querySelector(quick.dataset.from2).value);
+        // Lý do hủy: chỉ gửi khi ô nhập lý do đang hiện (đang chọn "Đã hủy")
+        var extra = quick.dataset.field3 && document.querySelector(quick.dataset.from3);
+        if (extra && !extra.hidden) q.append(quick.dataset.field3, extra.value.trim());
         postForm('/Crud/Save?entity=' + quick.dataset.quick + '&id=' + quick.dataset.id, q).then(handleResult);
+    }
+});
+
+// Ô chọn thanh toán của đơn (trang chi tiết và khung xem nhanh): chỉ khi chọn "Đã thanh toán" mới chọn được trạng thái "Đã giao" / "Đã hủy".
+// Chọn trạng thái "Đã hủy" thì hiện ô nhập lý do hủy (bắt buộc), chọn trạng thái khác thì ẩn đi.
+document.addEventListener('change', function (e) {
+    if (!e.target.matches || !e.target.matches('#quickStatus')) return;
+    var reason = document.getElementById('quickReason'); if (!reason) return;
+    reason.hidden = e.target.value !== 'da_huy';
+    if (!reason.hidden) reason.focus();
+});
+
+document.addEventListener('change', function (e) {
+    if (!e.target.matches || !e.target.matches('#quickPay')) return;
+    var status = document.getElementById('quickStatus'); if (!status) return;
+    var paid = e.target.value === 'da_thanh_toan';
+    Array.prototype.forEach.call(status.options, function (o) { if (o.value === 'da_giao' || o.value === 'da_huy') o.disabled = !paid; });
+    if (status.selectedOptions[0] && status.selectedOptions[0].disabled) {
+        var orig = Array.prototype.find.call(status.options, function (o) { return o.defaultSelected; });
+        if (orig) { status.value = orig.value; status.dispatchEvent(new Event('change', { bubbles: true })); }
     }
 });
 
@@ -350,3 +374,75 @@ document.addEventListener('keydown', function (e) {
         if (s) { e.preventDefault(); s.focus(); }
     }
 });
+
+// Xem nhanh đơn hàng / hóa đơn: rê chuột vào một dòng trong danh sách thì chi tiết hiện ở khung bên phải
+// (nội dung lấy từ trang chi tiết, chỉ để xem). Bấm nút con mắt vẫn mở trang chi tiết đầy đủ như cũ.
+(function () {
+    var rows = document.querySelectorAll('tr[data-peek]:not([data-peek=""])');
+    if (rows.length === 0) return;
+    var wide = window.matchMedia('(min-width: 1200px)');
+    var panel = document.createElement('aside');
+    panel.className = 'peek'; panel.hidden = true; panel.setAttribute('aria-label', 'Chi tiết đơn hàng');
+    document.body.appendChild(panel);
+    var cache = {}, current = '', showTimer = 0, hideTimer = 0, autoCollapsed = false;
+
+    // Lấy phần nội dung của trang chi tiết (giữ nút "Chỉnh sửa" và ô cập nhật trạng thái; bỏ nút quay lại, in hóa đơn và dòng chữ xanh phía trên tiêu đề)
+    function build(url, html) {
+        var main = new DOMParser().parseFromString(html, 'text/html').querySelector('main.content');
+        if (!main) return null;
+        var edit = main.querySelector('.head-actions [data-crud="edit"]');
+        main.querySelectorAll('.back, .head-actions, .eyebrow, script').forEach(function (n) { n.remove(); });
+        var bar = document.createElement('div');
+        bar.className = 'peek-bar';
+        bar.innerHTML = '<div class="peek-links"><a class="btn-outline" href="' + url + '">Mở trang chi tiết</a></div><button type="button" class="peek-close" aria-label="Đóng">&times;</button>';
+        if (edit) bar.firstChild.insertBefore(edit, bar.firstChild.firstChild);
+        main.insertBefore(bar, main.firstChild);
+        return main.innerHTML;
+    }
+
+    function close() {
+        clearTimeout(showTimer); clearTimeout(hideTimer);
+        panel.hidden = true; current = '';
+        document.body.classList.remove('peek-open');
+        if (autoCollapsed) { document.body.classList.remove('collapsed'); autoCollapsed = false; }
+        rows.forEach(function (r) { r.classList.remove('peek-on'); });
+    }
+    function scheduleHide() { clearTimeout(hideTimer); hideTimer = setTimeout(close, 350); }
+
+    function show(url) {
+        panel.innerHTML = cache[url];
+        panel.scrollTop = 0; panel.hidden = false;
+        document.body.classList.add('peek-open');
+        // Màn hình hẹp (dưới 1600px): thu gọn thanh menu bên trái trong lúc xem để bảng còn đủ chỗ
+        if (window.innerWidth < 1600 && !document.body.classList.contains('collapsed')) { document.body.classList.add('collapsed'); autoCollapsed = true; }
+    }
+    function open(tr) {
+        var url = tr.getAttribute('data-peek');
+        rows.forEach(function (r) { r.classList.toggle('peek-on', r === tr); });
+        if (url === current && !panel.hidden) return;
+        current = url;
+        if (cache[url]) { show(url); return; }
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
+            .then(function (html) {
+                cache[url] = build(url, html);
+                if (current !== url) return;
+                if (cache[url]) show(url); else close();
+            })
+            .catch(function () { if (current === url) close(); });
+    }
+
+    rows.forEach(function (tr) {
+        tr.addEventListener('mouseenter', function () {
+            if (!wide.matches) return;
+            clearTimeout(hideTimer); clearTimeout(showTimer);
+            showTimer = setTimeout(function () { open(tr); }, 120);
+        });
+        tr.addEventListener('mouseleave', function () { clearTimeout(showTimer); scheduleHide(); });
+    });
+    panel.addEventListener('mouseenter', function () { clearTimeout(hideTimer); });
+    panel.addEventListener('mouseleave', scheduleHide);
+    panel.addEventListener('click', function (e) { if (e.target.closest('.peek-close')) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) close(); });
+    wide.addEventListener('change', function () { if (!wide.matches) close(); });
+})();

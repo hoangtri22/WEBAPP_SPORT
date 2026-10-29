@@ -120,6 +120,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         {
             Lines = lines, To = to, Methods = shop.PaymentMethods(), PayMethod = payMethod, Voucher = voucher,
             Subtotal = subtotal, Discount = discount, Ship = ShopStore.ShippingFor(subtotal), VoucherError = voucherError,
+            Vouchers = shop.EligibleVouchers(CustomerId, subtotal),
         };
     }
 }
@@ -135,6 +136,7 @@ public class CheckoutVm
     public decimal Discount { get; init; }
     public decimal Ship { get; init; }
     public string? VoucherError { get; init; }
+    public List<VoucherOption> Vouchers { get; init; } = [];
     public string? Error { get; set; }
     public decimal Total => Math.Max(0, Subtotal - Discount) + Ship;
 }

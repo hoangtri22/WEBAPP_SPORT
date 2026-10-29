@@ -603,17 +603,25 @@ public class ShopCommands
         if (code.Length > 0)
         {
             var km = One(c, """
-                SELECT k.ma_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
+                SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
                 FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
                 WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
                 """, new { code }, tx) ?? throw new UserError("Mã voucher không hợp lệ hoặc đã hết hạn.");
             var member = One(c, "SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx);
             string tier = member == null ? "thuong" : MemberTier.Effective(S(member, "hang_thanh_vien"), decimal.Parse(Dec(member, "tong_chi_tieu"), CultureInfo.InvariantCulture));
-            if (S(km, "hang_ap_dung") is { Length: > 0 } need && need != tier) throw new UserError($"Voucher chỉ áp dụng cho khách hạng {need}.");
+            string needTier = S(km, "hang_ap_dung");
+            if (needTier.Length > 0 && needTier != tier) throw new UserError($"Voucher chỉ áp dụng cho khách hạng {needTier}.");
+            // Mã dành cho khách mới chỉ dùng được ở lần mua đầu tiên (chưa có đơn nào, không tính đơn đã hủy)
+            bool newCustomerOnly = Catalog.IsNewCustomerPromo(S(km, "ten_ctkm"));
+            if (newCustomerOnly && c.ExecuteScalar<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customer AND trang_thai_don_hang <> 'da_huy'", new { customer }, tx) > 0)
+                throw new UserError("Voucher dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
             if (S(km, "so_luong_gioi_han") is { Length: > 0 } lim && int.Parse(S(km, "so_luot_da_dung")) >= int.Parse(lim)) throw new UserError("Voucher đã hết lượt sử dụng.");
             int ctId = int.Parse(S(km, "ma_ctkm"));
-            if (S(km, "gioi_han_khach_hang") is { Length: > 0 } per
-                && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customer", new { ctId, customer }, tx) >= int.Parse(per))
+            // Mã khách mới và mã theo hạng thành viên: mỗi khách chỉ dùng 1 lần nếu chương trình chưa đặt giới hạn riêng
+            string perText = S(km, "gioi_han_khach_hang");
+            if (perText.Length == 0 && (newCustomerOnly || needTier.Length > 0)) perText = "1";
+            if (perText.Length > 0 && int.TryParse(perText, out int per)
+                && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customer", new { ctId, customer }, tx) >= per)
                 throw new UserError("Khách đã dùng hết số lần cho phép của voucher này.");
             discount = Math.Round(subtotal * decimal.Parse(Dec(km, "phan_tram_giam"), CultureInfo.InvariantCulture) / 100, 0);
             if (S(km, "gia_tri_giam_toi_da") is { Length: > 0 }) discount = Math.Min(discount, decimal.Parse(Dec(km, "gia_tri_giam_toi_da"), CultureInfo.InvariantCulture));
@@ -668,6 +676,7 @@ public class ShopCommands
         {
             if (reason.Length == 0) throw new UserError("Vui lòng nhập lý do hủy.");
             c.Execute("UPDATE BIEN_THE_SP bt JOIN CHI_TIET_DON_HANG ct ON ct.ma_bien_the = bt.ma_bien_the SET bt.so_luong_ton = bt.so_luong_ton + ct.so_luong WHERE ct.ma_don_hang = @id", new { id }, tx);
+            RefundVoucher(c, tx, id);
             msg = "Đã hủy đơn hàng và hoàn lại tồn kho.";
             decimal refunded = RefundInvoice(c, tx, id);
             if (refunded == 0 && oldPay == "da_thanh_toan") refunded = c.ExecuteScalar<decimal>("SELECT tong_thanh_toan FROM DON_HANG WHERE ma_don_hang=@id", new { id }, tx);
@@ -691,6 +700,16 @@ public class ShopCommands
         if (status == "da_giao" && pay == "da_thanh_toan" && c.ExecuteScalar<int>("SELECT COUNT(*) FROM HOA_DON WHERE ma_don_hang=@id", new { id }, tx) == 0)
             msg = "Đơn đã giao: lập hóa đơn " + CreateInvoice(c, tx, id) + ", cộng doanh thu và điểm tích lũy cho khách.";
         return msg;
+    }
+
+    // Đơn bị hủy: hoàn lại voucher đã áp dụng (xóa lượt dùng của đơn, trả lại lượt dùng chung của chương trình) để khách dùng lại ở lần mua sau.
+    static void RefundVoucher(MySqlConnection c, MySqlTransaction tx, int order)
+    {
+        c.Execute("""
+            UPDATE CTKM ct JOIN (SELECT ma_ctkm, COUNT(*) AS n FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_don_hang = @order GROUP BY ma_ctkm) l ON l.ma_ctkm = ct.ma_ctkm
+            SET ct.so_luot_da_dung = GREATEST(ct.so_luot_da_dung - l.n, 0)
+            """, new { order }, tx);
+        c.Execute("DELETE FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_don_hang = @order", new { order }, tx);
     }
 
     // Hủy hóa đơn của đơn bị hủy: xóa HOA_DON, CHI_TIET_HOA_DON và trừ lại tổng chi tiêu, điểm tích lũy, hạng thành viên trong KHACH_HANG.

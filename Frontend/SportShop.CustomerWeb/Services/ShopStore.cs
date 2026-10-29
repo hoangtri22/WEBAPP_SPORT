@@ -92,6 +92,23 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
+    // Các voucher khách này dùng được cho đơn hiện tại: mỗi mã được kiểm tra bằng ApplyVoucher() nên đúng hạng thành viên, đúng lượt mua (mã khách mới), chưa dùng hết lượt. Sắp theo số tiền giảm nhiều nhất.
+    public List<VoucherOption> EligibleVouchers(int customerId, decimal subtotal)
+    {
+        using var c = Open();
+        var options = new List<VoucherOption>();
+        foreach (var p in Promos())
+        {
+            try
+            {
+                var (_, discount) = ApplyVoucher(c, null, p.Code, customerId, subtotal);
+                options.Add(new VoucherOption(p.Code, p.Name, p.Percent, p.MaxDiscount, p.Tier, p.End, discount));
+            }
+            catch (OrderError) { }
+        }
+        return options.OrderByDescending(o => o.Discount).ThenBy(o => o.Code).ToList();
+    }
+
 
     static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
 
@@ -186,17 +203,24 @@ public class ShopStore(IConfiguration config, CartStore carts)
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
         var km = c.Query("""
-            SELECT k.ma_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
+            SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
             FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
             WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
             """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
         var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
         string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
-        if (NS(km, "hang_ap_dung") is { Length: > 0 } need && need != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {need}.");
+        string? needTier = NS(km, "hang_ap_dung");
+        if (needTier is { Length: > 0 } && needTier != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {needTier}.");
+        // Mã dành cho khách mới chỉ dùng được ở lần mua đầu tiên (chưa có đơn nào, không tính đơn đã hủy)
+        bool newCustomerOnly = Catalog.IsNewCustomerPromo(S(km, "ten_ctkm"));
+        if (newCustomerOnly && c.ExecuteScalar<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customerId AND trang_thai_don_hang <> 'da_huy'", new { customerId }, tx) > 0)
+            throw new OrderError("Mã dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
         if (NI(km, "so_luong_gioi_han") is int lim && I(km, "so_luot_da_dung") >= lim) throw new OrderError("Mã giảm giá đã hết lượt sử dụng.");
         int ctId = I(km, "ma_ctkm");
-        if (NI(km, "gioi_han_khach_hang") is int per
+        // Mã khách mới và mã theo hạng thành viên: mỗi khách chỉ dùng 1 lần nếu chương trình chưa đặt giới hạn riêng
+        int? perLimit = NI(km, "gioi_han_khach_hang") ?? (newCustomerOnly || needTier is { Length: > 0 } ? 1 : null);
+        if (perLimit is int per
             && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customerId", new { ctId, customerId }, tx) >= per)
             throw new OrderError("Bạn đã dùng hết số lần cho phép của mã này.");
         decimal discount = Math.Round(subtotal * D(km, "phan_tram_giam") / 100, 0);
@@ -337,8 +361,19 @@ public class ShopStore(IConfiguration config, CartStore carts)
         c.Execute("UPDATE BIEN_THE_SP bt JOIN CHI_TIET_DON_HANG ct ON ct.ma_bien_the = bt.ma_bien_the SET bt.so_luong_ton = bt.so_luong_ton + ct.so_luong WHERE ct.ma_don_hang = @orderId", new { orderId }, tx);
         c.Execute("UPDATE DON_HANG SET trang_thai_don_hang='da_huy', ly_do_huy='Khách hàng tự hủy đơn' WHERE ma_don_hang=@orderId", new { orderId }, tx);
         c.Execute("UPDATE VAN_CHUYEN SET trang_thai='that_bai' WHERE ma_don_hang=@orderId", new { orderId }, tx);
+        RefundVoucher(c, tx, orderId);
         tx.Commit();
         return null;
+    }
+
+    // Đơn bị hủy: hoàn lại voucher đã áp dụng (xóa lượt dùng của đơn, trả lại lượt dùng chung của chương trình) để khách dùng lại ở lần mua sau.
+    static void RefundVoucher(MySqlConnection c, MySqlTransaction tx, int orderId)
+    {
+        c.Execute("""
+            UPDATE CTKM ct JOIN (SELECT ma_ctkm, COUNT(*) AS n FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_don_hang = @orderId GROUP BY ma_ctkm) l ON l.ma_ctkm = ct.ma_ctkm
+            SET ct.so_luot_da_dung = GREATEST(ct.so_luot_da_dung - l.n, 0)
+            """, new { orderId }, tx);
+        c.Execute("DELETE FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_don_hang = @orderId", new { orderId }, tx);
     }
 
 

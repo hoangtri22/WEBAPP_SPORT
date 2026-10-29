@@ -227,7 +227,8 @@ public class CustomerStore(IConfiguration config)
             {
                 var (status, tone) = r.Status switch
                 {
-                    "da_tra_loi" => ("Đã trả lời", "success"),
+                    // Đã có câu trả lời của cửa hàng thì hiện "Đã trả lời" (giống trang quản trị), kể cả khi cột trang_thai còn ghi "đang xử lý"
+                    _ when r.Status == "da_tra_loi" || !string.IsNullOrEmpty(r.Reply) => ("Đã trả lời", "success"),
                     "dang_xu_ly" => ("Đang xử lý", "warning"),
                     _ => ("Mới", "info"),
                 };

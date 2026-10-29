@@ -141,3 +141,16 @@
 .pw-toggle::-webkit-details-marker { display: none; }
 .pw-form { margin-top: 18px; }
 @media (max-width: 900px) { .pw-card { grid-column: auto; } }
+
+/* Chọn mã giảm giá ở trang thanh toán: mỗi mã một dòng, hiện số tiền giảm theo đơn hiện tại */
+.voucher-list { display: grid; gap: 10px; margin-top: 14px; }
+.voucher-opt { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+.voucher-opt:hover { border-color: #b7d8d3; }
+.voucher-opt:has(input:checked) { border-color: var(--teal); background: #edf8f6; }
+.voucher-opt input { flex: none; width: 18px; height: 18px; accent-color: var(--teal); }
+.vo-code { flex: none; padding: 7px 14px; border: 1.5px dashed var(--teal); border-radius: 10px; background: #fff; color: var(--teal); font-weight: 800; letter-spacing: .5px; }
+.vo-body { flex: 1; min-width: 0; }
+.vo-body b { display: block; font-size: 15.5px; }
+.vo-body small { display: block; margin-top: 3px; color: #64748b; }
+.vo-save { flex: none; color: #ea7a1a; font-weight: 800; font-size: 16px; white-space: nowrap; }
+@media (max-width: 640px) { .voucher-opt { flex-wrap: wrap; } .vo-body { flex-basis: 60%; } }

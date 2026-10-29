@@ -28,12 +28,30 @@
             </div>
             <div class="card pad">
                 <h3>Mã giảm giá</h3>
-                <div class="voucher-row">
-                    <input name="voucher" value="@Model.Voucher" placeholder="Nhập mã, ví dụ WELCOME10" />
-                    <button type="submit" name="apply" value="1" class="btn btn-secondary">Áp dụng</button>
+                <p class="muted">Chọn một mã phù hợp với tài khoản của bạn, số tiền giảm được tính theo đơn hiện tại.</p>
+                @{ bool noneChosen = !Model.Vouchers.Any(v => v.Code == Model.Voucher); }
+                <div class="voucher-list">
+                    <label class="voucher-opt">
+                        <input type="radio" name="voucher" value="" checked="@noneChosen" />
+                        <span class="vo-body"><b>Không dùng mã</b></span>
+                    </label>
+                    @foreach (var v in Model.Vouchers)
+                    {
+                        <label class="voucher-opt">
+                            <input type="radio" name="voucher" value="@v.Code" checked="@(v.Code == Model.Voucher)" />
+                            <span class="vo-code">@v.Code</span>
+                            <span class="vo-body">
+                                <b>@v.Name</b>
+                                <small>Giảm @(v.Percent.ToString("0.##"))%@(v.MaxDiscount is decimal max ? ", tối đa " + Fmt.Money(max) : "") · HSD @v.End.ToString("dd/MM/yyyy")@(string.IsNullOrEmpty(v.Tier) ? "" : " · Hạng " + MemberTier.Label(v.Tier))</small>
+                            </span>
+                            <span class="vo-save">-@Fmt.Money(v.Discount)</span>
+                        </label>
+                    }
                 </div>
+                @if (Model.Vouchers.Count == 0) { <small class="muted">Hiện chưa có mã giảm giá phù hợp với tài khoản và đơn hàng này.</small> }
                 @if (!string.IsNullOrEmpty(Model.VoucherError)) { <small class="field-error">@Model.VoucherError</small> }
                 else if (Model.Discount > 0) { <small class="field-ok">Đã áp dụng mã, giảm @Fmt.Money(Model.Discount).</small> }
+                <button type="submit" name="apply" value="1" id="applyVoucher" hidden></button>
                 <small class="muted"><a asp-controller="Shop" asp-action="Promotions">Xem các mã đang có</a></small>
             </div>
         </div>
@@ -52,3 +70,12 @@
         </aside>
     </form>
 </section>
+
+@section Scripts {
+    <script>
+        // Chọn mã giảm giá thì tính lại số tiền giảm ngay (gửi lại biểu mẫu với nút "apply", chưa đặt hàng)
+        document.querySelectorAll('.voucher-opt input').forEach(function (r) {
+            r.addEventListener('change', function () { r.form.requestSubmit(document.getElementById('applyVoucher')); });
+        });
+    </script>
+}

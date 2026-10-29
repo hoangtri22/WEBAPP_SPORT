@@ -401,3 +401,29 @@ body.bare { align-items: center; justify-content: center; min-height: 100vh; bac
 .item-list li { padding: 1px 0; }
 .item-list li + li { border-top: 1px dashed #edf1f4; }
 .item-list .more { color: var(--teal); font-weight: 600; cursor: help; }
+
+/* Xem nhanh đơn hàng / hóa đơn: khung chi tiết bên phải, nội dung trang chừa chỗ để không che các nút thao tác */
+.peek { position: fixed; top: 76px; right: 0; bottom: 0; z-index: 15; width: 380px; overflow-y: auto; padding: 20px 20px 28px; background: var(--bg); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(16, 24, 40, .06); }
+.peek[hidden] { display: none; }
+body.peek-open .content { padding-right: 412px; }
+body.peek-open .tbl th, body.peek-open .tbl td { padding-left: 8px; padding-right: 8px; }
+body.peek-open .tbl th { letter-spacing: .3px; }
+/* Cột "Thao tác" (nút con mắt) luôn dính mép phải bảng để bấm được dù bảng phải cuộn ngang */
+body.peek-open .tbl th.col-act, body.peek-open .tbl td.col-act { position: sticky; right: 0; background: #fff; box-shadow: -8px 0 8px -8px rgba(16, 24, 40, .18); }
+body.peek-open .tbl th.col-act { background: #fafbfc; }
+body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); }
+.tbl tbody tr.peek-on td { background: var(--teal-soft); }
+.peek-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.peek-links { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.peek-bar .btn-outline { height: 38px; padding: 0 12px; gap: 6px; }
+.peek-close { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 22px; line-height: 1; color: var(--muted); }
+.peek-close:hover { background: var(--bg); color: var(--ink); }
+.peek .page-head { margin-bottom: 16px; }
+.peek .page-title { font-size: 24px; }
+.peek .grid2 { grid-template-columns: 1fr; gap: 0; }
+.peek .kv { grid-template-columns: 110px 1fr; }
+@media print { .peek { display: none !important; } body.peek-open .content { padding-right: 32px; } }
+
+/* Ô nhập lý do hủy đơn (hiện khi chọn trạng thái "Đã hủy" ở phần cập nhật trạng thái) */
+.quick-reason { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; }
+.quick-reason[hidden] { display: none; }

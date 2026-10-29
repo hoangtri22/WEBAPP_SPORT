@@ -28,15 +28,14 @@ public class OrdersController(ShopData db) : Controller
     {
         ViewBag.Menu = "invoices";
         var rows = db.Orders.Where(o => o.Invoiced).OrderByDescending(o => o.Id).Select(o => new Row(
-            [o.Code, $"DH{o.Id:D5}", db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), o.PayMethod, Fmt.Money(o.Total)],
+            [o.Code, $"DH{o.Id:D5}", db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total)],
             Url.Action(nameof(Detail), new { id = o.Code, from = "invoices" }), o.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Quản lý hóa đơn",
             Subtitle = "Tra cứu và in hóa đơn bán hàng",
-            Note = "Hóa đơn chỉ được lập cho đơn đã thanh toán; mỗi đơn có tối đa một hóa đơn. Hóa đơn đã xuất không được sửa để giữ nguyên số liệu đối soát; doanh thu và lợi nhuận chỉ tính từ các hóa đơn này.",
-            Sections = [new() { Columns = ["Số hóa đơn", "Mã đơn", "Khách hàng", "Ngày đặt", "Thanh toán", "Tổng thanh toán"], Rows = rows, ShowActions = true, Entity = "order", CanEdit = false, CanDelete = false }]
+            Sections = [new() { Columns = ["Số hóa đơn", "Mã đơn", "Khách hàng", "Ngày đặt", "Tổng thanh toán"], Rows = rows, Entity = "order" }]
         });
     }
 

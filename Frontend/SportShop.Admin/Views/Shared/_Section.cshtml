@@ -37,17 +37,17 @@
             <thead>
                 <tr>
                     @foreach (var c in Model.Columns) { <th>@c</th> }
-                    @if (Model.ShowActions) { <th>Thao tác</th> }
+                    @if (Model.ShowActions) { <th class="col-act">Thao tác</th> }
                 </tr>
             </thead>
             <tbody>
                 @foreach (var r in Model.Rows)
                 {
-                    <tr>
+                    <tr data-peek="@(Model.Entity == "order" ? r.Url : null)">
                         @foreach (var cell in r.Cells) { <td>@Fmt.Cell(cell)</td> }
                         @if (Model.ShowActions)
                         {
-                            <td>
+                            <td class="col-act">
                                 <div class="actions">
                                     @if (r.Url != null)
                                     {

@@ -1049,6 +1049,7 @@ public class ShopCommands
                 }
             case "lock_account":
                 {
+                    ManagerOnly(me);
                     var acc = One(c, "SELECT ten_dang_nhap, trang_thai FROM TAI_KHOAN WHERE ma_tai_khoan=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy tài khoản.");
                     if (S(acc, "ten_dang_nhap") == me.Username) throw new UserError("Không thể khóa tài khoản đang đăng nhập.");
                     if (S(acc, "trang_thai") == "da_xoa") throw new UserError("Tài khoản đã xóa, hãy khôi phục trước.");
@@ -1058,6 +1059,7 @@ public class ShopCommands
                 }
             case "restore_account":
                 {
+                    ManagerOnly(me);
                     var u = c.ExecuteScalar<string>("SELECT ten_dang_nhap FROM TAI_KHOAN WHERE ma_tai_khoan=@id AND trang_thai='da_xoa'", new { id }, tx)
                         ?? throw new UserError("Không tìm thấy tài khoản đã xóa.");
                     c.Execute("UPDATE TAI_KHOAN SET trang_thai='hoat_dong' WHERE ma_tai_khoan=@id", new { id }, tx);
@@ -1066,6 +1068,7 @@ public class ShopCommands
                 }
             case "restore_employee":
                 {
+                    ManagerOnly(me);
                     var name = c.ExecuteScalar<string>("SELECT CONCAT(ho_lot, ' ', ten) FROM NHAN_VIEN WHERE ma_nhan_vien=@id AND trang_thai='nghi_viec'", new { id }, tx)
                         ?? throw new UserError("Không tìm thấy nhân viên đã nghỉ việc.");
                     c.Execute("UPDATE NHAN_VIEN SET trang_thai='dang_lam' WHERE ma_nhan_vien=@id", new { id }, tx);
@@ -1150,6 +1153,12 @@ public class ShopCommands
         3819 => "Có giá trị nhập không hợp lệ (vi phạm ràng buộc dữ liệu).",
         _ => "Lỗi cơ sở dữ liệu: " + e.Message,
     };
+
+    // Chặn thao tác trên tài khoản / nhân viên của người không phải Quản lý (cùng quy tắc AdminOnly trong CrudController.Allowed()).
+    static void ManagerOnly(Ctx me)
+    {
+        if (!me.IsManager) throw new UserError("Chỉ tài khoản Quản lý mới được thao tác với mục này.");
+    }
 
     static void CheckEmail(string email)
     {

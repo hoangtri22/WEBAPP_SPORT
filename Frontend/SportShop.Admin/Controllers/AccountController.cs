@@ -60,6 +60,7 @@ public class AccountController(ShopData db) : Controller
     {
         ViewBag.Menu = "account";
         var me = User.FindFirst("username")?.Value;
+        bool manager = User.IsInRole("Quản lý");
         var rows = db.Accounts.Where(a => a.Status != "da_xoa").Select(a => new Row([a.Username, a.Role, a.Email, a.Phone,
             a.Status == "bi_khoa" ? "[x]Đã khóa" : "[g]Đang hoạt động"], Url.Action(nameof(Detail), new { id = a.Id }), a.Id,
             a.Username == me ? null : a.Status == "bi_khoa")).ToList();
@@ -72,8 +73,8 @@ public class AccountController(ShopData db) : Controller
             Subtitle = "Quản lý quyền truy cập hệ thống",
             Sections =
             [
-                new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account", LockAction = "lock_account" },
-                new() { Heading = "Tài khoản đã xóa", Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "account", CanEdit = false, CanDelete = false, RestoreAction = "restore_account" },
+                new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account", LockAction = manager ? "lock_account" : null },
+                new() { Heading = "Tài khoản đã xóa", Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "account", CanEdit = false, CanDelete = false, RestoreAction = manager ? "restore_account" : null },
             ]
         });
     }

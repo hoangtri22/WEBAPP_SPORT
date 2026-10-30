@@ -25,7 +25,7 @@ public class EmployeesController(ShopData db) : Controller
             Sections =
             [
                 new() { Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "employee" },
-                new() { Heading = "Nhân viên đã nghỉ việc", Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = left, ShowActions = true, Toolbar = false, Entity = "employee", CanEdit = false, CanDelete = false, RestoreAction = "restore_employee" },
+                new() { Heading = "Nhân viên đã nghỉ việc", Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = left, ShowActions = true, Toolbar = false, Entity = "employee", CanEdit = false, CanDelete = false, RestoreAction = User.IsInRole("Quản lý") ? "restore_employee" : null },
             ]
         });
     }

@@ -37,10 +37,12 @@ public class ShopCommands
     readonly string _cs;
     readonly string _imagesDir;
     readonly string _uploadsDir;
+    readonly DataCache _cache;
 
-    public ShopCommands(IConfiguration config, IWebHostEnvironment env)
+    public ShopCommands(IConfiguration config, IWebHostEnvironment env, DataCache cache)
     {
         _cs = config.GetConnectionString("Default") ?? "";
+        _cache = cache;
         _imagesDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Images"] ?? "../../Backend/Images"));
         _uploadsDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Uploads"] ?? "../Uploads"));
     }
@@ -75,7 +77,7 @@ public class ShopCommands
                        CONCAT(kh.ho_lot, ' ', kh.ten, '|', IFNULL(kh.so_dien_thoai, ''), '|',
                               IFNULL((SELECT d.dia_chi_chi_tiet FROM SO_DIA_CHI d WHERE d.ma_khach_hang = kh.ma_khach_hang
                                       ORDER BY d.la_mac_dinh DESC, d.ma_dia_chi LIMIT 1), '')) d
-                FROM KHACH_HANG kh ORDER BY kh.ten, kh.ho_lot
+                FROM KHACH_HANG kh WHERE kh.da_xoa = 0 ORDER BY kh.ten, kh.ho_lot
                 """, "v", "l", "d"),
             "bienthe" => Q($"""
                 SELECT bt.ma_bien_the v,
@@ -194,6 +196,7 @@ public class ShopCommands
         return c.Query<int>("SELECT ma_so_thich FROM KHACH_HANG_SO_THICH WHERE ma_khach_hang=@customerId", new { customerId }).Select(i => i.ToString()).ToHashSet();
     }
 
+    // Dòng hàng của một phiếu nhập (CHI_TIET_PHIEU_NHAP_HANG + BIEN_THE_SP + SAN_PHAM) cho trang Views/Imports/Detail.cshtml và biểu mẫu xem phiếu nhập (_Form.cshtml).
     public List<(string Name, int Qty, decimal Price, decimal Amount)> ImportLines(int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -206,6 +209,7 @@ public class ShopCommands
             .Select(r => (S(r, "ten"), int.Parse(S(r, "so_luong")), decimal.Parse(Dec(r, "don_gia"), CultureInfo.InvariantCulture), decimal.Parse(Dec(r, "thanh_tien"), CultureInfo.InvariantCulture))).ToList();
     }
 
+    // Câu hỏi (CAU_HOI_KHAO_SAT) và lựa chọn (LUA_CHON_CAU_HOI) của một khảo sát để điền sẵn biểu mẫu sửa khảo sát (_Form.cshtml).
     public List<(string Text, string Type, bool Required, string Options)> SurveyQuestions(int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -385,7 +389,7 @@ public class ShopCommands
             "gioi_tinh" => "kh.gioi_tinh = @gender",
             _ => "EXISTS (SELECT 1 FROM KHACH_HANG_SO_THICH s WHERE s.ma_khach_hang = kh.ma_khach_hang AND s.ma_so_thich = @interest)",
         };
-        int n = c.Execute($"INSERT INTO KHACH_HANG_NHOM_KH (ma_khach_hang, ma_nhom_kh) SELECT kh.ma_khach_hang, @id FROM KHACH_HANG kh WHERE {where}", new { id, from, to, gender, interest }, tx);
+        int n = c.Execute($"INSERT INTO KHACH_HANG_NHOM_KH (ma_khach_hang, ma_nhom_kh) SELECT kh.ma_khach_hang, @id FROM KHACH_HANG kh WHERE kh.da_xoa = 0 AND {where}", new { id, from, to, gender, interest }, tx);
         return $"Đã lưu nhóm \"{name}\" ({n} khách thuộc nhóm).";
     }
 
@@ -564,7 +568,7 @@ public class ShopCommands
         return $"Đã lập phiếu nhập PN{slip:D3}: {lines.Count} mặt hàng, tổng {total:N0}đ. Tồn kho và giá vốn đã được cập nhật.";
     }
 
-    // Tạo đơn tại quầy: tính tiền theo giá BIEN_THE_SP, áp voucher, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
+    // Tạo đơn tại quầy: tính tiền theo giá BIEN_THE_SP, áp voucher (KM_THEO_VOUCHER + CTKM; mã khách mới chỉ dùng ở lần mua đầu, mã khách mới / theo hạng mặc định 1 lần mỗi khách), ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string CreateOrder(MySqlConnection c, MySqlTransaction tx, Form f, Ctx me)
     {
         int customer = f.I("ma_khach_hang");
@@ -611,13 +615,11 @@ public class ShopCommands
             string tier = member == null ? "thuong" : MemberTier.Effective(S(member, "hang_thanh_vien"), decimal.Parse(Dec(member, "tong_chi_tieu"), CultureInfo.InvariantCulture));
             string needTier = S(km, "hang_ap_dung");
             if (needTier.Length > 0 && needTier != tier) throw new UserError($"Voucher chỉ áp dụng cho khách hạng {needTier}.");
-            // Mã dành cho khách mới chỉ dùng được ở lần mua đầu tiên (chưa có đơn nào, không tính đơn đã hủy)
             bool newCustomerOnly = Catalog.IsNewCustomerPromo(S(km, "ten_ctkm"));
             if (newCustomerOnly && c.ExecuteScalar<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customer AND trang_thai_don_hang <> 'da_huy'", new { customer }, tx) > 0)
                 throw new UserError("Voucher dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
             if (S(km, "so_luong_gioi_han") is { Length: > 0 } lim && int.Parse(S(km, "so_luot_da_dung")) >= int.Parse(lim)) throw new UserError("Voucher đã hết lượt sử dụng.");
             int ctId = int.Parse(S(km, "ma_ctkm"));
-            // Mã khách mới và mã theo hạng thành viên: mỗi khách chỉ dùng 1 lần nếu chương trình chưa đặt giới hạn riêng
             string perText = S(km, "gioi_han_khach_hang");
             if (perText.Length == 0 && (newCustomerOnly || needTier.Length > 0)) perText = "1";
             if (perText.Length > 0 && int.TryParse(perText, out int per)
@@ -749,6 +751,7 @@ public class ShopCommands
                 conn.Execute("UPDATE DON_HANG SET trang_thai_thanh_toan='chua_thanh_toan' WHERE ma_don_hang=@o", new { o }, tx);
             }
             tx.Commit();
+            _cache.Clear();
             return orders.Count;
         }
         catch { return 0; }
@@ -908,14 +911,14 @@ public class ShopCommands
             INSERT IGNORE INTO KHAO_SAT_KHACH_HANG (ma_khao_sat, ma_khach_hang, ngay_gui, trang_thai)
             SELECT @id, kh.ma_khach_hang, NOW(), 'chua_lam' FROM KHACH_HANG kh
             JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan AND tk.trang_thai = 'hoat_dong'
-            WHERE @group IS NULL OR kh.ma_khach_hang IN (SELECT x.ma_khach_hang FROM KHACH_HANG_NHOM_KH x WHERE x.ma_nhom_kh = @group)
+            WHERE kh.da_xoa = 0 AND (@group IS NULL OR kh.ma_khach_hang IN (SELECT x.ma_khach_hang FROM KHACH_HANG_NHOM_KH x WHERE x.ma_nhom_kh = @group))
             """, new { id, group }, tx);
         c.Execute("UPDATE KHAO_SAT SET trang_thai='da_gui' WHERE ma_khao_sat=@id AND trang_thai='nhap'", new { id }, tx);
         return n == 0 ? "Không có khách mới để gửi (các khách đủ điều kiện đều đã nhận khảo sát này)." : $"Đã gửi khảo sát đến {n} khách hàng.";
     }
 
 
-    // Xóa theo entity (gọi từ CrudController.Delete): dữ liệu đã phát sinh lịch sử thì chuyển trạng thái (đã xóa, nghỉ việc, ngừng hợp tác, ngừng...) hoặc báo lỗi thay vì xóa hẳn.
+    // Xóa theo entity (gọi từ CrudController.Delete): tài khoản, khách hàng (KHACH_HANG.da_xoa), nhân viên, nhà cung cấp, khuyến mãi chỉ chuyển trạng thái (xóa mềm) để khôi phục được qua Act("restore_..."); các mục khác xóa hẳn hoặc báo lỗi nếu đã phát sinh lịch sử.
     public Result Delete(string entity, int id, Ctx me) => Run((c, tx) =>
     {
         switch (entity)
@@ -936,18 +939,10 @@ public class ShopCommands
             case "customer":
                 {
                     var acc = c.ExecuteScalar<int?>("SELECT ma_tai_khoan FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx);
-                    try
-                    {
-                        foreach (var t in new[] { "SO_DIA_CHI", "KHACH_HANG_SO_THICH", "KHACH_HANG_NHOM_KH", "LICH_SU_CHAM_SOC" })
-                            c.Execute($"DELETE FROM {t} WHERE ma_khach_hang=@id", new { id }, tx);
-                        c.Execute("DELETE FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx);
-                    }
-                    catch (MySqlException e) when (e.Number == 1451)
-                    {
-                        throw new UserError("Khách hàng đã có đơn hàng, phản hồi hoặc khảo sát nên không thể xóa. Hãy dùng \"Khóa tài khoản\" để ngừng hoạt động.");
-                    }
+                    var name = c.ExecuteScalar<string>("SELECT CONCAT(ho_lot, ' ', ten) FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy khách hàng.");
+                    c.Execute("UPDATE KHACH_HANG SET da_xoa=1 WHERE ma_khach_hang=@id", new { id }, tx);
                     if (acc != null) c.Execute("UPDATE TAI_KHOAN SET trang_thai='da_xoa' WHERE ma_tai_khoan=@acc", new { acc }, tx);
-                    return "Đã xóa khách hàng.";
+                    return $"Khách hàng {name} đã xóa (đơn hàng, phản hồi, địa chỉ vẫn được giữ để khôi phục).";
                 }
             case "group":
                 {
@@ -998,23 +993,16 @@ public class ShopCommands
                 catch (MySqlException e) when (e.Number == 1451) { throw new UserError("Biến thể đã phát sinh đơn hàng hoặc phiếu nhập nên không thể xóa. Hãy chuyển sang \"Đang ẩn\"."); }
                 return "Đã xóa biến thể.";
             case "supplier":
-                try { c.Execute("DELETE FROM NHA_CUNG_CAP WHERE ma_ncc=@id", new { id }, tx); return "Đã xóa nhà cung cấp."; }
-                catch (MySqlException e) when (e.Number == 1451)
                 {
+                    var name = c.ExecuteScalar<string>("SELECT ten_ncc FROM NHA_CUNG_CAP WHERE ma_ncc=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy nhà cung cấp.");
                     c.Execute("UPDATE NHA_CUNG_CAP SET trang_thai='ngung_hop_tac' WHERE ma_ncc=@id", new { id }, tx);
-                    return "Nhà cung cấp đã có phiếu nhập nên được chuyển sang \"Ngừng hợp tác\" thay vì xóa.";
+                    return $"Nhà cung cấp \"{name}\" đã chuyển sang \"Ngừng hợp tác\" (lịch sử nhập hàng vẫn được giữ).";
                 }
             case "promotion":
                 {
-                    bool used = c.ExecuteScalar<int>("SELECT (SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@id) + (SELECT COUNT(*) FROM DON_HANG WHERE ma_ctkm=@id) + (SELECT COUNT(*) FROM CHIEN_DICH_THONG_BAO WHERE ma_ctkm=@id)", new { id }, tx) > 0;
-                    if (used)
-                    {
-                        c.Execute("UPDATE CTKM SET trang_thai='ngung' WHERE ma_ctkm=@id", new { id }, tx);
-                        return "Chương trình đã được sử dụng nên được chuyển sang \"Ngừng\" thay vì xóa.";
-                    }
-                    foreach (var t in new[] { "KM_THEO_SP", "KM_THEO_DH", "KM_THEO_VOUCHER" }) c.Execute($"DELETE FROM {t} WHERE ma_ctkm=@id", new { id }, tx);
-                    c.Execute("DELETE FROM CTKM WHERE ma_ctkm=@id", new { id }, tx);
-                    return "Đã xóa chương trình khuyến mãi.";
+                    var name = c.ExecuteScalar<string>("SELECT ten_ctkm FROM CTKM WHERE ma_ctkm=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy chương trình khuyến mãi.");
+                    c.Execute("UPDATE CTKM SET trang_thai='ngung' WHERE ma_ctkm=@id", new { id }, tx);
+                    return $"Chương trình \"{name}\" đã chuyển sang \"Ngừng\" (khách không dùng được nữa, lịch sử áp dụng vẫn được giữ).";
                 }
             case "campaign":
                 c.Execute("DELETE FROM CHIEN_DICH_THONG_BAO WHERE ma_chien_dich=@id", new { id }, tx);
@@ -1038,7 +1026,7 @@ public class ShopCommands
     });
 
 
-    // Thao tác riêng (gọi từ CrudController.Act): khóa / mở khóa tài khoản khách, trả lời phản hồi (TRA_LOI_PHAN_HOI), ẩn / hiện phản hồi, đóng khảo sát.
+    // Thao tác riêng (gọi từ CrudController.Act): khóa / mở khóa tài khoản (TAI_KHOAN.trang_thai), khôi phục mục đã xóa (tài khoản, khách hàng, nhân viên, nhà cung cấp, khuyến mãi), trả lời phản hồi (TRA_LOI_PHAN_HOI), ẩn / hiện phản hồi, đóng khảo sát.
     public Result Act(string action, int id, Form f, Ctx me) => Run((c, tx) =>
     {
         switch (action)
@@ -1050,6 +1038,52 @@ public class ShopCommands
                     string now = S(acc, "trang_thai") == "hoat_dong" ? "bi_khoa" : "hoat_dong";
                     c.Execute("UPDATE TAI_KHOAN SET trang_thai=@now WHERE ma_tai_khoan=@a", new { now, a = int.Parse(S(acc, "ma_tai_khoan")) }, tx);
                     return now == "bi_khoa" ? "Đã khóa tài khoản khách hàng (không đăng nhập được, dữ liệu vẫn được giữ)." : "Đã mở khóa tài khoản khách hàng.";
+                }
+            case "restore_customer":
+                {
+                    var name = c.ExecuteScalar<string>("SELECT CONCAT(ho_lot, ' ', ten) FROM KHACH_HANG WHERE ma_khach_hang=@id AND da_xoa=1", new { id }, tx)
+                        ?? throw new UserError("Không tìm thấy khách hàng đã xóa.");
+                    c.Execute("UPDATE KHACH_HANG SET da_xoa=0 WHERE ma_khach_hang=@id", new { id }, tx);
+                    c.Execute("UPDATE TAI_KHOAN tk JOIN KHACH_HANG kh ON kh.ma_tai_khoan = tk.ma_tai_khoan SET tk.trang_thai='hoat_dong' WHERE kh.ma_khach_hang=@id AND tk.trang_thai='da_xoa'", new { id }, tx);
+                    return $"Khách hàng {name} đã khôi phục.";
+                }
+            case "lock_account":
+                {
+                    var acc = One(c, "SELECT ten_dang_nhap, trang_thai FROM TAI_KHOAN WHERE ma_tai_khoan=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy tài khoản.");
+                    if (S(acc, "ten_dang_nhap") == me.Username) throw new UserError("Không thể khóa tài khoản đang đăng nhập.");
+                    if (S(acc, "trang_thai") == "da_xoa") throw new UserError("Tài khoản đã xóa, hãy khôi phục trước.");
+                    string now = S(acc, "trang_thai") == "hoat_dong" ? "bi_khoa" : "hoat_dong";
+                    c.Execute("UPDATE TAI_KHOAN SET trang_thai=@now WHERE ma_tai_khoan=@id", new { now, id }, tx);
+                    return (now == "bi_khoa" ? "Đã khóa tài khoản " : "Đã mở khóa tài khoản ") + S(acc, "ten_dang_nhap") + ".";
+                }
+            case "restore_account":
+                {
+                    var u = c.ExecuteScalar<string>("SELECT ten_dang_nhap FROM TAI_KHOAN WHERE ma_tai_khoan=@id AND trang_thai='da_xoa'", new { id }, tx)
+                        ?? throw new UserError("Không tìm thấy tài khoản đã xóa.");
+                    c.Execute("UPDATE TAI_KHOAN SET trang_thai='hoat_dong' WHERE ma_tai_khoan=@id", new { id }, tx);
+                    c.Execute("UPDATE KHACH_HANG SET da_xoa=0 WHERE ma_tai_khoan=@id", new { id }, tx);
+                    return $"Đã khôi phục tài khoản {u}.";
+                }
+            case "restore_employee":
+                {
+                    var name = c.ExecuteScalar<string>("SELECT CONCAT(ho_lot, ' ', ten) FROM NHAN_VIEN WHERE ma_nhan_vien=@id AND trang_thai='nghi_viec'", new { id }, tx)
+                        ?? throw new UserError("Không tìm thấy nhân viên đã nghỉ việc.");
+                    c.Execute("UPDATE NHAN_VIEN SET trang_thai='dang_lam' WHERE ma_nhan_vien=@id", new { id }, tx);
+                    return $"Nhân viên {name} đã quay lại làm việc.";
+                }
+            case "restore_supplier":
+                {
+                    var name = c.ExecuteScalar<string>("SELECT ten_ncc FROM NHA_CUNG_CAP WHERE ma_ncc=@id AND trang_thai='ngung_hop_tac'", new { id }, tx)
+                        ?? throw new UserError("Không tìm thấy nhà cung cấp đã ngừng hợp tác.");
+                    c.Execute("UPDATE NHA_CUNG_CAP SET trang_thai='hop_tac' WHERE ma_ncc=@id", new { id }, tx);
+                    return $"Nhà cung cấp \"{name}\" đã hợp tác trở lại.";
+                }
+            case "restore_promotion":
+                {
+                    var name = c.ExecuteScalar<string>("SELECT ten_ctkm FROM CTKM WHERE ma_ctkm=@id AND trang_thai='ngung'", new { id }, tx)
+                        ?? throw new UserError("Không tìm thấy chương trình đã ngừng.");
+                    c.Execute("UPDATE CTKM SET trang_thai='hoat_dong' WHERE ma_ctkm=@id", new { id }, tx);
+                    return $"Chương trình \"{name}\" đã hoạt động trở lại.";
                 }
             case "feedback_reply":
                 {
@@ -1085,7 +1119,7 @@ public class ShopCommands
             using var conn = new MySqlConnection(_cs);
             conn.Open();
             using var tx = conn.BeginTransaction();
-            try { var msg = work(conn, tx); tx.Commit(); return new Result(true, msg); }
+            try { var msg = work(conn, tx); tx.Commit(); _cache.Clear(); return new Result(true, msg); }
             catch { tx.Rollback(); throw; }
         }
         catch (UserError e) { return new Result(false, e.Message); }

@@ -225,13 +225,7 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId })
             .Select(r =>
             {
-                var (status, tone) = r.Status switch
-                {
-                    // Đã có câu trả lời của cửa hàng thì hiện "Đã trả lời" (giống trang quản trị), kể cả khi cột trang_thai còn ghi "đang xử lý"
-                    _ when r.Status == "da_tra_loi" || !string.IsNullOrEmpty(r.Reply) => ("Đã trả lời", "success"),
-                    "dang_xu_ly" => ("Đang xử lý", "warning"),
-                    _ => ("Mới", "info"),
-                };
+                var (status, tone) = r.Status == "da_tra_loi" || r.Reply != null ? ("Đã trả lời", "success") : ("Chưa trả lời", "warning");
                 return new FeedbackRow($"PH{r.Id:D4}", r.Product, r.Text, r.SentAt.ToString("dd/MM/yyyy"), status, tone, r.Reply);
             }).ToList();
     }

@@ -61,7 +61,6 @@ h1, h2, h3, p { margin: 0; }
 .shop-header > nav a, .shop-header > nav button { height: 100%; display: inline-flex; align-items: center; border: 0; background: transparent; color: #475569; font-size: 17px; font-weight: 600; position: relative; padding: 0; }
 .shop-header > nav a:hover, .shop-header > nav button:hover, .shop-header > nav a.active { color: var(--teal); }
 .shop-header > nav a.active::after { content: ""; height: 2px; background: var(--teal); position: absolute; bottom: 0; left: 0; right: 0; }
-.shop-header > nav .sale { color: var(--orange); }
 .shop-actions { display: flex; align-items: center; gap: 6px; }
 .shop-actions > button { width: 42px; height: 42px; border: 0; border-radius: 10px; background: transparent; color: #334155; display: grid; place-items: center; position: relative; }
 .shop-actions > button:hover { background: #f1f8f7; color: var(--teal); }
@@ -169,19 +168,19 @@ h1, h2, h3, p { margin: 0; }
 .color-swatches i:nth-child(3) { background: var(--orange); }
 .view-products { display: flex; margin: 26px auto 0; }
 
-.shop-campaign { min-height: 340px; margin: 80px 0 20px; border-radius: 20px; overflow: hidden; background: #0b5d57; color: #fff; display: grid; grid-template-columns: 1fr 190px 42%; position: relative; }
-.shop-campaign > div:first-child { padding: 48px; z-index: 2; }
+.shop-campaign { min-height: 280px; margin: 64px 0 20px; border-radius: 20px; overflow: hidden; background: #0b5d57; color: #fff; display: grid; grid-template-columns: 1fr 190px 42%; position: relative; }
+.shop-campaign > div:first-child { padding: 40px 44px; z-index: 2; align-self: center; }
 .shop-campaign > div:first-child > span { color: #9bd4ce; font-size: 12px; letter-spacing: .17em; font-weight: 800; }
-.shop-campaign h2 { font-size: 38px; line-height: 1.14; letter-spacing: -.05em; margin: 11px 0 15px; }
+.shop-campaign h2 { font-size: 32px; line-height: 1.14; letter-spacing: -.05em; margin: 11px 0 15px; }
 .shop-campaign p { color: #b7d8d4; font-size: 14px; margin-bottom: 14px; }
 .shop-campaign p strong { color: #ff9d5b; font-size: 20px; }
-.campaign-card { width: 150px; height: 190px; align-self: center; border: 1px dashed #f9a15f; border-radius: 14px; background: rgba(255, 255, 255, .07); transform: rotate(-6deg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.campaign-card { width: 130px; height: 165px; align-self: center; border: 1px dashed #f9a15f; border-radius: 14px; background: rgba(255, 255, 255, .07); transform: rotate(-6deg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .campaign-card span { font-size: 12px; letter-spacing: .2em; }
-.campaign-card strong { font-size: 46px; color: #fb923c; line-height: 1.1; }
+.campaign-card strong { font-size: 38px; color: #fb923c; line-height: 1.1; }
 .campaign-card small { color: #9bd4ce; font-size: 12px; }
 .campaign-card b { margin-top: 12px; border: 1px dashed #9bd4ce; padding: 5px 12px; border-radius: 6px; font-size: 13px; }
-.campaign-shoe { overflow: hidden; clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%); background: #14776f; }
-.campaign-shoe img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.campaign-shoe { position: relative; overflow: hidden; clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%); background: #14776f; }
+.campaign-shoe img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .shop-newsletter { margin: 70px 0 0; min-height: 112px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 30px; }
 .shop-newsletter > div { display: flex; align-items: center; gap: 13px; color: var(--teal); }
@@ -409,7 +408,7 @@ body.customer-area { background: var(--bg); min-height: 100vh; display: flex; fl
     .shop-product-image { aspect-ratio: 3 / 4; }
     .quick-add { transform: none; opacity: 1; height: 36px; }
     .shop-product-info h3 { font-size: 13px; }
-    .shop-campaign { margin-top: 55px; grid-template-columns: 1fr 120px; min-height: 350px; }
+    .shop-campaign { margin-top: 55px; grid-template-columns: 1fr 120px; min-height: 260px; }
     .shop-campaign > div:first-child { padding: 30px 25px; }
     .shop-campaign h2 { font-size: 28px; }
     .campaign-card { width: 105px; height: 150px; }
@@ -457,3 +456,7 @@ body.customer-area { background: var(--bg); min-height: 100vh; display: flex; fl
     .survey-actions > span { display: none; }
     .toast { left: 16px; right: 16px; bottom: 84px; max-width: none; }
 }
+.shop-footer-wrap { background: #fff; border-top: 1px solid var(--line); }
+body.customer-area .shop-header { position: sticky; }
+.account-btn.active strong { color: var(--teal); }
+.account-menu a.active { background: #eff8f6; color: var(--teal); font-weight: 600; }

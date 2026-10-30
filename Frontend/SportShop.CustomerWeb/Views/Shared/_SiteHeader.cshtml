@@ -1,0 +1,54 @@
+@inject ShopStore Shop
+@{
+    bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
+    var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
+    string adminUrl = Config["Links:AdminUrl"] ?? "#";
+    int cartCount = Db.IsConnected ? Shop.CartCount(Context.Session) : 0;
+    string controller = ViewContext.RouteData.Values["controller"] as string ?? "";
+    string action = ViewContext.RouteData.Values["action"] as string ?? "";
+    string current = controller == "Home" ? "home" : controller == "Customer" ? action.ToLowerInvariant() : "";
+    string On(string key) => current == key ? "active" : "";
+}
+<div class="shop-promo">
+    <span>Ý kiến của bạn giúp SPORTSHOP ngày càng tốt hơn</span>
+    <a asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
+    <a href="@adminUrl">Trang quản trị</a>
+</div>
+
+<header class="shop-header">
+    <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+    <nav>
+        <a class="@On("home")" asp-controller="Home" asp-action="Index">Trang chủ</a>
+        <a class="@On("profile")" asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
+        <a class="@On("orders")" asp-controller="Customer" asp-action="Orders">Đơn hàng</a>
+        <a class="@On("feedback")" asp-controller="Customer" asp-action="Feedback">Gửi phản hồi</a>
+        <a class="@On("surveys")" asp-controller="Customer" asp-action="Surveys">Khảo sát</a>
+    </nav>
+    <div class="shop-actions">
+        <a class="cart-button @(controller == "Cart" ? "active" : "")" asp-controller="Cart" asp-action="Index" aria-label="Giỏ hàng" title="Giỏ hàng">@Icons.Svg("shopping-bag", 20)@if (cartCount > 0) {<i class="cart-count">@cartCount</i>}</a>
+        @if (loggedIn)
+        {
+            <div class="shop-account">
+                <button type="button" class="account-btn @On("profile")">
+                    <span class="avatar sm">@me.Initials</span>
+                    <span class="account-name"><strong>@me.ShortName</strong><small>Thành viên @me.Tier</small></span>
+                    @Icons.Svg("chevron-down", 15)
+                </button>
+                <div class="account-menu">
+                    <a class="@On("profile")" asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
+                    <a class="@On("orders")" asp-controller="Customer" asp-action="Orders">Lịch sử đơn hàng</a>
+                    <a class="@On("feedback")" asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
+                    <a class="@On("surveys")" asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
+                    <a asp-controller="Account" asp-action="Logout">Đăng xuất</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="shop-auth-actions">
+                <a class="link-login" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Đăng ký</a>
+            </div>
+        }
+    </div>
+</header>

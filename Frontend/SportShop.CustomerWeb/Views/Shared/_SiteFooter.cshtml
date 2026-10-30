@@ -1,0 +1,50 @@
+@{
+    bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
+    string adminUrl = Config["Links:AdminUrl"] ?? "#";
+    string controller = ViewContext.RouteData.Values["controller"] as string ?? "";
+    string action = ViewContext.RouteData.Values["action"] as string ?? "";
+    string current = controller == "Home" ? "home" : controller == "Customer" ? action.ToLowerInvariant() : "";
+    string On(string key) => current == key ? "active" : "";
+}
+<div class="shop-footer-wrap">
+    <footer class="shop-footer">
+        <div>
+            <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
+            <p>Đồng hành cùng bạn trên hành trình sống khỏe và chinh phục mọi giới hạn.</p>
+            <span>@Icons.Svg("map-pin", 15) 128 Nguyễn Trãi, Quận 1, TP.HCM</span>
+        </div>
+        <div>
+            <strong>Tài khoản</strong>
+            @if (loggedIn)
+            {
+                <a asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
+                <a asp-controller="Customer" asp-action="Orders">Lịch sử đơn hàng</a>
+                <a asp-controller="Account" asp-action="Logout">Đăng xuất</a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Register">Đăng ký</a>
+                <a asp-controller="Account" asp-action="Login">Đăng nhập</a>
+            }
+        </div>
+        <div>
+            <strong>Góp ý</strong>
+            <a asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
+            <a asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
+        </div>
+        <div>
+            <strong>SPORTSHOP</strong>
+            <span>support@sportshop.vn</span>
+            <span>1900 6868</span>
+            <a href="@adminUrl">Đăng nhập quản trị</a>
+        </div>
+    </footer>
+</div>
+
+<nav class="shop-mobile-nav">
+    <a class="@On("home")" asp-controller="Home" asp-action="Index">@Icons.Svg("store", 20)<span>Trang chủ</span></a>
+    <a class="@On("orders")" asp-controller="Customer" asp-action="Orders">@Icons.Svg("shopping-bag", 20)<span>Đơn hàng</span></a>
+    <a class="@On("feedback")" asp-controller="Customer" asp-action="Feedback">@Icons.Svg("message-square", 20)<span>Phản hồi</span></a>
+    <a class="@On("surveys")" asp-controller="Customer" asp-action="Surveys">@Icons.Svg("clipboard-list", 20)<span>Khảo sát</span></a>
+    <a class="@On("profile")" asp-controller="@(loggedIn ? "Customer" : "Account")" asp-action="@(loggedIn ? "Profile" : "Login")">@Icons.Svg("user", 20)<span>Tài khoản</span></a>
+</nav>

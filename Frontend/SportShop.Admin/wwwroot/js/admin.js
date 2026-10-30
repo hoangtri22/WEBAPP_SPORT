@@ -86,7 +86,7 @@ function openDrawer(entity, id, parent, mode) {
 if (backdrop) backdrop.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
 
-// Nút data-crud (thêm/sửa/xem → openDrawer(), xóa → /Crud/Delete), data-act (→ /Crud/Act) và data-quick (→ /Crud/Save).
+// Nút data-crud (thêm/sửa/xem → openDrawer(), xóa → /Crud/Delete), data-act (→ /Crud/Act) và data-quick (→ /Crud/Save, kèm lý do hủy khi ô lý do đang hiện).
 document.addEventListener('click', function (e) {
     if (e.target.closest('.js-drawer-close')) { closeDrawer(); return; }
 
@@ -121,15 +121,13 @@ document.addEventListener('click', function (e) {
         var q = new FormData();
         q.append(quick.dataset.field, document.querySelector(quick.dataset.from).value);
         if (quick.dataset.field2) q.append(quick.dataset.field2, document.querySelector(quick.dataset.from2).value);
-        // Lý do hủy: chỉ gửi khi ô nhập lý do đang hiện (đang chọn "Đã hủy")
         var extra = quick.dataset.field3 && document.querySelector(quick.dataset.from3);
         if (extra && !extra.hidden) q.append(quick.dataset.field3, extra.value.trim());
         postForm('/Crud/Save?entity=' + quick.dataset.quick + '&id=' + quick.dataset.id, q).then(handleResult);
     }
 });
 
-// Ô chọn thanh toán của đơn (trang chi tiết và khung xem nhanh): chỉ khi chọn "Đã thanh toán" mới chọn được trạng thái "Đã giao" / "Đã hủy".
-// Chọn trạng thái "Đã hủy" thì hiện ô nhập lý do hủy (bắt buộc), chọn trạng thái khác thì ẩn đi.
+// Ô cập nhật trạng thái đơn (#quickStatus, trang chi tiết đơn và khung xem nhanh): chọn "Đã hủy" thì hiện ô nhập lý do hủy (bắt buộc), chọn trạng thái khác thì ẩn đi.
 document.addEventListener('change', function (e) {
     if (!e.target.matches || !e.target.matches('#quickStatus')) return;
     var reason = document.getElementById('quickReason'); if (!reason) return;
@@ -137,6 +135,7 @@ document.addEventListener('change', function (e) {
     if (!reason.hidden) reason.focus();
 });
 
+// Ô chọn thanh toán của đơn (#quickPay): chỉ khi chọn "Đã thanh toán" mới chọn được trạng thái "Đã giao" / "Đã hủy" trong #quickStatus.
 document.addEventListener('change', function (e) {
     if (!e.target.matches || !e.target.matches('#quickPay')) return;
     var status = document.getElementById('quickStatus'); if (!status) return;
@@ -375,14 +374,22 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
-// Xem nhanh đơn hàng / hóa đơn: rê chuột vào một dòng trong danh sách thì chi tiết hiện ở khung bên phải
-// (nội dung lấy từ trang chi tiết, chỉ để xem). Bấm nút con mắt vẫn mở trang chi tiết đầy đủ như cũ.
+// Bấm vào một dòng có trang chi tiết (data-peek) thì mở trang chi tiết; bỏ qua khi bấm nút, link, ô nhập hoặc khi đang bôi đen chữ.
+document.addEventListener('click', function (e) {
+    var tr = e.target.closest('tr[data-peek]:not([data-peek=""])');
+    if (!tr || e.target.closest('a, button, input, select, textarea, label')) return;
+    if (String(window.getSelection())) return;
+    if (e.ctrlKey || e.metaKey) window.open(tr.getAttribute('data-peek'), '_blank');
+    else location.href = tr.getAttribute('data-peek');
+});
+
+// Xem nhanh dòng có trang chi tiết (data-peek): rê chuột vào dòng thì fetch trang chi tiết, lấy phần nội dung qua build() rồi hiện ở khung bên phải (màn hình dưới 1600px tự thu gọn menu trái trong lúc xem).
 (function () {
     var rows = document.querySelectorAll('tr[data-peek]:not([data-peek=""])');
     if (rows.length === 0) return;
     var wide = window.matchMedia('(min-width: 1200px)');
     var panel = document.createElement('aside');
-    panel.className = 'peek'; panel.hidden = true; panel.setAttribute('aria-label', 'Chi tiết đơn hàng');
+    panel.className = 'peek'; panel.hidden = true; panel.setAttribute('aria-label', 'Xem chi tiết');
     document.body.appendChild(panel);
     var cache = {}, current = '', showTimer = 0, hideTimer = 0, autoCollapsed = false;
 
@@ -413,7 +420,6 @@ document.addEventListener('keydown', function (e) {
         panel.innerHTML = cache[url];
         panel.scrollTop = 0; panel.hidden = false;
         document.body.classList.add('peek-open');
-        // Màn hình hẹp (dưới 1600px): thu gọn thanh menu bên trái trong lúc xem để bảng còn đủ chỗ
         if (window.innerWidth < 1600 && !document.body.classList.contains('collapsed')) { document.body.classList.add('collapsed'); autoCollapsed = true; }
     }
     function open(tr) {

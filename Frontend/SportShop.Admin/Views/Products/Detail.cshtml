@@ -1,0 +1,63 @@
+@model Product
+@{
+    ViewData["Title"] = Model.Name;
+    var vs = Data.Variants.Where(v => v.ProductId == Model.Id).ToList();
+    var ids = vs.Select(v => v.Id).ToHashSet();
+    var sold = Data.Orders.Where(o => o.Invoiced).SelectMany(o => o.Lines).Where(l => ids.Contains(l.VariantId)).ToList();
+    string price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách sản phẩm</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SẢN PHẨM SP@(Model.Id.ToString("D3"))</div>
+        <h1 class="page-title">@Model.Name</h1>
+        <p class="page-sub">@Fmt.Cell(Model.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="product" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin sản phẩm</h3>
+        @if (!string.IsNullOrEmpty(Model.Image)) { <img class="detail-img" src="@Model.Image" alt="@Model.Name" loading="lazy" onerror="this.remove()" /> }
+        <dl class="kv">
+            <dt>Loại</dt><dd>@Model.Category</dd>
+            <dt>Đơn vị tính</dt><dd>@Model.Unit</dd>
+            <dt>Giá bán</dt><dd>@price</dd>
+            <dt>Mô tả</dt><dd>@(string.IsNullOrEmpty(Model.Description) ? "-" : Model.Description)</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Tồn kho &amp; bán hàng</h3>
+        <dl class="kv">
+            <dt>Số biến thể</dt><dd>@vs.Count</dd>
+            <dt>Tổng tồn kho</dt><dd>@vs.Sum(v => v.Stock) @Model.Unit</dd>
+            <dt>Đã bán</dt><dd>@sold.Sum(l => l.Qty) @Model.Unit</dd>
+            <dt>Doanh thu</dt><dd>@Fmt.Money(sold.Sum(l => l.Amount))</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Biến thể sản phẩm</div>
+    @if (vs.Count == 0)
+    {
+        <div class="empty">Sản phẩm chưa có biến thể</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead><tr><th>Mã BT</th><th>Size</th><th>Màu</th><th class="r">Giá bán</th><th class="r">Giá vốn</th><th class="r">Tồn</th></tr></thead>
+                <tbody>
+                    @foreach (var v in vs)
+                    {
+                        <tr><td>BT@(v.Id.ToString("D3"))</td><td>@(v.Size ?? "-")</td><td>@(v.Color ?? "-")</td><td class="r">@Fmt.Money(v.Price)</td><td class="r">@Fmt.Money(v.Cost)</td><td class="r">@v.Stock</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

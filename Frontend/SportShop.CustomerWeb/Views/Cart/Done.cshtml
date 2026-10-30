@@ -9,7 +9,7 @@
         <p>Mã đơn hàng của bạn là <b>@Model.Code</b>. Cửa hàng sẽ xác nhận và giao hàng cho @Model.Receiver, bạn theo dõi trạng thái trong mục "Đơn hàng của tôi".</p>
         <div class="card done-box">
             @foreach (var l in Model.Lines) { <div class="sum-line"><span>@l.Name@(string.IsNullOrEmpty(l.Label) ? "" : " (" + l.Label + ")") × @l.Qty</span><b>@Fmt.Money(l.Amount)</b></div> }
-            <div class="sum-row total"><span>Tổng thanh toán (@Model.PayMethod)</span><b>@Fmt.Money(Model.Total)</b></div>
+            <div class="sum-row total"><span>Tổng thanh toán<small class="pay-note">@Model.PayMethod</small></span><b>@Fmt.Money(Model.Total)</b></div>
         </div>
         <div class="done-actions">
             <a class="btn btn-primary" asp-controller="Customer" asp-action="Orders">Xem đơn hàng của tôi</a>

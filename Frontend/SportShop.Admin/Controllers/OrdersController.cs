@@ -11,7 +11,7 @@ public class OrdersController(ShopData db) : Controller
         ViewBag.Menu = "orders";
         var rows = db.Orders.OrderByDescending(o => o.Id).Select(o => new Row(
             [$"DH{o.Id:D5}", db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total),
-             Fmt.PayStatus(o.PayStatus), o.Carrier, Fmt.OrderStatus(o.Status)],
+             Fmt.PayStatus(o.PayStatus), Fmt.OrderStatus(o.Status)],
             Url.Action(nameof(Detail), new { id = o.Code }), o.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
@@ -19,7 +19,7 @@ public class OrdersController(ShopData db) : Controller
             Title = "Quản lý đơn đặt hàng và giao hàng",
             Subtitle = "Tiếp nhận, xử lý và theo dõi giao hàng",
             Note = "Trạng thái đơn: chờ xác nhận → đang chuẩn bị → đang giao → đã giao, hoặc đã hủy (kèm lý do, hàng được hoàn lại tồn kho). Đơn đã thanh toán được lập hóa đơn, xem ở trang \"Quản lý hóa đơn\".",
-            Sections = [new() { Columns = ["Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Giao hàng", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
+            Sections = [new() { Columns = ["Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
         });
     }
 

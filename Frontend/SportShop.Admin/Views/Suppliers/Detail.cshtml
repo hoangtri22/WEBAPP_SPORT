@@ -1,0 +1,58 @@
+@model Supplier
+@{
+    ViewData["Title"] = Model.Name;
+    var slips = Data.ImportSlips.Where(p => p.Supplier == Model.Name).OrderByDescending(p => p.Date).ToList();
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách nhà cung cấp</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">NHÀ CUNG CẤP NCC@(Model.Id.ToString("D2"))</div>
+        <h1 class="page-title">@Model.Name</h1>
+        <p class="page-sub">@Fmt.Cell(Model.Active ? "[g]Đang hợp tác" : "[x]Ngừng hợp tác")</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="supplier" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin liên hệ</h3>
+        <dl class="kv">
+            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</dd>
+            <dt>Email</dt><dd>@(string.IsNullOrEmpty(Model.Email) ? "-" : Model.Email)</dd>
+            <dt>Địa chỉ</dt><dd>@(string.IsNullOrEmpty(Model.Address) ? "-" : Model.Address)</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Nhập hàng</h3>
+        <dl class="kv">
+            <dt>Số phiếu nhập</dt><dd>@slips.Count</dd>
+            <dt>Tổng số lượng</dt><dd>@slips.Sum(p => p.Quantity) sản phẩm</dd>
+            <dt>Tổng giá trị</dt><dd>@Fmt.Money(slips.Sum(p => p.Total))</dd>
+            <dt>Lần nhập gần nhất</dt><dd>@(slips.Count == 0 ? "-" : Fmt.Date(slips[0].Date))</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Phiếu nhập từ nhà cung cấp</div>
+    @if (slips.Count == 0)
+    {
+        <div class="empty">Chưa có phiếu nhập nào</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead><tr><th>Mã phiếu</th><th>Ngày nhập</th><th class="r">Số lượng</th><th>Nhân viên lập</th><th class="r">Tổng giá trị</th></tr></thead>
+                <tbody>
+                    @foreach (var p in slips)
+                    {
+                        <tr><td><a class="code" asp-controller="Imports" asp-action="Detail" asp-route-id="@p.Id">PN@(p.Id.ToString("D3"))</a></td><td>@Fmt.Date(p.Date)</td><td class="r">@p.Quantity</td><td>@p.Employee</td><td class="r">@Fmt.Money(p.Total)</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

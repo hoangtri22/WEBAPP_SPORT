@@ -3,7 +3,7 @@
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
     var variants = Data.ActiveVariants.Select(v => new Row(
-        [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], null, v.Id)).ToList();
+        [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], Url.Action("Detail", new { id = v.ProductId }), v.Id)).ToList();
     var variantSection = new TableSection
     {
         Heading = "Biến thể sản phẩm (size, màu, giá bán, giá vốn, tồn)",
@@ -71,11 +71,10 @@
                 {
                     var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
                     var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
-                    <tr data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
+                    <tr data-peek="@Url.Action("Detail", new { id = p.Id })" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                         <td>SP@(p.Id.ToString("D3"))</td><td><div class="prod-name">@if (!string.IsNullOrEmpty(p.Image)) { <img class="prod-thumb" src="@p.Image" alt="" loading="lazy" onerror="this.remove()" /> }@p.Name</div></td><td>@p.Category</td><td>@p.Unit</td><td>@price</td><td>@vs.Sum(v => v.Stock)</td>
                         <td>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</td>
                         <td><div class="actions">
-                            <button type="button" class="act" data-crud="view" data-entity="product" data-id="@p.Id">@Icons.Svg("eye", 18)</button>
                             <button type="button" class="act" data-crud="edit" data-entity="product" data-id="@p.Id">@Icons.Svg("pencil", 18)</button>
                             <button type="button" class="act" data-crud="delete" data-entity="product" data-id="@p.Id" data-name="@p.Name">@Icons.Svg("trash", 18)</button>
                         </div></td>

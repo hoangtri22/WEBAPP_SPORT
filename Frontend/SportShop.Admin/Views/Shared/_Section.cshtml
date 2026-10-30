@@ -43,23 +43,23 @@
             <tbody>
                 @foreach (var r in Model.Rows)
                 {
-                    <tr data-peek="@(Model.Entity == "order" ? r.Url : null)">
+                    <tr data-peek="@r.Url">
                         @foreach (var cell in r.Cells) { <td>@Fmt.Cell(cell)</td> }
                         @if (Model.ShowActions)
                         {
                             <td class="col-act">
                                 <div class="actions">
-                                    @if (r.Url != null)
-                                    {
-                                        <a class="act" href="@r.Url" title="Xem chi tiết">@Icons.Svg("eye", 18)</a>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="act" data-crud="view" data-entity="@Model.Entity" data-id="@r.Id" title="Xem chi tiết">@Icons.Svg("eye", 18)</button>
-                                    }
                                     @if (Model.CanEdit)
                                     {
                                         <button type="button" class="act" data-crud="edit" data-entity="@Model.Entity" data-id="@r.Id" title="Chỉnh sửa">@Icons.Svg("pencil", 18)</button>
+                                    }
+                                    @if (Model.LockAction != null && r.Locked is bool isLocked)
+                                    {
+                                        <button type="button" class="act @(isLocked ? "unlock" : "")" data-act="@Model.LockAction" data-id="@r.Id" data-confirm="@(isLocked ? $"Mở khóa tài khoản \"{r.Cells[0]}\"?" : $"Khóa tài khoản \"{r.Cells[0]}\"? Tài khoản sẽ không đăng nhập được, dữ liệu vẫn được giữ lại.")" title="@(isLocked ? "Mở khóa tài khoản" : "Khóa tài khoản")">@Icons.Svg(isLocked ? "lock-open" : "lock", 18)</button>
+                                    }
+                                    @if (Model.RestoreAction != null)
+                                    {
+                                        <button type="button" class="act unlock" data-act="@Model.RestoreAction" data-id="@r.Id" data-confirm="@($"{Model.RestoreLabel} \"{r.Cells[0]}\"?")" title="@Model.RestoreLabel">@Icons.Svg("rotate-ccw", 18)</button>
                                     }
                                     @if (Model.CanDelete)
                                     {

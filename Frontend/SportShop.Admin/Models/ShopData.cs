@@ -6,23 +6,25 @@ namespace SportShop.Admin.Models;
 public class ShopData
 {
     readonly string _cs;
+    readonly DataCache _cache;
 
-    // Đọc dữ liệu cho các trang quản trị từ MySQL (ConnectionStrings:Default); mỗi danh sách được nạp bằng hàm Load...() tương ứng khi dùng lần đầu trong request (Lazy).
-    public ShopData(IConfiguration config)
+    // Đọc dữ liệu cho các trang quản trị từ MySQL (ConnectionStrings:Default): mỗi danh sách nạp bằng Load...() khi dùng lần đầu trong request (Lazy); sản phẩm, biến thể, nhân viên, khách, đơn, chăm sóc, phản hồi được đặt luôn vào DataCache cho trang Báo cáo dùng lại.
+    public ShopData(IConfiguration config, DataCache cache)
     {
+        _cache = cache;
         _cs = config.GetConnectionString("Default") ?? "";
         if (string.IsNullOrWhiteSpace(_cs))
             throw new InvalidOperationException("Chưa điền chuỗi kết nối MySQL: appsettings.json → ConnectionStrings:Default");
 
         _categories = new(LoadCategories);
-        _products = new(LoadProducts);
-        _variants = new(LoadVariants);
-        _employees = new(LoadEmployees);
-        _customers = new(LoadCustomers);
+        _products = new(() => cache.Put("products", LoadProducts()));
+        _variants = new(() => cache.Put("variants", LoadVariants()));
+        _employees = new(() => cache.Put("employees", LoadEmployees()));
+        _customers = new(() => cache.Put("customers", LoadCustomers()));
         _groups = new(LoadGroups);
-        _orders = new(LoadOrders);
-        _careNotes = new(LoadCareNotes);
-        _feedback = new(LoadFeedback);
+        _orders = new(() => cache.Put("orders", LoadOrders()));
+        _careNotes = new(() => cache.Put("care", LoadCareNotes()));
+        _feedback = new(() => cache.Put("feedback", LoadFeedback()));
         _accounts = new(LoadAccounts);
         _suppliers = new(LoadSuppliers);
         _imports = new(LoadImports);
@@ -55,6 +57,7 @@ public class ShopData
     public List<Variant> ActiveVariants { get { var ids = ActiveProducts.Select(p => p.Id).ToHashSet(); return Variants.Where(v => ids.Contains(v.ProductId)).ToList(); } }
     public List<Employee> Employees => _employees.Value;
     public List<Customer> Customers => _customers.Value;
+    public List<Customer> ActiveCustomers => Customers.Where(c => !c.Deleted).ToList();
     public List<CustomerGroup> CustomerGroups => _groups.Value;
     public List<Order> Orders => _orders.Value;
     public List<CareNote> CareNotes => _careNotes.Value;
@@ -70,11 +73,65 @@ public class ShopData
     public Product Product(int id) => Products.First(p => p.Id == id);
     public Customer Customer(int id) => Customers.First(c => c.Id == id);
     public Employee Employee(int id) => Employees.First(e => e.Id == id);
-    public string VariantName(int id)
+    public string VariantName(int id) => VariantName(Product(Variant(id).ProductId), Variant(id));
+    public static string VariantName(Product p, Variant v)
     {
-        var v = Variant(id);
         var extra = string.Join(" / ", new[] { v.Size, v.Color }.Where(s => !string.IsNullOrEmpty(s)));
-        return extra.Length == 0 ? Product(v.ProductId).Name : $"{Product(v.ProductId).Name} ({extra})";
+        return extra.Length == 0 ? p.Name : $"{p.Name} ({extra})";
+    }
+
+    // Bản đã nạp sẵn để trang Báo cáo dùng lại: request này đã nạp thì lấy luôn, trang khác vừa nạp (trong DataCache) thì lấy từ bộ nhớ đệm, chưa có mới truy vấn MySQL.
+    List<T> Reuse<T>(string key, Lazy<List<T>> lazy) => lazy.IsValueCreated ? lazy.Value : _cache.Get<List<T>>(key) ?? lazy.Value;
+    public List<Product> ReusedProducts => Reuse("products", _products);
+    public List<Variant> ReusedVariants => Reuse("variants", _variants);
+    public List<Employee> ReusedEmployees => Reuse("employees", _employees);
+    public List<Customer> ReusedCustomers => Reuse("customers", _customers);
+    public List<Order> ReusedOrders => Reuse("orders", _orders);
+    public List<CareNote> ReusedCareNotes => Reuse("care", _careNotes);
+    public List<FeedbackItem> ReusedFeedback => Reuse("feedback", _feedback);
+
+    // Báo cáo (tải mới): mỗi hóa đơn trong [from, to] một dòng gồm ngày, doanh thu sau giảm giá đơn và giá vốn (ưu tiên giá vốn lưu trong CHI_TIET_HOA_DON); MySQL tự cộng dồn nên không phải nạp cả bảng đơn hàng.
+    public List<ReportOrder> ReportOrders(DateTime from, DateTime to) =>
+        Query("""
+            SELECT dh.ngay_dat,
+                   IFNULL(SUM(ct.so_luong * ct.don_gia), 0) - dh.tong_tien_giam_gia AS doanh_thu,
+                   IFNULL(SUM(ct.so_luong * COALESCE(cthd.gia_von, bt.gia_von)), 0) AS gia_von
+            FROM DON_HANG dh
+            JOIN HOA_DON hd ON hd.ma_don_hang = dh.ma_don_hang
+            LEFT JOIN CHI_TIET_DON_HANG ct ON ct.ma_don_hang = dh.ma_don_hang
+            LEFT JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
+            LEFT JOIN CHI_TIET_HOA_DON cthd ON cthd.ma_hoa_don = hd.ma_hoa_don AND cthd.ma_bien_the = ct.ma_bien_the
+            WHERE dh.ngay_dat >= @from AND dh.ngay_dat < @to
+            GROUP BY dh.ma_don_hang, dh.ngay_dat, dh.tong_tien_giam_gia
+            """, new { from, to = to.AddDays(1) })
+            .Select(r => new ReportOrder(T(r, "ngay_dat"), M(r, "doanh_thu"), M(r, "gia_von"))).ToList();
+
+    // Báo cáo (tải mới): số lượng bán, doanh thu dòng và giá vốn theo sản phẩm của các hóa đơn trong [from, to], sắp theo lần bán đầu tiên trong kỳ (ngày đặt, mã đơn, mã biến thể).
+    public List<ReportProduct> ReportProducts(DateTime from, DateTime to) =>
+        Query("""
+            SELECT sp.ten_san_pham, SUM(ct.so_luong) AS so_luong,
+                   SUM(ct.so_luong * ct.don_gia - ct.giam_gia) AS doanh_thu,
+                   SUM(ct.so_luong * COALESCE(cthd.gia_von, bt.gia_von)) AS gia_von
+            FROM DON_HANG dh
+            JOIN HOA_DON hd ON hd.ma_don_hang = dh.ma_don_hang
+            JOIN CHI_TIET_DON_HANG ct ON ct.ma_don_hang = dh.ma_don_hang
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
+            JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+            LEFT JOIN CHI_TIET_HOA_DON cthd ON cthd.ma_hoa_don = hd.ma_hoa_don AND cthd.ma_bien_the = ct.ma_bien_the
+            WHERE dh.ngay_dat >= @from AND dh.ngay_dat < @to
+            GROUP BY sp.ma_san_pham, sp.ten_san_pham
+            ORDER BY MIN(CONCAT(DATE_FORMAT(dh.ngay_dat, '%Y%m%d%H%i%s'), LPAD(dh.ma_don_hang, 10, '0'), LPAD(ct.ma_bien_the, 10, '0')))
+            """, new { from, to = to.AddDays(1) })
+            .Select(r => new ReportProduct(S(r, "ten_san_pham"), I(r, "so_luong"), M(r, "doanh_thu"), M(r, "gia_von"))).ToList();
+
+    // Ngày hóa đơn gần nhất và số hóa đơn trong [recentFrom, today] (MySQL) để chọn ngày kết thúc mặc định của báo cáo.
+    public (DateTime? Last, int Recent) InvoiceDates(DateTime recentFrom, DateTime today)
+    {
+        var r = Query("""
+            SELECT MAX(dh.ngay_dat) AS cuoi, IFNULL(SUM(dh.ngay_dat >= @recentFrom AND dh.ngay_dat < @to), 0) AS gan
+            FROM DON_HANG dh JOIN HOA_DON hd ON hd.ma_don_hang = dh.ma_don_hang
+            """, new { recentFrom, to = today.AddDays(1) })[0];
+        return (NT(r, "cuoi")?.Date, I(r, "gan"));
     }
 
     // Thống kê hiệu quả khuyến mãi trong kỳ: số lượt dùng và tiền giảm (LUOT_SU_DUNG_KHUYEN_MAI), doanh thu các hóa đơn liên quan (HOA_DON).
@@ -184,6 +241,7 @@ public class ShopData
                 Username = S(r, "ten_dang_nhap"),
                 Password = S(r, "mat_khau"),
                 Locked = S(r, "tk_trang_thai") is "bi_khoa" or "da_xoa",
+                Deleted = S(r, "da_xoa") is "1" or "True",
                 Interests = interests[id].ToArray(),
                 Addresses = addresses[id].ToArray(),
                 Groups = groups[id].ToArray(),
@@ -197,7 +255,7 @@ public class ShopData
     List<CustomerGroup> LoadGroups() =>
         Query("""
             SELECT n.*, st.ten_so_thich,
-                   (SELECT COUNT(*) FROM KHACH_HANG_NHOM_KH x WHERE x.ma_nhom_kh = n.ma_nhom_kh) AS so_khach
+                   (SELECT COUNT(*) FROM KHACH_HANG_NHOM_KH x JOIN KHACH_HANG k ON k.ma_khach_hang = x.ma_khach_hang AND k.da_xoa = 0 WHERE x.ma_nhom_kh = n.ma_nhom_kh) AS so_khach
             FROM NHOM_KHACH_HANG n LEFT JOIN SO_THICH st ON st.ma_so_thich = n.ma_so_thich
             ORDER BY n.ma_nhom_kh
             """).Select(r =>

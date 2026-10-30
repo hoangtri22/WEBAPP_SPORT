@@ -92,21 +92,17 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
-    // Các voucher khách này dùng được cho đơn hiện tại: mỗi mã được kiểm tra bằng ApplyVoucher() nên đúng hạng thành viên, đúng lượt mua (mã khách mới), chưa dùng hết lượt. Sắp theo số tiền giảm nhiều nhất.
-    public List<VoucherOption> EligibleVouchers(int customerId, decimal subtotal)
+    // Mã khách áp dụng được cho đơn hiện tại: lấy voucher đang hiệu lực từ Promos() rồi kiểm tra từng mã bằng ApplyVoucher() (hạng thành viên, lượt mua của mã khách mới, lượt dùng); trả về kèm số tiền giảm, sắp theo số tiền giảm nhiều nhất.
+    public List<UsablePromo> UsablePromos(int customerId, decimal subtotal)
     {
+        var list = new List<UsablePromo>();
         using var c = Open();
-        var options = new List<VoucherOption>();
         foreach (var p in Promos())
         {
-            try
-            {
-                var (_, discount) = ApplyVoucher(c, null, p.Code, customerId, subtotal);
-                options.Add(new VoucherOption(p.Code, p.Name, p.Percent, p.MaxDiscount, p.Tier, p.End, discount));
-            }
+            try { list.Add(new UsablePromo(p, ApplyVoucher(c, null, p.Code, customerId, subtotal).Discount)); }
             catch (OrderError) { }
         }
-        return options.OrderByDescending(o => o.Discount).ThenBy(o => o.Code).ToList();
+        return list.OrderByDescending(x => x.Discount).ThenBy(x => x.Promo.Code).ToList();
     }
 
 
@@ -199,7 +195,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         return new ReceiverInfo(k == null ? "" : S(k, "ten"), k == null ? "" : S(k, "so_dien_thoai"), "");
     }
 
-    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, còn lượt và chưa vượt giới hạn mỗi khách; trả về mã CTKM và số tiền giảm.
+    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), còn lượt và chưa vượt giới hạn mỗi khách (mã khách mới / theo hạng mặc định 1 lần); trả về mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
         var km = c.Query("""
@@ -212,13 +208,11 @@ public class ShopStore(IConfiguration config, CartStore carts)
         string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
         string? needTier = NS(km, "hang_ap_dung");
         if (needTier is { Length: > 0 } && needTier != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {needTier}.");
-        // Mã dành cho khách mới chỉ dùng được ở lần mua đầu tiên (chưa có đơn nào, không tính đơn đã hủy)
         bool newCustomerOnly = Catalog.IsNewCustomerPromo(S(km, "ten_ctkm"));
         if (newCustomerOnly && c.ExecuteScalar<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customerId AND trang_thai_don_hang <> 'da_huy'", new { customerId }, tx) > 0)
             throw new OrderError("Mã dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
         if (NI(km, "so_luong_gioi_han") is int lim && I(km, "so_luot_da_dung") >= lim) throw new OrderError("Mã giảm giá đã hết lượt sử dụng.");
         int ctId = I(km, "ma_ctkm");
-        // Mã khách mới và mã theo hạng thành viên: mỗi khách chỉ dùng 1 lần nếu chương trình chưa đặt giới hạn riêng
         int? perLimit = NI(km, "gioi_han_khach_hang") ?? (newCustomerOnly || needTier is { Length: > 0 } ? 1 : null);
         if (perLimit is int per
             && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customerId", new { ctId, customerId }, tx) >= per)

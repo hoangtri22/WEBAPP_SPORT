@@ -59,9 +59,7 @@ public class MyOrder
 }
 
 public record PromoInfo(string Code, string Name, decimal Percent, decimal? MaxDiscount, string? Tier, DateTime End);
-
-/// <summary>Voucher khách đang dùng được cho đơn hiện tại, kèm số tiền sẽ được giảm.</summary>
-public record VoucherOption(string Code, string Name, decimal Percent, decimal? MaxDiscount, string? Tier, DateTime End, decimal Discount);
+public record UsablePromo(PromoInfo Promo, decimal Discount);
 
 public record PaymentMethod(int Id, string Name);
 

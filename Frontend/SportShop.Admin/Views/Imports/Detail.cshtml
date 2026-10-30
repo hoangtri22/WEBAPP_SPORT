@@ -1,0 +1,52 @@
+@model ImportSlip
+@inject ShopCommands Cmd
+@{
+    ViewData["Title"] = $"PN{Model.Id:D3}";
+    var lines = Cmd.ImportLines(Model.Id);
+    var supplier = Data.Suppliers.FirstOrDefault(s => s.Name == Model.Supplier);
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách phiếu nhập</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">PHIẾU NHẬP HÀNG</div>
+        <h1 class="page-title">PN@(Model.Id.ToString("D3"))</h1>
+        <p class="page-sub">Phiếu nhập đã cập nhật tồn kho nên không sửa hoặc xóa được</p>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin phiếu nhập</h3>
+        <dl class="kv">
+            <dt>Nhà cung cấp</dt><dd>@if (supplier != null) { <a class="code" asp-controller="Suppliers" asp-action="Detail" asp-route-id="@supplier.Id">@Model.Supplier</a> } else { @Model.Supplier }</dd>
+            <dt>Ngày nhập</dt><dd>@Fmt.DateTimeDot(Model.Date)</dd>
+            <dt>Nhân viên lập</dt><dd>@Model.Employee</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Tổng hợp</h3>
+        <dl class="kv">
+            <dt>Số mặt hàng</dt><dd>@lines.Count</dd>
+            <dt>Tổng số lượng</dt><dd>@Model.Quantity sản phẩm</dd>
+            <dt>Tổng giá trị</dt><dd>@Fmt.Money(Model.Total)</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Chi tiết phiếu nhập</div>
+    <div class="table-wrap">
+        <table class="tbl">
+            <thead><tr><th>Mặt hàng</th><th class="r">Số lượng</th><th class="r">Đơn giá nhập</th><th class="r">Thành tiền</th></tr></thead>
+            <tbody>
+                @foreach (var l in lines)
+                {
+                    <tr><td>@l.Name</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r"><b>@Fmt.Money(l.Amount)</b></td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="sum">
+        <div class="total"><span>Tổng giá trị</span><span>@Fmt.Money(Model.Total)</span></div>
+    </div>
+</section>

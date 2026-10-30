@@ -55,18 +55,35 @@ public class AccountController(ShopData db) : Controller
         return RedirectToAction(nameof(Login));
     }
 
-    // Tài khoản & phân quyền: danh sách từ ShopData.Accounts, hiển thị bằng Views/Shared/Table.cshtml; thêm/sửa/xóa qua CrudController với entity "account".
+    // Tài khoản & phân quyền: danh sách từ ShopData.Accounts, tài khoản đã xóa (trang_thai = da_xoa) tách sang bảng riêng có nút Khôi phục; thêm/sửa/xóa/khóa qua CrudController với entity "account".
     public IActionResult Index()
     {
         ViewBag.Menu = "account";
-        var rows = db.Accounts.Select(a => new Row([a.Username, a.Role, a.Email, a.Phone,
-            a.Status switch { "hoat_dong" => "[g]Đang hoạt động", "bi_khoa" => "[x]Đã khóa", _ => "[r]Đã xóa" }], null, a.Id)).ToList();
+        var me = User.FindFirst("username")?.Value;
+        var rows = db.Accounts.Where(a => a.Status != "da_xoa").Select(a => new Row([a.Username, a.Role, a.Email, a.Phone,
+            a.Status == "bi_khoa" ? "[x]Đã khóa" : "[g]Đang hoạt động"], Url.Action(nameof(Detail), new { id = a.Id }), a.Id,
+            a.Username == me ? null : a.Status == "bi_khoa")).ToList();
+        var deleted = db.Accounts.Where(a => a.Status == "da_xoa").Select(a => new Row([a.Username, a.Role, a.Email, a.Phone, "[r]Đã xóa"],
+            Url.Action(nameof(Detail), new { id = a.Id }), a.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Tài khoản & Phân quyền",
             Subtitle = "Quản lý quyền truy cập hệ thống",
-            Sections = [new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account" }]
+            Sections =
+            [
+                new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account", LockAction = "lock_account" },
+                new() { Heading = "Tài khoản đã xóa", Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "account", CanEdit = false, CanDelete = false, RestoreAction = "restore_account" },
+            ]
         });
+    }
+
+    // Chi tiết một tài khoản (Views/Account/Detail.cshtml) từ ShopData.Accounts, kèm hồ sơ nhân viên / khách hàng gắn với tài khoản.
+    public IActionResult Detail(int id)
+    {
+        ViewBag.Menu = "account";
+        var a = db.Accounts.FirstOrDefault(x => x.Id == id);
+        if (a == null) return NotFound();
+        return View(a);
     }
 }

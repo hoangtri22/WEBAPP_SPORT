@@ -1,0 +1,56 @@
+@model CustomerGroup
+@{
+    ViewData["Title"] = Model.Name;
+    var members = Data.ActiveCustomers.Where(c => c.Groups.Contains(Model.Name)).ToList();
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">NHÓM KHÁCH HÀNG</div>
+        <h1 class="page-title">@Model.Name</h1>
+        <p class="page-sub">@Model.Count khách thuộc nhóm</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="group" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Tiêu chí phân nhóm</h3>
+        <dl class="kv">
+            <dt>Tiêu chí</dt><dd>@Model.Criterion</dd>
+            <dt>Giá trị</dt><dd>@Model.Value</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Thống kê</h3>
+        <dl class="kv">
+            <dt>Số khách</dt><dd>@members.Count</dd>
+            <dt>Tổng chi tiêu</dt><dd>@Fmt.Money(members.Sum(c => c.TotalSpent))</dd>
+            <dt>Chi tiêu TB</dt><dd>@(members.Count == 0 ? "-" : Fmt.Money(members.Average(c => c.TotalSpent)))</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Khách hàng trong nhóm</div>
+    @if (members.Count == 0)
+    {
+        <div class="empty">Nhóm chưa có khách hàng</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead><tr><th>Khách hàng</th><th>Số điện thoại</th><th>Hạng</th><th class="r">Tổng chi tiêu</th></tr></thead>
+                <tbody>
+                    @foreach (var c in members)
+                    {
+                        <tr><td><a class="code" asp-action="Detail" asp-route-id="@c.Id">@c.FullName</a></td><td>@c.Phone</td><td>@c.Tier</td><td class="r">@Fmt.Money(c.TotalSpent)</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

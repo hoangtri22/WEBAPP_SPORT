@@ -14,8 +14,8 @@
 
     int staffTotal = Data.Employees.Count;
     int staffWorking = Data.Employees.Count(e => e.Working);
-    int customers = Data.Customers.Count;
-    int customersActive = Data.Customers.Count(c => !c.Locked);
+    int customers = Data.ActiveCustomers.Count;
+    int customersActive = Data.ActiveCustomers.Count(c => !c.Locked);
     int unanswered = Data.FeedbackItems.Count(f => !f.Answered);
     int followToday = Data.CareNotes.Count(n => n.FollowUp?.Date == today);
     var recent = Data.Orders.OrderByDescending(o => o.Id).Take(5).ToList();
@@ -97,7 +97,7 @@
     </div>
     <div class="table-wrap">
         <table class="tbl">
-            <thead><tr><th>Mã HĐ</th><th>Khách hàng</th><th>Ngày lập</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+            <thead><tr><th>Mã HĐ</th><th>Khách hàng</th><th>Ngày lập</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
             <tbody>
                 @foreach (var o in recent)
                 {
@@ -107,9 +107,7 @@
                         <td><div class="cust"><span class="mini-av">@name.Substring(0, 1)</span><b>@name</b></div></td>
                         <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
                         <td><b>@Fmt.Money(o.Total)</b></td>
-                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>
-                        <td class="r"><a class="act" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code" title="Xem chi tiết">@Icons.Svg("eye", 18)</a></td>
-                    </tr>
+                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>                    </tr>
                 }
             </tbody>
         </table>

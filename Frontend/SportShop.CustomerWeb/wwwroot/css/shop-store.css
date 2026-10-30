@@ -1,6 +1,7 @@
 
 .shop-actions > a.cart-button { width: 42px; height: 42px; border-radius: 10px; color: #334155; display: grid; place-items: center; position: relative; }
 .shop-actions > a.cart-button:hover { background: #f1f8f7; color: var(--teal); }
+.shop-actions > a.cart-button.active { background: #eff8f6; color: var(--teal); }
 .cart-count { position: absolute; top: 3px; right: 1px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--orange); color: #fff; font: 700 11px/18px "Be Vietnam Pro", sans-serif; font-style: normal; text-align: center; }
 .shop-product-image { display: block; }
 .shop-product-info h3 a:hover { color: var(--teal); }
@@ -32,6 +33,8 @@
 .shop-empty.done { padding-top: 40px; }
 .done-icon { color: #0b7a5a; }
 .done-box { width: min(480px, 100%); padding: 18px 22px; text-align: left; display: grid; gap: 10px; }
+.done-box .sum-row.total { align-items: center; }
+.pay-note { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; font-weight: 500; }
 .done-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .related-head { margin-top: 70px; }
 
@@ -141,16 +144,13 @@
 .pw-toggle::-webkit-details-marker { display: none; }
 .pw-form { margin-top: 18px; }
 @media (max-width: 900px) { .pw-card { grid-column: auto; } }
-
-/* Chọn mã giảm giá ở trang thanh toán: mỗi mã một dòng, hiện số tiền giảm theo đơn hiện tại */
-.voucher-list { display: grid; gap: 10px; margin-top: 14px; }
-.voucher-opt { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
-.voucher-opt:hover { border-color: #b7d8d3; }
-.voucher-opt:has(input:checked) { border-color: var(--teal); background: #edf8f6; }
-.voucher-opt input { flex: none; width: 18px; height: 18px; accent-color: var(--teal); }
-.vo-code { flex: none; padding: 7px 14px; border: 1.5px dashed var(--teal); border-radius: 10px; background: #fff; color: var(--teal); font-weight: 800; letter-spacing: .5px; }
-.vo-body { flex: 1; min-width: 0; }
-.vo-body b { display: block; font-size: 15.5px; }
-.vo-body small { display: block; margin-top: 3px; color: #64748b; }
-.vo-save { flex: none; color: #ea7a1a; font-weight: 800; font-size: 16px; white-space: nowrap; }
-@media (max-width: 640px) { .voucher-opt { flex-wrap: wrap; } .vo-body { flex-basis: 60%; } }
+.voucher-list { display: grid; gap: 10px; margin-top: 12px; }
+.voucher-opt { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.voucher-opt:hover { border-color: #9bd4ce; }
+.voucher-opt:has(input:checked) { border-color: var(--teal); background: #eff8f6; }
+.voucher-opt input { accent-color: var(--teal); }
+.voucher-code { flex: 0 0 132px; box-sizing: border-box; text-align: center; padding: 5px 8px; border: 1px dashed var(--teal); border-radius: 8px; color: var(--teal); font-weight: 800; font-size: 13px; letter-spacing: .04em; }
+.voucher-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.voucher-info strong { font-size: 14px; }
+.voucher-info small { color: var(--muted); font-size: 12.5px; }
+.voucher-save { color: var(--orange); font-size: 14px; white-space: nowrap; }

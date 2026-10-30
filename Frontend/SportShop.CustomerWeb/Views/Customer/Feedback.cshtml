@@ -99,7 +99,7 @@
                     document.getElementById('fbText').textContent = b.dataset.text;
                     var st = document.getElementById('fbStatus');
                     st.querySelector('b').textContent = b.dataset.status;
-                    st.className = 'pill ' + (b.dataset.status === 'Đã trả lời' ? 'p-g' : b.dataset.status === 'Đang xử lý' ? 'p-o' : 'p-b');
+                    st.className = 'pill ' + (b.dataset.status === 'Đã trả lời' ? 'p-g' : 'p-o');
                     document.getElementById('fbReplyText').textContent = b.dataset.reply;
                     document.getElementById('fbReply').hidden = !b.dataset.reply;
                     modal.hidden = false;

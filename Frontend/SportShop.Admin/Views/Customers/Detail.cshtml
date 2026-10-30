@@ -65,7 +65,7 @@
     <div class="card-title">Lịch sử mua hàng</div>
     <div class="table-wrap">
         <table class="tbl">
-            <thead><tr><th>Mã HĐ</th><th>Ngày mua</th><th>Sản phẩm</th><th>Tổng thanh toán</th><th>Trạng thái</th><th></th></tr></thead>
+            <thead><tr><th>Mã HĐ</th><th>Ngày mua</th><th>Sản phẩm</th><th>Tổng thanh toán</th><th>Trạng thái</th></tr></thead>
             <tbody>
                 @foreach (var o in orders)
                 {
@@ -74,9 +74,7 @@
                         <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
                         <td>@string.Join("; ", o.Lines.Select(l => $"{Data.VariantName(l.VariantId)} x{l.Qty}"))</td>
                         <td><b>@Fmt.Money(o.Total)</b></td>
-                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>
-                        <td class="r"><a class="act" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@Icons.Svg("eye", 18)</a></td>
-                    </tr>
+                        <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>                    </tr>
                 }
             </tbody>
         </table>

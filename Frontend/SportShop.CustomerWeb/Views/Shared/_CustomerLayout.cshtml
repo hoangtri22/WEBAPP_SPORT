@@ -1,7 +1,3 @@
-@{
-    string active = ViewData["Active"] as string ?? "";
-    var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
-}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -15,29 +11,11 @@
     <link rel="stylesheet" href="~/css/shop-store.css" asp-append-version="true" />
 </head>
 <body class="customer-area" data-db="@(Db.IsConnected ? "true" : "false")">
-    <header class="customer-header">
-        <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
-        <nav>
-            <a asp-controller="Home" asp-action="Index">Cửa hàng</a>
-            <a class="@(active == "orders" ? "active" : "")" asp-controller="Customer" asp-action="Orders">Đơn hàng của tôi</a>
-            <a class="@(active == "profile" ? "active" : "")" asp-controller="Customer" asp-action="Profile">Chỉnh sửa thông tin</a>
-            <a class="@(active == "feedback" ? "active" : "")" asp-controller="Customer" asp-action="Feedback">Gửi phản hồi về sản phẩm</a>
-            <a class="@(active == "surveys" ? "active" : "")" asp-controller="Customer" asp-action="Surveys">Khảo sát khách hàng</a>
-        </nav>
-        <div class="customer-user">
-            <span class="avatar sm">@me.Initials</span>
-            <span class="customer-user-name"><strong>@me.ShortName</strong><small>Thành viên @me.Tier</small></span>
-            <a class="icon-square" asp-controller="Account" asp-action="Logout" title="Đăng xuất">@Icons.Svg("log-out", 18)</a>
-        </div>
-    </header>
+    <partial name="_SiteHeader" />
     <main class="customer-content">
         @RenderBody()
     </main>
-    <footer class="customer-mini-footer">
-        <a class="logo" asp-controller="Home" asp-action="Index"><span class="logo-mark">@Icons.Svg("activity", 21)</span><span class="logo-text">SPORT<b>SHOP</b></span></a>
-        <span>© 2025 SPORTSHOP · Chinh phục giới hạn mỗi ngày.</span>
-        <span>support@sportshop.vn · 1900 6868</span>
-    </footer>
+    <partial name="_SiteFooter" />
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="~/js/shop.js" asp-append-version="true"></script>
     @if (TempData["Notice"] is string notice)

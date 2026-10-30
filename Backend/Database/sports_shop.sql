@@ -65,6 +65,7 @@ CREATE TABLE KHACH_HANG (
     hang_thanh_vien VARCHAR(10)   NOT NULL DEFAULT 'thuong',
     diem_tich_luy   INT           NOT NULL DEFAULT 0,
     tong_chi_tieu   DECIMAL(15,2) NOT NULL DEFAULT 0,
+    da_xoa          TINYINT(1)    NOT NULL DEFAULT 0,
     CONSTRAINT FK_KH_TK FOREIGN KEY (ma_tai_khoan) REFERENCES TAI_KHOAN(ma_tai_khoan),
     CONSTRAINT CK_KH_GIOITINH CHECK (gioi_tinh IN ('Nam','Nữ','Khác')),
     CONSTRAINT CK_KH_HANG CHECK (hang_thanh_vien IN ('thuong','bac','vang','VIP')),

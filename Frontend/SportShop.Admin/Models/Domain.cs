@@ -6,6 +6,8 @@ namespace SportShop.Admin.Models;
 
 
 public record Category(int Id, string Name);
+public record ReportOrder(DateTime Date, decimal Revenue, decimal Cost);
+public record ReportProduct(string Name, int Qty, decimal Revenue, decimal Cost);
 
 public record Variant(int Id, int ProductId, string? Size, string? Color, decimal Price, decimal Cost, int Stock);
 
@@ -66,6 +68,7 @@ public class Customer
     public string Username { get; init; } = "";
     public string Password { get; init; } = "";
     public bool Locked { get; init; }
+    public bool Deleted { get; init; }
     public string[] Interests { get; init; } = [];
     public string[] Addresses { get; init; } = [];
     public string[] Groups { get; init; } = [];

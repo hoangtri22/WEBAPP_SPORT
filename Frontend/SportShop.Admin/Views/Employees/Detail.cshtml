@@ -1,0 +1,72 @@
+@model Employee
+@{
+    string fullName = $"{Model.LastName} {Model.FirstName}";
+    ViewData["Title"] = fullName;
+    var orders = Data.Orders.Where(o => o.EmployeeId == Model.Id).OrderByDescending(o => o.Id).ToList();
+    var imports = Data.ImportSlips.Where(p => p.Employee == fullName).ToList();
+    int care = Data.CareNotes.Count(n => n.EmployeeId == Model.Id);
+    int replies = Data.FeedbackItems.Count(f => f.ReplyEmployeeId == Model.Id);
+}
+<a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách nhân viên</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">NHÂN VIÊN NV@(Model.Id.ToString("D3"))</div>
+        <h1 class="page-title">@fullName</h1>
+        <p class="page-sub">@Fmt.Cell(Model.Working ? "[g]Đang làm việc" : "[x]Nghỉ việc")</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="employee" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin nhân viên</h3>
+        <dl class="kv">
+            <dt>Giới tính</dt><dd>@(string.IsNullOrEmpty(Model.Gender) ? "-" : Model.Gender)</dd>
+            <dt>Ngày sinh</dt><dd>@(Model.Birth.HasValue ? Fmt.Date(Model.Birth.Value) : "-")</dd>
+            <dt>Chức vụ</dt><dd>@Model.Position</dd>
+            <dt>Lương cơ bản</dt><dd>@Fmt.Money(Model.BaseSalary)</dd>
+        </dl>
+        <h3 class="card-h" style="margin-top:18px">Tài khoản</h3>
+        <dl class="kv">
+            <dt>Tên đăng nhập</dt><dd>@Model.Username</dd>
+            <dt>Vai trò</dt><dd>@Model.Role</dd>
+            <dt>Email</dt><dd>@(string.IsNullOrEmpty(Model.Email) ? "-" : Model.Email)</dd>
+            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Hoạt động</h3>
+        <dl class="kv">
+            <dt>Đơn đã lập</dt><dd>@orders.Count</dd>
+            <dt>Hóa đơn</dt><dd>@orders.Count(o => o.Invoiced)</dd>
+            <dt>Doanh thu hóa đơn</dt><dd>@Fmt.Money(orders.Where(o => o.Invoiced).Sum(o => o.Total))</dd>
+            <dt>Phiếu nhập</dt><dd>@imports.Count</dd>
+            <dt>Lần chăm sóc khách</dt><dd>@care</dd>
+            <dt>Phản hồi đã trả lời</dt><dd>@replies</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Đơn hàng đã lập</div>
+    @if (orders.Count == 0)
+    {
+        <div class="empty">Nhân viên chưa lập đơn hàng nào</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th class="r">Tổng tiền</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                    @foreach (var o in orders)
+                    {
+                        <tr><td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td><td>@Data.Customer(o.CustomerId).FullName</td><td>@Fmt.DateTimeDot(o.Date)</td><td class="r">@Fmt.Money(o.Total)</td><td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -1,0 +1,58 @@
+@model Category
+@{
+    ViewData["Title"] = Model.Name;
+    var products = Data.Products.Where(p => p.Category == Model.Name).ToList();
+}
+<a class="back" asp-action="Categories">@Icons.Svg("arrow-left", 16) Danh sách loại sản phẩm</a>
+<div class="page-head">
+    <div>
+        <div class="eyebrow">LOẠI SẢN PHẨM LSP@(Model.Id.ToString("D3"))</div>
+        <h1 class="page-title">@Model.Name</h1>
+        <p class="page-sub">@products.Count sản phẩm</p>
+    </div>
+    <div class="head-actions">
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="category" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+    </div>
+</div>
+
+<div class="grid2">
+    <section class="card pad">
+        <h3 class="card-h">Thông tin loại</h3>
+        <dl class="kv">
+            <dt>Mã loại</dt><dd>LSP@(Model.Id.ToString("D3"))</dd>
+            <dt>Tên loại</dt><dd>@Model.Name</dd>
+        </dl>
+    </section>
+    <section class="card pad">
+        <h3 class="card-h">Thống kê</h3>
+        <dl class="kv">
+            <dt>Số sản phẩm</dt><dd>@products.Count</dd>
+            <dt>Đang bán</dt><dd>@products.Count(p => p.Visible)</dd>
+            <dt>Đang ẩn</dt><dd>@products.Count(p => !p.Visible)</dd>
+            <dt>Tổng tồn kho</dt><dd>@Data.Variants.Where(v => products.Any(p => p.Id == v.ProductId)).Sum(v => v.Stock)</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="card">
+    <div class="card-title">Sản phẩm thuộc loại</div>
+    @if (products.Count == 0)
+    {
+        <div class="empty">Loại này chưa có sản phẩm</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th class="r">Biến thể</th><th class="r">Tồn</th><th>Hiển thị</th></tr></thead>
+                <tbody>
+                    @foreach (var p in products)
+                    {
+                        var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+                        <tr><td>SP@(p.Id.ToString("D3"))</td><td><a class="code" asp-action="Detail" asp-route-id="@p.Id">@p.Name</a></td><td class="r">@vs.Count</td><td class="r">@vs.Sum(v => v.Stock)</td><td>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

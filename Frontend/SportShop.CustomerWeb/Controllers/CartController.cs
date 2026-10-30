@@ -111,7 +111,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return RedirectToAction("Login", "Account");
     }
 
-    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
+    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher()), danh sách mã dùng được (ShopStore.UsablePromos()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
     CheckoutVm BuildCheckout(List<CartLine> lines, ReceiverInfo to, int payMethod, string? voucher)
     {
         decimal subtotal = lines.Sum(l => l.Amount), discount = 0; string? voucherError = null;
@@ -120,7 +120,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         {
             Lines = lines, To = to, Methods = shop.PaymentMethods(), PayMethod = payMethod, Voucher = voucher,
             Subtotal = subtotal, Discount = discount, Ship = ShopStore.ShippingFor(subtotal), VoucherError = voucherError,
-            Vouchers = shop.EligibleVouchers(CustomerId, subtotal),
+            Promos = shop.UsablePromos(CustomerId, subtotal),
         };
     }
 }
@@ -136,7 +136,7 @@ public class CheckoutVm
     public decimal Discount { get; init; }
     public decimal Ship { get; init; }
     public string? VoucherError { get; init; }
-    public List<VoucherOption> Vouchers { get; init; } = [];
+    public List<UsablePromo> Promos { get; init; } = [];
     public string? Error { get; set; }
     public decimal Total => Math.Max(0, Subtotal - Discount) + Ship;
 }

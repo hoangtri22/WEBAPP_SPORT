@@ -71,7 +71,7 @@ public static class StoreData
     public static readonly List<FeedbackRow> Feedbacks =
     [
         new("PH0238", "Nike Air Zoom Pegasus 41", "Giày nhẹ, đệm êm và rất phù hợp để chạy dài.", "22/05/2025", "Đã trả lời", "success"),
-        new("PH0214", "Áo Adidas Own The Run", "Chất liệu thoáng, nhưng mình cần hỗ trợ đổi size.", "18/05/2025", "Đang xử lý", "warning"),
+        new("PH0214", "Áo Adidas Own The Run", "Chất liệu thoáng, nhưng mình cần hỗ trợ đổi size.", "18/05/2025", "Chưa trả lời", "warning"),
         new("PH0189", "Túi Nike Brasilia 9.5", "Ngăn đựng rộng và đường may chắc chắn.", "03/05/2025", "Mới", "info"),
     ];
 

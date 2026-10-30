@@ -11,7 +11,7 @@ public class ImportsController(ShopData db) : Controller
         ViewBag.Menu = "imports";
 
         var slips = db.ImportSlips.Select(p => new Row(
-            [$"PN{p.Id:D3}", p.Supplier, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], null, p.Id)).ToList();
+            [$"PN{p.Id:D3}", p.Supplier, Fmt.Date(p.Date), $"{p.Quantity} sản phẩm", p.Employee, "[g]" + Fmt.Money(p.Total)], Url.Action(nameof(Detail), new { id = p.Id }), p.Id)).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
@@ -19,8 +19,17 @@ public class ImportsController(ShopData db) : Controller
             Subtitle = "Theo dõi phiếu nhập hàng",
             Sections =
             [
-                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, AddLabel = "Thêm mới", ShowActions = true, Entity = "import", CanEdit = false, CanDelete = false },
+                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, AddLabel = "Thêm mới", Entity = "import", CanEdit = false, CanDelete = false },
             ]
         });
+    }
+
+    // Chi tiết phiếu nhập (Views/Imports/Detail.cshtml): thông tin từ ShopData.ImportSlips, các dòng hàng đọc bằng ShopCommands.ImportLines().
+    public IActionResult Detail(int id)
+    {
+        ViewBag.Menu = "imports";
+        var p = db.ImportSlips.FirstOrDefault(x => x.Id == id);
+        if (p == null) return NotFound();
+        return View(p);
     }
 }

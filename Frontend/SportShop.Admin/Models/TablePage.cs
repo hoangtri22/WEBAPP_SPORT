@@ -1,6 +1,6 @@
 namespace SportShop.Admin.Models;
 
-public record Row(string[] Cells, string? Url = null, int Id = 0);
+public record Row(string[] Cells, string? Url = null, int Id = 0, bool? Locked = null);
 
 public class TableSection
 {
@@ -15,6 +15,9 @@ public class TableSection
     public string? Entity { get; init; }
     public bool CanEdit { get; init; } = true;
     public bool CanDelete { get; init; } = true;
+    public string? LockAction { get; init; }
+    public string? RestoreAction { get; init; }
+    public string RestoreLabel { get; init; } = "Khôi phục";
 }
 
 public class TablePage

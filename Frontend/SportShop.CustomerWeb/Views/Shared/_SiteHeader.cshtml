@@ -1,9 +1,8 @@
-@inject ShopStore Shop
 @{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
-    var me = (Db.IsConnected ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
-    string adminUrl = Config["Links:AdminUrl"] ?? "#";
-    int cartCount = Db.IsConnected ? Shop.CartCount(Context.Session) : 0;
+    var me = ViewData["Me"] as CustomerProfile ?? StoreData.Customer;
+    string adminUrl = ViewData["AdminUrl"] as string ?? "#";
+    int cartCount = ViewData["CartCount"] as int? ?? 0;
     string controller = ViewContext.RouteData.Values["controller"] as string ?? "";
     string action = ViewContext.RouteData.Values["action"] as string ?? "";
     string current = controller == "Home" ? "home" : controller == "Customer" ? action.ToLowerInvariant() : "";

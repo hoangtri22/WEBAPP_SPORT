@@ -3,7 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-public class PromotionsController(ShopData db) : Controller
+public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
 {
     // Khuyến mãi & marketing: chương trình khuyến mãi (ShopData.Promotions, chương trình đã ngừng tách sang bảng riêng có nút Khôi phục) và chiến dịch thông báo (ShopData.Campaigns).
     public IActionResult Index()
@@ -38,7 +38,9 @@ public class PromotionsController(ShopData db) : Controller
         ViewBag.Menu = "promotions";
         var p = db.Promotions.FirstOrDefault(x => x.Id == id);
         if (p == null) return NotFound();
-        return View(p);
+        var orders = db.Orders.Where(o => o.Voucher != null && o.Voucher.Split(", ").Contains(p.Name)).OrderByDescending(o => o.Id).ToList();
+        return View(new PromotionDetailVm(p, orders, db.Campaigns.Where(c => c.Promotion == p.Name).ToList(),
+            orders.Select(o => o.CustomerId).Distinct().ToDictionary(c => c, c => db.Customer(c).FullName)));
     }
 
     // Chi tiết chiến dịch thông báo (Views/Promotions/CampaignDetail.cshtml) từ ShopData.Campaigns; nội dung đọc bằng ShopCommands.Load("campaign").
@@ -47,7 +49,8 @@ public class PromotionsController(ShopData db) : Controller
         ViewBag.Menu = "promotions";
         var c = db.Campaigns.FirstOrDefault(x => x.Id == id);
         if (c == null) return NotFound();
-        return View(c);
+        return View(new CampaignDetailVm(c, cmd.Load("campaign", c.Id).GetValueOrDefault("noi_dung") ?? "",
+            db.Promotions.FirstOrDefault(p => p.Name == c.Promotion), db.CustomerGroups.FirstOrDefault(g => g.Name == c.Group)));
     }
 
     public static string StatusOf(Promotion p) =>

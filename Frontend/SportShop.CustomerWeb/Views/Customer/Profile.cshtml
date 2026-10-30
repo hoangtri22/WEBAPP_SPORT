@@ -1,19 +1,10 @@
+@model ProfileVm
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Chỉnh sửa thông tin";
-    bool live = Db.IsConnected;
-    var me = (live ? Store.Current(Context.Session) : null) ?? StoreData.Customer;
-
-    List<string> allInterests; HashSet<string> chosen;
-    if (live)
-    {
-        var x = Store.Interests(Context.Session.GetInt32("customer_id") ?? 0);
-        allInterests = x.All; chosen = x.Selected;
-    }
-    else
-    {
-        allInterests = StoreData.Interests.ToList(); chosen = StoreData.Interests.Take(3).ToHashSet();
-    }
+    bool live = Model.Live;
+    var me = Model.Me;
+    List<string> allInterests = Model.AllInterests; HashSet<string> chosen = Model.Chosen;
 
     int filled = new[] { me.FullName, me.Email, me.Phone, me.Birth, me.Gender }.Count(s => !string.IsNullOrWhiteSpace(s)) + (chosen.Count > 0 ? 1 : 0);
     int complete = filled * 100 / 6;

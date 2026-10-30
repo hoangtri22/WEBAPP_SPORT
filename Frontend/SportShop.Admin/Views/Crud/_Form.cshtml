@@ -31,10 +31,10 @@
                     @switch (f.Type)
                     {
                         case "interests":
-                            var chosen = Model.Id > 0 ? Model.Cmd.CustomerInterests(Model.Id) : [];
+                            var chosen = Model.Interests;
                             <label>@f.Label</label>
                             <div class="chips">
-                                @foreach (var o in Model.Cmd.Options("lookup:sothich").Where(o => o.Value != ""))
+                                @foreach (var o in Model.Options("lookup:sothich").Where(o => o.Value != ""))
                                 {
                                     <label class="chip"><input type="checkbox" name="so_thich" value="@o.Value" checked="@chosen.Contains(o.Value)" /> <span>@o.Label</span></label>
                                 }
@@ -51,7 +51,7 @@
                                     <div class="line">
                                         <select name="dong_bien_the" class="js-variant">
                                             <option value="">-- Chọn sản phẩm --</option>
-                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
+                                            @foreach (var o in Model.Options("lookup:bienthe")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
                                         </select>
                                         <input type="number" name="dong_so_luong" class="js-qty" min="1" value="1" aria-label="Số lượng" />
                                         <span class="line-amount">0đ</span>
@@ -66,7 +66,7 @@
                             <table class="tbl mini">
                                 <thead><tr><th>Mặt hàng</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
                                 <tbody>
-                                    @foreach (var l in Model.Cmd.ImportLines(Model.Id))
+                                    @foreach (var l in Model.ImportLines)
                                     {
                                         <tr><td>@l.Name</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r">@Fmt.Money(l.Amount)</td></tr>
                                     }
@@ -84,7 +84,7 @@
                                     <div class="line">
                                         <select name="dong_bien_the" class="js-variant">
                                             <option value="">-- Chọn sản phẩm --</option>
-                                            @foreach (var o in Model.Cmd.Options("lookup:bienthe_nhap")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
+                                            @foreach (var o in Model.Options("lookup:bienthe_nhap")) { <option value="@o.Value" data-info="@o.Data">@o.Label</option> }
                                         </select>
                                         <input type="number" name="dong_so_luong" class="js-qty" min="1" value="10" aria-label="Số lượng" />
                                         <input type="number" name="dong_don_gia" class="js-cost" min="0" step="1000" placeholder="Đơn giá nhập" aria-label="Đơn giá nhập" />
@@ -110,7 +110,7 @@
                                         <button type="button" class="act js-remove-vline" title="Bỏ dòng">@Icons.Svg("trash", 16)</button>
                                         <select name="bt_hinh_anh" aria-label="Hình ảnh">
                                             <option value="">-- Hình ảnh (không bắt buộc) --</option>
-                                            @foreach (var o in Model.Cmd.Options("lookup:images").Where(o => o.Value != "")) { <option value="@o.Value">@o.Label</option> }
+                                            @foreach (var o in Model.Options("lookup:images").Where(o => o.Value != "")) { <option value="@o.Value">@o.Label</option> }
                                         </select>
                                         <div class="vline-upload">
                                             <input type="file" class="js-vline-file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="Tải ảnh từ máy" title="Hoặc tải ảnh từ máy (ưu tiên hơn ảnh chọn ở trên)" />
@@ -122,8 +122,8 @@
                             break;
 
                         case "questions":
-                            var qs = creating ? [] : Model.Cmd.SurveyQuestions(Model.Id);
-                            bool locked = !creating && Model.Cmd.SurveyHasAnswers(Model.Id);
+                            var qs = Model.Questions;
+                            bool locked = Model.QuestionsLocked;
                             <label>@f.Label <span class="req">*</span></label>
                             @if (locked) { <p class="hint">Khảo sát đã có khách trả lời nên giữ nguyên câu hỏi.</p> }
                             <div class="questions" data-locked="@(locked ? "1" : "0")">
@@ -167,7 +167,7 @@
                                 <div class="fld" data-showwhen="loai_khuyen_mai=theo_san_pham">
                                     <label>Sản phẩm được giảm</label>
                                     <select name="d_san_pham">
-                                        @foreach (var o in Model.Cmd.Options("lookup:sanpham")) { <option value="@o.Value" selected="@(Model.Val("d_san_pham") == o.Value)">@o.Label</option> }
+                                        @foreach (var o in Model.Options("lookup:sanpham")) { <option value="@o.Value" selected="@(Model.Val("d_san_pham") == o.Value)">@o.Label</option> }
                                     </select>
                                 </div>
                                 <div class="fld" data-showwhen="loai_khuyen_mai=theo_don_hang">
@@ -189,7 +189,7 @@
                             <label for="f_@f.Name">@f.Label@if (f.Required) { <span class="req"> *</span> }</label>
                             <select id="f_@f.Name" name="@f.Name">
                                 @if (creating && f.Required) { <option value="">-- Chọn --</option> }
-                                @foreach (var o in Model.Cmd.Options(f.Options))
+                                @foreach (var o in Model.Options(f.Options))
                                 {
                                     <option value="@o.Value" data-info="@o.Data" selected="@(val == o.Value)">@o.Label</option>
                                 }

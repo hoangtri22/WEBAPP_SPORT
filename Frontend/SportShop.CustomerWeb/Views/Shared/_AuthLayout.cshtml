@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
 </head>
-<body class="auth-body" data-db="@(Db.IsConnected ? "true" : "false")">
+<body class="auth-body" data-db="@(ViewData["DbConnected"] is true ? "true" : "false")">
     @RenderBody()
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="~/js/shop.js" asp-append-version="true"></script>

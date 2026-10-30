@@ -1,17 +1,18 @@
-@model Supplier
+@model SupplierDetailVm
 @{
-    ViewData["Title"] = Model.Name;
-    var slips = Data.ImportSlips.Where(p => p.Supplier == Model.Name).OrderByDescending(p => p.Date).ToList();
+    var M = Model.Supplier;
+    ViewData["Title"] = M.Name;
+    var slips = Model.Slips;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách nhà cung cấp</a>
 <div class="page-head">
     <div>
-        <div class="eyebrow">NHÀ CUNG CẤP NCC@(Model.Id.ToString("D2"))</div>
-        <h1 class="page-title">@Model.Name</h1>
-        <p class="page-sub">@Fmt.Cell(Model.Active ? "[g]Đang hợp tác" : "[x]Ngừng hợp tác")</p>
+        <div class="eyebrow">NHÀ CUNG CẤP NCC@(M.Id.ToString("D2"))</div>
+        <h1 class="page-title">@M.Name</h1>
+        <p class="page-sub">@Fmt.Cell(M.Active ? "[g]Đang hợp tác" : "[x]Ngừng hợp tác")</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="supplier" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="supplier" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -19,9 +20,9 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin liên hệ</h3>
         <dl class="kv">
-            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</dd>
-            <dt>Email</dt><dd>@(string.IsNullOrEmpty(Model.Email) ? "-" : Model.Email)</dd>
-            <dt>Địa chỉ</dt><dd>@(string.IsNullOrEmpty(Model.Address) ? "-" : Model.Address)</dd>
+            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(M.Phone) ? "-" : M.Phone)</dd>
+            <dt>Email</dt><dd>@(string.IsNullOrEmpty(M.Email) ? "-" : M.Email)</dd>
+            <dt>Địa chỉ</dt><dd>@(string.IsNullOrEmpty(M.Address) ? "-" : M.Address)</dd>
         </dl>
     </section>
     <section class="card pad">

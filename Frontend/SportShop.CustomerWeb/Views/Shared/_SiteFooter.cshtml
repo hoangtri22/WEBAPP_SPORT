@@ -1,6 +1,6 @@
 @{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
-    string adminUrl = Config["Links:AdminUrl"] ?? "#";
+    string adminUrl = ViewData["AdminUrl"] as string ?? "#";
     string controller = ViewContext.RouteData.Values["controller"] as string ?? "";
     string action = ViewContext.RouteData.Values["action"] as string ?? "";
     string current = controller == "Home" ? "home" : controller == "Customer" ? action.ToLowerInvariant() : "";

@@ -3,7 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
-public class ImportsController(ShopData db) : Controller
+public class ImportsController(ShopData db, ShopCommands cmd) : Controller
 {
     // Quản lý nhập hàng: danh sách phiếu nhập từ ShopData.ImportSlips; lập phiếu mới qua CrudController → ShopCommands.SaveImport().
     public IActionResult Index()
@@ -30,6 +30,6 @@ public class ImportsController(ShopData db) : Controller
         ViewBag.Menu = "imports";
         var p = db.ImportSlips.FirstOrDefault(x => x.Id == id);
         if (p == null) return NotFound();
-        return View(p);
+        return View(new ImportDetailVm(p, cmd.ImportLines(p.Id), db.Suppliers.FirstOrDefault(s => s.Name == p.Supplier)));
     }
 }

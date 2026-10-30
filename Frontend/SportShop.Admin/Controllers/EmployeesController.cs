@@ -36,6 +36,10 @@ public class EmployeesController(ShopData db) : Controller
         ViewBag.Menu = "employees";
         var e = db.Employees.FirstOrDefault(x => x.Id == id);
         if (e == null) return NotFound();
-        return View(e);
+        string fullName = $"{e.LastName} {e.FirstName}";
+        var orders = db.Orders.Where(o => o.EmployeeId == e.Id).OrderByDescending(o => o.Id).ToList();
+        return View(new EmployeeDetailVm(e, orders, db.ImportSlips.Count(p => p.Employee == fullName),
+            db.CareNotes.Count(n => n.EmployeeId == e.Id), db.FeedbackItems.Count(f => f.ReplyEmployeeId == e.Id),
+            orders.Select(o => o.CustomerId).Distinct().ToDictionary(c => c, c => db.Customer(c).FullName)));
     }
 }

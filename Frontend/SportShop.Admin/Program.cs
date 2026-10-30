@@ -21,7 +21,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.AccessDeniedPath = "/";
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
     });
-builder.Services.AddControllersWithViews(o => o.Filters.Add(new AuthorizeFilter()));
+builder.Services.AddControllersWithViews(o => { o.Filters.Add(new AuthorizeFilter()); o.Filters.Add<SportShop.Admin.Controllers.LayoutDataFilter>(); });
 
 var app = builder.Build();
 

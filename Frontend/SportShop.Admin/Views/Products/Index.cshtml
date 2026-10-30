@@ -1,14 +1,13 @@
+@model ProductsVm
 @{
     ViewData["Title"] = "Quản lý sản phẩm";
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
-    var variants = Data.ActiveVariants.Select(v => new Row(
-        [$"BT{v.Id:D3}", Data.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], Url.Action("Detail", new { id = v.ProductId }), v.Id)).ToList();
     var variantSection = new TableSection
     {
         Heading = "Biến thể sản phẩm (size, màu, giá bán, giá vốn, tồn)",
         Columns = ["Mã BT", "Sản phẩm", "Size", "Màu", "Giá bán", "Giá vốn", "Tồn"],
-        Rows = variants, AddLabel = "Thêm biến thể", ShowActions = true, Entity = "variant"
+        Rows = Model.VariantRows, AddLabel = "Thêm biến thể", ShowActions = true, Entity = "variant"
     };
 }
 <div class="page-head">
@@ -30,7 +29,7 @@
             @Icons.Svg("sliders", 18)
             <select id="prodCat">
                 <option value="">Loại sản phẩm</option>
-                @foreach (var c in Data.Categories) { <option>@c</option> }
+                @foreach (var c in Model.Categories) { <option>@c</option> }
             </select>
         </div>
         <span class="grow"></span>
@@ -42,9 +41,9 @@
     </div>
 
     <div class="prod-grid" id="prodGrid">
-        @foreach (var p in Data.ActiveProducts)
+        @foreach (var p in Model.Products)
         {
-            var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+            var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
             var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
             <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
@@ -67,9 +66,9 @@
         <table class="tbl">
             <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Loại</th><th>ĐVT</th><th>Giá bán</th><th>Tồn</th><th>Hiển thị</th><th>Thao tác</th></tr></thead>
             <tbody>
-                @foreach (var p in Data.ActiveProducts)
+                @foreach (var p in Model.Products)
                 {
-                    var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+                    var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
                     var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
                     <tr data-peek="@Url.Action("Detail", new { id = p.Id })" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                         <td>SP@(p.Id.ToString("D3"))</td><td><div class="prod-name">@if (!string.IsNullOrEmpty(p.Image)) { <img class="prod-thumb" src="@p.Image" alt="" loading="lazy" onerror="this.remove()" /> }@p.Name</div></td><td>@p.Category</td><td>@p.Unit</td><td>@price</td><td>@vs.Sum(v => v.Stock)</td>

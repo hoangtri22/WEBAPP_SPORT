@@ -1,4 +1,4 @@
-@inject ShopStore Shop
+@model HomeVm
 @{
     ViewData["Title"] = "Trang chủ";
 }
@@ -37,10 +37,10 @@
         <a class="heading-link" asp-controller="Shop" asp-action="Index">Xem tất cả sản phẩm @Icons.Svg("chevron-right", 17)</a>
     </div>
     <div class="shop-category-grid">
-        @if (Db.IsConnected)
+        @if (Model.Live)
         {
             string[] styles = ["running", "men", "women", "gear"], icons = ["zap", "user", "sparkles", "activity"];
-            var categories = Shop.Categories();
+            var categories = Model.Categories;
             for (int i = 0; i < categories.Count; i++)
             {
                 var c = categories[i];
@@ -53,7 +53,7 @@
         }
         else
         {
-            foreach (var c in StoreData.Categories)
+            foreach (var c in Model.SampleCategories)
             {
                 <a class="shop-category @c.Css" asp-controller="Shop" asp-action="Index">
                     @Icons.Svg(c.Icon, 30)
@@ -76,7 +76,7 @@
         </div>
     </div>
     <div class="shop-products">
-        @foreach (var p in Db.IsConnected ? Store.FeaturedProducts(8) : StoreData.Products)
+        @foreach (var p in Model.Featured)
         {
             <article class="shop-product-card">
                 <div class="shop-product-image">

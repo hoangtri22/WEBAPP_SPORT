@@ -1,8 +1,9 @@
-@model Order
+@model OrderDetailVm
 @{
-    ViewData["Title"] = Model.Code;
-    var c = Data.Customer(Model.CustomerId);
-    var emp = Model.EmployeeId.HasValue ? Data.Employee(Model.EmployeeId.Value).FirstName : "Khách tự đặt online";
+    var M = Model.Order;
+    ViewData["Title"] = M.Code;
+    var c = Model.Customer;
+    var emp = Model.EmployeeName;
     var statuses = new[] { ("cho_xac_nhan", "Chờ xác nhận"), ("dang_chuan_bi", "Đang chuẩn bị"), ("dang_giao", "Đang giao"), ("da_giao", "Đã giao"), ("da_huy", "Đã hủy") };
 }
 @if (ViewBag.Menu == "invoices")
@@ -15,12 +16,12 @@ else
 }
 <div class="page-head">
     <div>
-        <div class="eyebrow">@(Model.Invoiced ? "HÓA ĐƠN" : "ĐƠN HÀNG (CHƯA LẬP HÓA ĐƠN)")</div>
-        <h1 class="page-title">@Model.Code</h1>
-        <p class="page-sub">@Fmt.Cell(Fmt.OrderStatus(Model.Status)) &nbsp;@Fmt.Cell(Fmt.PayStatus(Model.PayStatus))</p>
+        <div class="eyebrow">@(M.Invoiced ? "HÓA ĐƠN" : "ĐƠN HÀNG (CHƯA LẬP HÓA ĐƠN)")</div>
+        <h1 class="page-title">@M.Code</h1>
+        <p class="page-sub">@Fmt.Cell(Fmt.OrderStatus(M.Status)) &nbsp;@Fmt.Cell(Fmt.PayStatus(M.PayStatus))</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="order" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="order" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
         <button type="button" class="btn-outline" onclick="window.print()">@Icons.Svg("printer", 18) In hóa đơn</button>
     </div>
 </div>
@@ -30,25 +31,25 @@ else
         <h3 class="card-h">Thông tin đơn hàng</h3>
         <dl class="kv">
             <dt>Khách hàng</dt><dd><a class="code" asp-controller="Customers" asp-action="Detail" asp-route-id="@c.Id">@c.FullName</a></dd>
-            <dt>Ngày lập</dt><dd>@Fmt.DateTimeDot(Model.Date)</dd>
+            <dt>Ngày lập</dt><dd>@Fmt.DateTimeDot(M.Date)</dd>
             <dt>Nhân viên lập</dt><dd>@emp</dd>
-            <dt>Thanh toán</dt><dd>@Model.PayMethod</dd>
-            <dt>Khuyến mãi</dt><dd>@(Model.Voucher ?? "Không áp dụng")</dd>
-            <dt>Người nhận</dt><dd>@Model.Receiver - @Model.ReceiverPhone</dd>
-            <dt>Địa chỉ giao</dt><dd>@Model.Address</dd>
-            @if (Model.CancelReason != null) { <dt>Lý do hủy</dt><dd>@Model.CancelReason</dd> }
+            <dt>Thanh toán</dt><dd>@M.PayMethod</dd>
+            <dt>Khuyến mãi</dt><dd>@(M.Voucher ?? "Không áp dụng")</dd>
+            <dt>Người nhận</dt><dd>@M.Receiver - @M.ReceiverPhone</dd>
+            <dt>Địa chỉ giao</dt><dd>@M.Address</dd>
+            @if (M.CancelReason != null) { <dt>Lý do hủy</dt><dd>@M.CancelReason</dd> }
         </dl>
     </section>
     <section class="card pad">
         <h3 class="card-h">Vận chuyển</h3>
         <dl class="kv">
-            <dt>Đơn vị vận chuyển</dt><dd>@Model.Carrier</dd>
-            <dt>Mã vận đơn</dt><dd>@(string.IsNullOrEmpty(Model.TrackingCode) ? "-" : Model.TrackingCode)</dd>
-            <dt>Phí ship</dt><dd>@Fmt.Money(Model.ShipFee)</dd>
+            <dt>Đơn vị vận chuyển</dt><dd>@M.Carrier</dd>
+            <dt>Mã vận đơn</dt><dd>@(string.IsNullOrEmpty(M.TrackingCode) ? "-" : M.TrackingCode)</dd>
+            <dt>Phí ship</dt><dd>@Fmt.Money(M.ShipFee)</dd>
         </dl>
         <h3 class="card-h" style="margin-top:18px">Cập nhật trạng thái</h3>
         <div class="inline-form">
-            @{ bool locked = Model.Status is "da_giao" or "da_huy"; bool unpaid = Model.PayStatus != "da_thanh_toan" && !locked; bool paid = Model.PayStatus == "da_thanh_toan"; }
+            @{ bool locked = M.Status is "da_giao" or "da_huy"; bool unpaid = M.PayStatus != "da_thanh_toan" && !locked; bool paid = M.PayStatus == "da_thanh_toan"; }
             <select id="quickPay" disabled="@(locked || paid)" aria-label="Trạng thái thanh toán">
                 <option value="chua_thanh_toan" selected="@(!paid)" disabled="@paid">Chưa thanh toán</option>
                 <option value="da_thanh_toan" selected="@paid">Đã thanh toán</option>
@@ -56,13 +57,13 @@ else
             <select id="quickStatus" disabled="@locked">
                 @foreach (var (value, text) in statuses)
                 {
-                    <option value="@value" selected="@(value == Model.Status)" disabled="@(unpaid && value is "da_giao" or "da_huy")">@text</option>
+                    <option value="@value" selected="@(value == M.Status)" disabled="@(unpaid && value is "da_giao" or "da_huy")">@text</option>
                 }
             </select>
             <input type="text" id="quickReason" class="quick-reason" maxlength="200" placeholder="Nhập lý do hủy đơn (bắt buộc)" aria-label="Lý do hủy đơn" hidden />
-            <button type="button" class="btn-primary" disabled="@locked" data-quick="order" data-id="@Model.Id" data-field="trang_thai_don_hang" data-from="#quickStatus" data-field2="trang_thai_thanh_toan" data-from2="#quickPay" data-field3="ly_do_huy" data-from3="#quickReason">Cập nhật</button>
+            <button type="button" class="btn-primary" disabled="@locked" data-quick="order" data-id="@M.Id" data-field="trang_thai_don_hang" data-from="#quickStatus" data-field2="trang_thai_thanh_toan" data-from2="#quickPay" data-field3="ly_do_huy" data-from3="#quickReason">Cập nhật</button>
             @if (unpaid) { <small class="muted" style="width:100%">Đơn chưa thanh toán chỉ chuyển được đến "Đang chuẩn bị" hoặc "Đang giao". Muốn chọn "Đã giao" hoặc "Đã hủy", hãy chọn "Đã thanh toán" ở ô bên cạnh rồi bấm "Cập nhật".</small> }
-            @if (locked) { <small class="muted" style="width:100%">Đơn @(Model.Status == "da_giao" ? "đã giao" : "đã hủy") là trạng thái cuối nên không đổi được nữa.</small> }
+            @if (locked) { <small class="muted" style="width:100%">Đơn @(M.Status == "da_giao" ? "đã giao" : "đã hủy") là trạng thái cuối nên không đổi được nữa.</small> }
         </div>
     </section>
 </div>
@@ -73,17 +74,17 @@ else
         <table class="tbl">
             <thead><tr><th>Sản phẩm</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Giảm giá</th><th class="r">Thành tiền</th></tr></thead>
             <tbody>
-                @foreach (var l in Model.Lines)
+                @foreach (var l in M.Lines)
                 {
-                    <tr><td>@Data.VariantName(l.VariantId)</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r">@(l.Discount > 0 ? "-" + Fmt.Money(l.Discount) : "-")</td><td class="r"><b>@Fmt.Money(l.Amount)</b></td></tr>
+                    <tr><td>@Model.VariantNames[l.VariantId]</td><td class="r">@l.Qty</td><td class="r">@Fmt.Money(l.Price)</td><td class="r">@(l.Discount > 0 ? "-" + Fmt.Money(l.Discount) : "-")</td><td class="r"><b>@Fmt.Money(l.Amount)</b></td></tr>
                 }
             </tbody>
         </table>
     </div>
     <div class="sum">
-        <div><span>Tiền hàng</span><span>@Fmt.Money(Model.Subtotal)</span></div>
-        <div><span>Giảm giá</span><span>-@Fmt.Money(Model.Discount)</span></div>
-        <div><span>Phí vận chuyển</span><span>@Fmt.Money(Model.ShipFee)</span></div>
-        <div class="total"><span>Tổng thanh toán</span><span>@Fmt.Money(Model.Total)</span></div>
+        <div><span>Tiền hàng</span><span>@Fmt.Money(M.Subtotal)</span></div>
+        <div><span>Giảm giá</span><span>-@Fmt.Money(M.Discount)</span></div>
+        <div><span>Phí vận chuyển</span><span>@Fmt.Money(M.ShipFee)</span></div>
+        <div class="total"><span>Tổng thanh toán</span><span>@Fmt.Money(M.Total)</span></div>
     </div>
 </section>

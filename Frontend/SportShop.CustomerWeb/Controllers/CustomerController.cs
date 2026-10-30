@@ -24,8 +24,16 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
     }
 
 
-    // Trang hồ sơ: view Profile.cshtml tự đọc dữ liệu qua CustomerStore.Current() và CustomerStore.Interests().
-    public IActionResult Profile() { ViewData["Active"] = "profile"; return View(); }
+    // Trang hồ sơ: đọc hồ sơ (CustomerStore.Current()) và sở thích (CustomerStore.Interests()), chưa kết nối CSDL thì dùng StoreData mẫu; truyền sang Profile.cshtml qua ProfileVm.
+    public IActionResult Profile()
+    {
+        ViewData["Active"] = "profile";
+        bool live = db.IsConnected;
+        var me = (live ? store.Current(HttpContext.Session) : null) ?? StoreData.Customer;
+        if (!live) return View(new ProfileVm(false, me, StoreData.Interests.ToList(), StoreData.Interests.Take(3).ToHashSet()));
+        var x = store.Interests(CustomerId);
+        return View(new ProfileVm(true, me, x.All, x.Selected));
+    }
 
     // Cập nhật hồ sơ: kiểm tra họ tên, email, SĐT, giới tính, ngày sinh rồi gọi CustomerStore.UpdateProfile() ghi vào KHACH_HANG, TAI_KHOAN, KHACH_HANG_SO_THICH.
     [HttpPost, ValidateAntiForgeryToken]
@@ -75,8 +83,15 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
     }
 
 
-    // Trang phản hồi: view Feedback.cshtml đọc sản phẩm đã mua (CustomerStore.PurchasedProducts()) và phản hồi đã gửi (CustomerStore.Feedbacks()).
-    public IActionResult Feedback() { ViewData["Active"] = "feedback"; return View(); }
+    // Trang phản hồi: đọc sản phẩm đã mua (CustomerStore.PurchasedProducts()) và phản hồi đã gửi (CustomerStore.Feedbacks()), chưa kết nối CSDL thì dùng StoreData mẫu; truyền sang Feedback.cshtml qua FeedbackPageVm.
+    public IActionResult Feedback()
+    {
+        ViewData["Active"] = "feedback";
+        bool live = db.IsConnected;
+        return View(new FeedbackPageVm(live,
+            live ? store.PurchasedProducts(CustomerId) : StoreData.Products.Select(p => (p.Id, p.Name)).ToList(),
+            live ? store.Feedbacks(CustomerId) : StoreData.Feedbacks));
+    }
 
     // Gửi phản hồi sản phẩm: kiểm tra khách đã nhận hàng (HasReceivedProduct()), số sao, nội dung rồi gọi CustomerStore.SendFeedback() thêm vào bảng PHAN_HOI.
     [HttpPost, ValidateAntiForgeryToken]

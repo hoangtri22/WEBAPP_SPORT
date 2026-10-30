@@ -4,7 +4,7 @@
     bool reg = Model.IsRegister;
     ViewData["Title"] = reg ? "Đăng ký" : "Đăng nhập";
     string Err(string k) => Model.Errors.TryGetValue(k, out var m) ? m : "";
-    bool live = Db.IsConnected;
+    bool live = ViewData["DbConnected"] is true;
 }
 <div class="customer-auth">
     <section class="customer-auth-visual">

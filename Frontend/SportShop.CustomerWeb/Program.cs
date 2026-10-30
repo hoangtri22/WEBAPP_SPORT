@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(o => o.Filters.Add<SportShop.CustomerWeb.Controllers.LayoutDataFilter>());
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>

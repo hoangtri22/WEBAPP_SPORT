@@ -1,19 +1,20 @@
-@model Customer
+@model CustomerDetailVm
 @{
-    ViewData["Title"] = Model.FullName;
-    var orders = Data.Orders.Where(o => o.CustomerId == Model.Id).OrderByDescending(o => o.Id).ToList();
-    var notes = Data.CareNotes.Where(n => n.CustomerId == Model.Id).OrderByDescending(n => n.Date).ToList();
+    var M = Model.Customer;
+    ViewData["Title"] = M.FullName;
+    var orders = Model.Orders;
+    var notes = Model.Notes;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
 <div class="page-head">
     <div>
-        <div class="eyebrow">KH@(Model.Id.ToString("D3"))</div>
-        <h1 class="page-title">@Model.FullName</h1>
+        <div class="eyebrow">KH@(M.Id.ToString("D3"))</div>
+        <h1 class="page-title">@M.FullName</h1>
         <p class="page-sub">Thông tin và lịch sử mua hàng của khách hàng</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
-        <button type="button" class="btn-outline" data-act="lock_customer" data-id="@Model.Id" data-confirm="@(Model.Locked ? "Mở khóa tài khoản của khách hàng này?" : "Khóa tài khoản của khách hàng này? Khách sẽ không đăng nhập được nhưng dữ liệu vẫn được giữ.")">@(Model.Locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-act="lock_customer" data-id="@M.Id" data-confirm="@(M.Locked ? "Mở khóa tài khoản của khách hàng này?" : "Khóa tài khoản của khách hàng này? Khách sẽ không đăng nhập được nhưng dữ liệu vẫn được giữ.")">@(M.Locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
     </div>
 </div>
 
@@ -21,42 +22,42 @@
     <section class="card pad">
         <div class="card-h-row">
             <h3 class="card-h">Thông tin khách hàng</h3>
-            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 16) Chỉnh sửa thông tin</button>
+            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@M.Id">@Icons.Svg("pencil", 16) Chỉnh sửa thông tin</button>
         </div>
         <dl class="kv">
-            <dt>Giới tính</dt><dd>@Model.Gender</dd>
-            <dt>Ngày sinh</dt><dd>@(Model.Birth.HasValue ? $"{Fmt.Date(Model.Birth.Value)} ({Model.Age} tuổi)" : "-")</dd>
-            <dt>Số điện thoại</dt><dd>@Model.Phone</dd>
-            <dt>Email</dt><dd>@Model.Email</dd>
-            <dt>Tài khoản</dt><dd>@(string.IsNullOrEmpty(Model.Username) ? "Chưa có tài khoản" : Model.Username) @Fmt.Cell(Model.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
+            <dt>Giới tính</dt><dd>@M.Gender</dd>
+            <dt>Ngày sinh</dt><dd>@(M.Birth.HasValue ? $"{Fmt.Date(M.Birth.Value)} ({M.Age} tuổi)" : "-")</dd>
+            <dt>Số điện thoại</dt><dd>@M.Phone</dd>
+            <dt>Email</dt><dd>@M.Email</dd>
+            <dt>Tài khoản</dt><dd>@(string.IsNullOrEmpty(M.Username) ? "Chưa có tài khoản" : M.Username) @Fmt.Cell(M.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động")</dd>
             <dt>Mật khẩu</dt><dd>
-                @if (string.IsNullOrEmpty(Model.Username)) { <text>-</text> }
+                @if (string.IsNullOrEmpty(M.Username)) { <text>-</text> }
                 else if (User.IsInRole("Quản lý"))
                 {
-                    <span id="pwText" data-pw="@Model.Password">••••••••</span>
+                    <span id="pwText" data-pw="@M.Password">••••••••</span>
                     <button type="button" class="btn-outline" style="height:30px;padding:0 12px;margin-left:8px" onclick="var s=document.getElementById('pwText'),h=this.dataset.shown==='1';s.textContent=h?'••••••••':s.dataset.pw;this.dataset.shown=h?'0':'1';this.textContent=h?'Hiện':'Ẩn'">Hiện</button>
                 }
                 else { <span class="muted">Chỉ tài khoản Quản lý xem được</span> }
             </dd>
-            <dt>Nhóm khách hàng</dt><dd class="tags">@foreach (var g in Model.Groups) { <span>@g</span> }</dd>
-            <dt>Sở thích</dt><dd class="tags">@foreach (var i in Model.Interests) { <span>@i</span> }</dd>
+            <dt>Nhóm khách hàng</dt><dd class="tags">@foreach (var g in M.Groups) { <span>@g</span> }</dd>
+            <dt>Sở thích</dt><dd class="tags">@foreach (var i in M.Interests) { <span>@i</span> }</dd>
         </dl>
     </section>
     <section class="card pad">
         <h3 class="card-h">Hạng thành viên</h3>
         <dl class="kv">
-            <dt>Hạng</dt><dd><b>@Model.Tier</b></dd>
-            <dt>Điểm tích lũy</dt><dd>@Model.Points.ToString("N0")</dd>
-            <dt>Tổng chi tiêu</dt><dd><b>@Fmt.Money(Model.TotalSpent)</b></dd>
+            <dt>Hạng</dt><dd><b>@M.Tier</b></dd>
+            <dt>Điểm tích lũy</dt><dd>@M.Points.ToString("N0")</dd>
+            <dt>Tổng chi tiêu</dt><dd><b>@Fmt.Money(M.TotalSpent)</b></dd>
             <dt>Số đơn hàng</dt><dd>@orders.Count</dd>
         </dl>
         <div class="card-h-row" style="margin-top:18px">
             <h3 class="card-h">Sổ địa chỉ giao hàng</h3>
-            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@Model.Id">@Icons.Svg("pencil", 16) Sửa địa chỉ</button>
+            <button type="button" class="btn-outline" data-crud="edit" data-entity="customer" data-id="@M.Id">@Icons.Svg("pencil", 16) Sửa địa chỉ</button>
         </div>
         <ul class="ul-plain">
-            @foreach (var a in Model.Addresses) { <li>@a</li> }
-            @if (Model.Addresses.Length == 0) { <li class="muted">Chưa có địa chỉ</li> }
+            @foreach (var a in M.Addresses) { <li>@a</li> }
+            @if (M.Addresses.Length == 0) { <li class="muted">Chưa có địa chỉ</li> }
         </ul>
     </section>
 </div>
@@ -72,7 +73,7 @@
                     <tr>
                         <td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td>
                         <td class="muted">@Fmt.DateTimeDot(o.Date)</td>
-                        <td>@string.Join("; ", o.Lines.Select(l => $"{Data.VariantName(l.VariantId)} x{l.Qty}"))</td>
+                        <td>@string.Join("; ", o.Lines.Select(l => $"{Model.VariantNames[l.VariantId]} x{l.Qty}"))</td>
                         <td><b>@Fmt.Money(o.Total)</b></td>
                         <td>@Fmt.Cell(Fmt.OrderStatus(o.Status))</td>                    </tr>
                 }
@@ -83,7 +84,7 @@
 </section>
 
 <section class="card">
-    <div class="card-title row-between">Ghi chú &amp; lịch sử chăm sóc <button type="button" class="btn-primary" data-crud="create" data-entity="care" data-parent="@Model.Id">@Icons.Svg("plus", 18) Thêm ghi chú</button></div>
+    <div class="card-title row-between">Ghi chú &amp; lịch sử chăm sóc <button type="button" class="btn-primary" data-crud="create" data-entity="care" data-parent="@M.Id">@Icons.Svg("plus", 18) Thêm ghi chú</button></div>
     <div class="table-wrap">
         <table class="tbl">
             <thead><tr><th>Thời điểm</th><th>Hình thức</th><th>Nội dung</th><th>Nhân viên</th><th>Hẹn liên hệ lại</th></tr></thead>
@@ -94,7 +95,7 @@
                         <td class="muted">@Fmt.DateTimeDot(n.Date)</td>
                         <td>@Fmt.Channel(n.Channel)</td>
                         <td>@n.Content</td>
-                        <td>@Data.Employee(n.EmployeeId).FirstName</td>
+                        <td>@Model.EmployeeNames[n.EmployeeId]</td>
                         <td>@(n.FollowUp.HasValue ? Fmt.Date(n.FollowUp.Value) : "-")</td>
                     </tr>
                 }

@@ -1,17 +1,18 @@
-@model Category
+@model CategoryDetailVm
 @{
-    ViewData["Title"] = Model.Name;
-    var products = Data.Products.Where(p => p.Category == Model.Name).ToList();
+    var M = Model.Category;
+    ViewData["Title"] = M.Name;
+    var products = Model.Products;
 }
 <a class="back" asp-action="Categories">@Icons.Svg("arrow-left", 16) Danh sách loại sản phẩm</a>
 <div class="page-head">
     <div>
-        <div class="eyebrow">LOẠI SẢN PHẨM LSP@(Model.Id.ToString("D3"))</div>
-        <h1 class="page-title">@Model.Name</h1>
+        <div class="eyebrow">LOẠI SẢN PHẨM LSP@(M.Id.ToString("D3"))</div>
+        <h1 class="page-title">@M.Name</h1>
         <p class="page-sub">@products.Count sản phẩm</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="category" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="category" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -19,8 +20,8 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin loại</h3>
         <dl class="kv">
-            <dt>Mã loại</dt><dd>LSP@(Model.Id.ToString("D3"))</dd>
-            <dt>Tên loại</dt><dd>@Model.Name</dd>
+            <dt>Mã loại</dt><dd>LSP@(M.Id.ToString("D3"))</dd>
+            <dt>Tên loại</dt><dd>@M.Name</dd>
         </dl>
     </section>
     <section class="card pad">
@@ -29,7 +30,7 @@
             <dt>Số sản phẩm</dt><dd>@products.Count</dd>
             <dt>Đang bán</dt><dd>@products.Count(p => p.Visible)</dd>
             <dt>Đang ẩn</dt><dd>@products.Count(p => !p.Visible)</dd>
-            <dt>Tổng tồn kho</dt><dd>@Data.Variants.Where(v => products.Any(p => p.Id == v.ProductId)).Sum(v => v.Stock)</dd>
+            <dt>Tổng tồn kho</dt><dd>@Model.Variants.Values.Sum(l => l.Sum(v => v.Stock))</dd>
         </dl>
     </section>
 </div>
@@ -48,7 +49,7 @@
                 <tbody>
                     @foreach (var p in products)
                     {
-                        var vs = Data.Variants.Where(v => v.ProductId == p.Id).ToList();
+                        var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
                         <tr><td>SP@(p.Id.ToString("D3"))</td><td><a class="code" asp-action="Detail" asp-route-id="@p.Id">@p.Name</a></td><td class="r">@vs.Count</td><td class="r">@vs.Sum(v => v.Stock)</td><td>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</td></tr>
                     }
                 </tbody>

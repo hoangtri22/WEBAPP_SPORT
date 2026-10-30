@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/shop-store.css" asp-append-version="true" />
 </head>
-<body class="customer-area" data-db="@(Db.IsConnected ? "true" : "false")">
+<body class="customer-area" data-db="@(ViewData["DbConnected"] is true ? "true" : "false")">
     <partial name="_SiteHeader" />
     <main class="customer-content">
         @RenderBody()

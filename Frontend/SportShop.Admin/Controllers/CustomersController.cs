@@ -42,7 +42,11 @@ public class CustomersController(ShopData db) : Controller
         ViewBag.Menu = "customers";
         var c = db.Customers.FirstOrDefault(x => x.Id == id);
         if (c == null) return NotFound();
-        return View(c);
+        var orders = db.Orders.Where(o => o.CustomerId == c.Id).OrderByDescending(o => o.Id).ToList();
+        var notes = db.CareNotes.Where(n => n.CustomerId == c.Id).OrderByDescending(n => n.Date).ToList();
+        return View(new CustomerDetailVm(c, orders, notes,
+            orders.SelectMany(o => o.Lines).Select(l => l.VariantId).Distinct().ToDictionary(v => v, v => db.VariantName(v)),
+            notes.Select(n => n.EmployeeId).Distinct().ToDictionary(e => e, e => db.Employee(e).FirstName)));
     }
 
     // Chi tiết nhóm khách hàng (Views/Customers/GroupDetail.cshtml) từ ShopData.CustomerGroups, kèm danh sách khách thuộc nhóm.
@@ -51,6 +55,6 @@ public class CustomersController(ShopData db) : Controller
         ViewBag.Menu = "customers";
         var g = db.CustomerGroups.FirstOrDefault(x => x.Id == id);
         if (g == null) return NotFound();
-        return View(g);
+        return View(new GroupDetailVm(g, db.ActiveCustomers.Where(c => c.Groups.Contains(g.Name)).ToList()));
     }
 }

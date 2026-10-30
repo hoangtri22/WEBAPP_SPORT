@@ -1,19 +1,20 @@
-@model Account
+@model AccountDetailVm
 @{
-    ViewData["Title"] = Model.Username;
-    var emp = Data.Employees.FirstOrDefault(e => e.Username == Model.Username);
-    var cus = Data.Customers.FirstOrDefault(c => c.Username == Model.Username);
-    string status = Model.Status switch { "hoat_dong" => "[g]Đang hoạt động", "bi_khoa" => "[x]Đã khóa", _ => "[r]Đã xóa" };
+    var M = Model.Account;
+    ViewData["Title"] = M.Username;
+    var emp = Model.Employee;
+    var cus = Model.Customer;
+    string status = M.Status switch { "hoat_dong" => "[g]Đang hoạt động", "bi_khoa" => "[x]Đã khóa", _ => "[r]Đã xóa" };
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách tài khoản</a>
 <div class="page-head">
     <div>
-        <div class="eyebrow">TÀI KHOẢN TK@(Model.Id.ToString("D3"))</div>
-        <h1 class="page-title">@Model.Username</h1>
+        <div class="eyebrow">TÀI KHOẢN TK@(M.Id.ToString("D3"))</div>
+        <h1 class="page-title">@M.Username</h1>
         <p class="page-sub">@Fmt.Cell(status)</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="account" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="account" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -21,10 +22,10 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin tài khoản</h3>
         <dl class="kv">
-            <dt>Tên đăng nhập</dt><dd>@Model.Username</dd>
-            <dt>Vai trò</dt><dd>@Model.Role</dd>
-            <dt>Email</dt><dd>@(string.IsNullOrEmpty(Model.Email) ? "-" : Model.Email)</dd>
-            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</dd>
+            <dt>Tên đăng nhập</dt><dd>@M.Username</dd>
+            <dt>Vai trò</dt><dd>@M.Role</dd>
+            <dt>Email</dt><dd>@(string.IsNullOrEmpty(M.Email) ? "-" : M.Email)</dd>
+            <dt>Số điện thoại</dt><dd>@(string.IsNullOrEmpty(M.Phone) ? "-" : M.Phone)</dd>
             <dt>Trạng thái</dt><dd>@Fmt.Cell(status)</dd>
         </dl>
     </section>

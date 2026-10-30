@@ -1,17 +1,18 @@
-@model CustomerGroup
+@model GroupDetailVm
 @{
-    ViewData["Title"] = Model.Name;
-    var members = Data.ActiveCustomers.Where(c => c.Groups.Contains(Model.Name)).ToList();
+    var M = Model.Group;
+    ViewData["Title"] = M.Name;
+    var members = Model.Members;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách khách hàng</a>
 <div class="page-head">
     <div>
         <div class="eyebrow">NHÓM KHÁCH HÀNG</div>
-        <h1 class="page-title">@Model.Name</h1>
-        <p class="page-sub">@Model.Count khách thuộc nhóm</p>
+        <h1 class="page-title">@M.Name</h1>
+        <p class="page-sub">@M.Count khách thuộc nhóm</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="group" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="group" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -19,8 +20,8 @@
     <section class="card pad">
         <h3 class="card-h">Tiêu chí phân nhóm</h3>
         <dl class="kv">
-            <dt>Tiêu chí</dt><dd>@Model.Criterion</dd>
-            <dt>Giá trị</dt><dd>@Model.Value</dd>
+            <dt>Tiêu chí</dt><dd>@M.Criterion</dd>
+            <dt>Giá trị</dt><dd>@M.Value</dd>
         </dl>
     </section>
     <section class="card pad">

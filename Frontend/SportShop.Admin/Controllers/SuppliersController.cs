@@ -34,6 +34,6 @@ public class SuppliersController(ShopData db) : Controller
         ViewBag.Menu = "suppliers";
         var s = db.Suppliers.FirstOrDefault(x => x.Id == id);
         if (s == null) return NotFound();
-        return View(s);
+        return View(new SupplierDetailVm(s, db.ImportSlips.Where(p => p.Supplier == s.Name).OrderByDescending(p => p.Date).ToList()));
     }
 }

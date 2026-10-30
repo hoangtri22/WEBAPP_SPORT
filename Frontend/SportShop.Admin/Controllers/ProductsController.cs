@@ -20,11 +20,13 @@ public class ProductsController(ShopData db) : Controller
         });
     }
 
-    // Quản lý sản phẩm: view Products/Index.cshtml tự đọc sản phẩm và biến thể từ ShopData (inject trong _ViewImports.cshtml).
+    // Quản lý sản phẩm: lấy loại, sản phẩm đang bán, biến thể theo sản phẩm và các dòng bảng biến thể từ ShopData, truyền sang Products/Index.cshtml qua ProductsVm.
     public IActionResult Index()
     {
         ViewBag.Menu = "products";
-        return View();
+        var variantRows = db.ActiveVariants.Select(v => new Row(
+            [$"BT{v.Id:D3}", db.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], Url.Action("Detail", new { id = v.ProductId }), v.Id)).ToList();
+        return View(new ProductsVm(db.Categories, db.ActiveProducts, db.Variants.GroupBy(v => v.ProductId).ToDictionary(g => g.Key, g => g.ToList()), variantRows));
     }
 
     // Chi tiết loại sản phẩm (Views/Products/CategoryDetail.cshtml): các sản phẩm thuộc loại lấy từ ShopData.Products và ShopData.Variants.
@@ -33,7 +35,9 @@ public class ProductsController(ShopData db) : Controller
         ViewBag.Menu = "categories";
         var c = db.CategoryList.FirstOrDefault(x => x.Id == id);
         if (c == null) return NotFound();
-        return View(c);
+        var products = db.Products.Where(p => p.Category == c.Name).ToList();
+        var ids = products.Select(p => p.Id).ToHashSet();
+        return View(new CategoryDetailVm(c, products, db.Variants.Where(v => ids.Contains(v.ProductId)).GroupBy(v => v.ProductId).ToDictionary(g => g.Key, g => g.ToList())));
     }
 
     // Chi tiết sản phẩm (Views/Products/Detail.cshtml): thông tin SAN_PHAM, các biến thể và số lượng đã bán từ ShopData (Products, Variants, Orders).
@@ -42,6 +46,8 @@ public class ProductsController(ShopData db) : Controller
         ViewBag.Menu = "products";
         var p = db.Products.FirstOrDefault(x => x.Id == id);
         if (p == null) return NotFound();
-        return View(p);
+        var vs = db.Variants.Where(v => v.ProductId == p.Id).ToList();
+        var vids = vs.Select(v => v.Id).ToHashSet();
+        return View(new ProductDetailVm(p, vs, db.Orders.Where(o => o.Invoiced).SelectMany(o => o.Lines).Where(l => vids.Contains(l.VariantId)).ToList()));
     }
 }

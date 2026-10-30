@@ -1,19 +1,20 @@
-@model Promotion
+@model PromotionDetailVm
 @using SportShop.Admin.Controllers
 @{
-    ViewData["Title"] = Model.Name;
-    var orders = Data.Orders.Where(o => o.Voucher != null && o.Voucher.Split(", ").Contains(Model.Name)).OrderByDescending(o => o.Id).ToList();
-    var campaigns = Data.Campaigns.Where(c => c.Promotion == Model.Name).ToList();
+    var M = Model.Promotion;
+    ViewData["Title"] = M.Name;
+    var orders = Model.Orders;
+    var campaigns = Model.Campaigns;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Khuyến mãi &amp; Marketing</a>
 <div class="page-head">
     <div>
         <div class="eyebrow">CHƯƠNG TRÌNH KHUYẾN MÃI</div>
-        <h1 class="page-title">@Model.Name</h1>
-        <p class="page-sub">@Fmt.Cell(PromotionsController.StatusOf(Model))</p>
+        <h1 class="page-title">@M.Name</h1>
+        <p class="page-sub">@Fmt.Cell(PromotionsController.StatusOf(M))</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="promotion" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="promotion" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -21,17 +22,17 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin chương trình</h3>
         <dl class="kv">
-            <dt>Loại</dt><dd>@Model.Type</dd>
-            <dt>Mức giảm</dt><dd>@Model.Discount</dd>
-            <dt>Bắt đầu</dt><dd>@Fmt.DateTimeDot(Model.Start)</dd>
-            <dt>Kết thúc</dt><dd>@Fmt.DateTimeDot(Model.End)</dd>
-            <dt>Trạng thái</dt><dd>@Fmt.Cell(PromotionsController.StatusOf(Model))</dd>
+            <dt>Loại</dt><dd>@M.Type</dd>
+            <dt>Mức giảm</dt><dd>@M.Discount</dd>
+            <dt>Bắt đầu</dt><dd>@Fmt.DateTimeDot(M.Start)</dd>
+            <dt>Kết thúc</dt><dd>@Fmt.DateTimeDot(M.End)</dd>
+            <dt>Trạng thái</dt><dd>@Fmt.Cell(PromotionsController.StatusOf(M))</dd>
         </dl>
     </section>
     <section class="card pad">
         <h3 class="card-h">Hiệu quả</h3>
         <dl class="kv">
-            <dt>Lượt sử dụng</dt><dd>@Model.Uses</dd>
+            <dt>Lượt sử dụng</dt><dd>@M.Uses</dd>
             <dt>Đơn áp dụng</dt><dd>@orders.Count</dd>
             <dt>Tổng tiền giảm</dt><dd>@Fmt.Money(orders.Sum(o => o.Discount))</dd>
             <dt>Chiến dịch gắn kèm</dt><dd>@(campaigns.Count == 0 ? "-" : string.Join(", ", campaigns.Select(c => c.Title)))</dd>
@@ -53,7 +54,7 @@
                 <tbody>
                     @foreach (var o in orders)
                     {
-                        <tr><td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td><td>@Data.Customer(o.CustomerId).FullName</td><td>@Fmt.DateTimeDot(o.Date)</td><td class="r">-@Fmt.Money(o.Discount)</td><td class="r">@Fmt.Money(o.Total)</td></tr>
+                        <tr><td><a class="code" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Code">@o.Code</a></td><td>@Model.CustomerNames[o.CustomerId]</td><td>@Fmt.DateTimeDot(o.Date)</td><td class="r">-@Fmt.Money(o.Discount)</td><td class="r">@Fmt.Money(o.Total)</td></tr>
                     }
                 </tbody>
             </table>

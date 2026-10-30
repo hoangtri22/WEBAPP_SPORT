@@ -45,6 +45,8 @@ public class OrdersController(ShopData db) : Controller
         ViewBag.Menu = from == "invoices" ? "invoices" : "orders";
         var o = db.Orders.FirstOrDefault(x => x.Code == id);
         if (o == null) return NotFound();
-        return View(o);
+        return View(new OrderDetailVm(o, db.Customer(o.CustomerId),
+            o.EmployeeId.HasValue ? db.Employee(o.EmployeeId.Value).FirstName : "Khách tự đặt online",
+            o.Lines.Select(l => l.VariantId).Distinct().ToDictionary(v => v, v => db.VariantName(v))));
     }
 }

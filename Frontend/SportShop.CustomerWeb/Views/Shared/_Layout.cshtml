@@ -1,8 +1,7 @@
-﻿@inject ShopStore Shop
-@{
+﻿@{
     bool loggedIn = !string.IsNullOrEmpty(Context.Session.GetString("customer"));
-    string adminUrl = Config["Links:AdminUrl"] ?? "#";
-    int cartCount = Db.IsConnected ? Shop.CartCount(Context.Session) : 0;
+    string adminUrl = ViewData["AdminUrl"] as string ?? "#";
+    int cartCount = ViewData["CartCount"] as int? ?? 0;
     string controllerName = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string actionName = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
     bool onHome = controllerName == "Home" && actionName == "Index";
@@ -21,7 +20,7 @@
     <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/shop-store.css" asp-append-version="true" />
 </head>
-<body class="storefront" data-db="@(Db.IsConnected ? "true" : "false")">
+<body class="storefront" data-db="@(ViewData["DbConnected"] is true ? "true" : "false")">
     @if (loggedIn)
     {
         <partial name="_SiteHeader" />

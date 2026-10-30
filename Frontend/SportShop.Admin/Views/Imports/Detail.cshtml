@@ -1,15 +1,15 @@
-@model ImportSlip
-@inject ShopCommands Cmd
+@model ImportDetailVm
 @{
-    ViewData["Title"] = $"PN{Model.Id:D3}";
-    var lines = Cmd.ImportLines(Model.Id);
-    var supplier = Data.Suppliers.FirstOrDefault(s => s.Name == Model.Supplier);
+    var M = Model.Slip;
+    ViewData["Title"] = $"PN{M.Id:D3}";
+    var lines = Model.Lines;
+    var supplier = Model.Supplier;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Danh sách phiếu nhập</a>
 <div class="page-head">
     <div>
         <div class="eyebrow">PHIẾU NHẬP HÀNG</div>
-        <h1 class="page-title">PN@(Model.Id.ToString("D3"))</h1>
+        <h1 class="page-title">PN@(M.Id.ToString("D3"))</h1>
         <p class="page-sub">Phiếu nhập đã cập nhật tồn kho nên không sửa hoặc xóa được</p>
     </div>
 </div>
@@ -18,17 +18,17 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin phiếu nhập</h3>
         <dl class="kv">
-            <dt>Nhà cung cấp</dt><dd>@if (supplier != null) { <a class="code" asp-controller="Suppliers" asp-action="Detail" asp-route-id="@supplier.Id">@Model.Supplier</a> } else { @Model.Supplier }</dd>
-            <dt>Ngày nhập</dt><dd>@Fmt.DateTimeDot(Model.Date)</dd>
-            <dt>Nhân viên lập</dt><dd>@Model.Employee</dd>
+            <dt>Nhà cung cấp</dt><dd>@if (supplier != null) { <a class="code" asp-controller="Suppliers" asp-action="Detail" asp-route-id="@supplier.Id">@M.Supplier</a> } else { @M.Supplier }</dd>
+            <dt>Ngày nhập</dt><dd>@Fmt.DateTimeDot(M.Date)</dd>
+            <dt>Nhân viên lập</dt><dd>@M.Employee</dd>
         </dl>
     </section>
     <section class="card pad">
         <h3 class="card-h">Tổng hợp</h3>
         <dl class="kv">
             <dt>Số mặt hàng</dt><dd>@lines.Count</dd>
-            <dt>Tổng số lượng</dt><dd>@Model.Quantity sản phẩm</dd>
-            <dt>Tổng giá trị</dt><dd>@Fmt.Money(Model.Total)</dd>
+            <dt>Tổng số lượng</dt><dd>@M.Quantity sản phẩm</dd>
+            <dt>Tổng giá trị</dt><dd>@Fmt.Money(M.Total)</dd>
         </dl>
     </section>
 </div>
@@ -47,6 +47,6 @@
         </table>
     </div>
     <div class="sum">
-        <div class="total"><span>Tổng giá trị</span><span>@Fmt.Money(Model.Total)</span></div>
+        <div class="total"><span>Tổng giá trị</span><span>@Fmt.Money(M.Total)</span></div>
     </div>
 </section>

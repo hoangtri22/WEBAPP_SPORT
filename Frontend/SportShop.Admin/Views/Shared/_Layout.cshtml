@@ -2,11 +2,10 @@
     string menu = ViewBag.Menu as string ?? "";
     bool bare = ViewBag.Bare == true;
 
-    int unanswered = bare ? 0 : Data.FeedbackItems.Count(f => !f.Answered);
+    int unanswered = ViewData["Unanswered"] as int? ?? 0;
 
     bool isAdminAccount = string.Equals(User.FindFirst("username")?.Value, "admin", StringComparison.OrdinalIgnoreCase);
-    int employeeId = int.TryParse(User.FindFirst("employee_id")?.Value, out var eid) ? eid : 0;
-    var self = bare || isAdminAccount ? null : Data.Employees.FirstOrDefault(e => e.Id == employeeId);
+    var self = ViewData["Self"] as Employee;
     string fullName = isAdminAccount ? "Admin" : self != null ? $"{self.LastName} {self.FirstName}".Trim() : User.Identity?.Name ?? "";
     string firstName = isAdminAccount ? "Admin" : self?.FirstName ?? User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? fullName;
     string role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";

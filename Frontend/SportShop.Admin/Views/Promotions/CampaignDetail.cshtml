@@ -1,20 +1,19 @@
-@model Campaign
-@inject ShopCommands Cmd
+@model CampaignDetailVm
 @{
-    ViewData["Title"] = Model.Title;
-    var raw = Cmd.Load("campaign", Model.Id);
-    var promo = Data.Promotions.FirstOrDefault(p => p.Name == Model.Promotion);
-    var group = Data.CustomerGroups.FirstOrDefault(g => g.Name == Model.Group);
+    var M = Model.Campaign;
+    ViewData["Title"] = M.Title;
+    var promo = Model.Promotion;
+    var group = Model.Group;
 }
 <a class="back" asp-action="Index">@Icons.Svg("arrow-left", 16) Khuyến mãi &amp; Marketing</a>
 <div class="page-head">
     <div>
         <div class="eyebrow">CHIẾN DỊCH THÔNG BÁO</div>
-        <h1 class="page-title">@Model.Title</h1>
-        <p class="page-sub">@Fmt.Cell(Model.Sent ? "[g]Đã gửi" : "[x]Nháp")</p>
+        <h1 class="page-title">@M.Title</h1>
+        <p class="page-sub">@Fmt.Cell(M.Sent ? "[g]Đã gửi" : "[x]Nháp")</p>
     </div>
     <div class="head-actions">
-        <button type="button" class="btn-outline" data-crud="edit" data-entity="campaign" data-id="@Model.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
+        <button type="button" class="btn-outline" data-crud="edit" data-entity="campaign" data-id="@M.Id">@Icons.Svg("pencil", 18) Chỉnh sửa</button>
     </div>
 </div>
 
@@ -22,15 +21,15 @@
     <section class="card pad">
         <h3 class="card-h">Thông tin chiến dịch</h3>
         <dl class="kv">
-            <dt>Kênh gửi</dt><dd>@Model.Channel</dd>
-            <dt>Nhóm khách</dt><dd>@if (group != null) { <a class="code" asp-controller="Customers" asp-action="GroupDetail" asp-route-id="@group.Id">@Model.Group</a> } else { @Model.Group }</dd>
-            <dt>Khuyến mãi</dt><dd>@if (promo != null) { <a class="code" asp-action="Detail" asp-route-id="@promo.Id">@Model.Promotion</a> } else { @Model.Promotion }</dd>
-            <dt>Người tạo</dt><dd>@Model.Creator</dd>
-            <dt>Trạng thái</dt><dd>@Fmt.Cell(Model.Sent ? "[g]Đã gửi" : "[x]Nháp")</dd>
+            <dt>Kênh gửi</dt><dd>@M.Channel</dd>
+            <dt>Nhóm khách</dt><dd>@if (group != null) { <a class="code" asp-controller="Customers" asp-action="GroupDetail" asp-route-id="@group.Id">@M.Group</a> } else { @M.Group }</dd>
+            <dt>Khuyến mãi</dt><dd>@if (promo != null) { <a class="code" asp-action="Detail" asp-route-id="@promo.Id">@M.Promotion</a> } else { @M.Promotion }</dd>
+            <dt>Người tạo</dt><dd>@M.Creator</dd>
+            <dt>Trạng thái</dt><dd>@Fmt.Cell(M.Sent ? "[g]Đã gửi" : "[x]Nháp")</dd>
         </dl>
     </section>
     <section class="card pad">
         <h3 class="card-h">Nội dung thông báo</h3>
-        <p class="pre-wrap">@(raw.GetValueOrDefault("noi_dung") is { Length: > 0 } text ? text : "-")</p>
+        <p class="pre-wrap">@(Model.Content.Length > 0 ? Model.Content : "-")</p>
     </section>
 </div>

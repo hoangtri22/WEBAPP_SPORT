@@ -85,6 +85,6 @@ public class AccountController(ShopData db) : Controller
         ViewBag.Menu = "account";
         var a = db.Accounts.FirstOrDefault(x => x.Id == id);
         if (a == null) return NotFound();
-        return View(a);
+        return View(new AccountDetailVm(a, db.Employees.FirstOrDefault(e => e.Username == a.Username), db.Customers.FirstOrDefault(c => c.Username == a.Username)));
     }
 }

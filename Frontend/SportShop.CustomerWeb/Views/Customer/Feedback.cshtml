@@ -1,11 +1,11 @@
+@model FeedbackPageVm
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Gửi phản hồi về sản phẩm";
     string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
-    bool live = Db.IsConnected;
-    int customerId = Context.Session.GetInt32("customer_id") ?? 0;
-    var products = live ? Store.PurchasedProducts(customerId) : StoreData.Products.Select(p => (p.Id, p.Name)).ToList();
-    var feedbacks = live ? Store.Feedbacks(customerId) : StoreData.Feedbacks;
+    bool live = Model.Live;
+    var products = Model.Products;
+    var feedbacks = Model.Feedbacks;
 }
 <div class="customer-page-title"><span>LẮNG NGHE &amp; CẢI THIỆN</span><h1>Gửi phản hồi về sản phẩm</h1><p>Chia sẻ trải nghiệm để chúng tôi nâng cao chất lượng sản phẩm và dịch vụ.</p></div>
 

@@ -9,7 +9,10 @@ public class FeedbackController(ShopData db) : Controller
     public IActionResult Index()
     {
         ViewBag.Menu = "feedback";
-        return View(db.FeedbackItems.OrderByDescending(f => f.Id).ToList());
+        var items = db.FeedbackItems.OrderByDescending(f => f.Id).ToList();
+        return View(new FeedbackVm(items,
+            items.Select(f => f.CustomerId).Distinct().ToDictionary(id => id, db.Customer),
+            items.Where(f => f.ReplyEmployeeId.HasValue).Select(f => f.ReplyEmployeeId!.Value).Distinct().ToDictionary(id => id, id => db.Employee(id).FirstName)));
     }
 
     // Danh sách khảo sát từ ShopData.Surveys kèm số câu hỏi và số khách hoàn thành.

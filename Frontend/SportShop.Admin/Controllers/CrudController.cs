@@ -28,7 +28,22 @@ public class CrudController(ShopCommands cmd) : Controller
         if (id > 0 && entity is not ("customer" or "import" or "survey" or "survey_send") && values.Count == 0)
             return Content("Không tìm thấy dữ liệu.", "text/plain; charset=utf-8");
         if (entity == "order" && id > 0 && values.GetValueOrDefault("trang_thai_don_hang") is "da_giao" or "da_huy") mode = "view";
-        return PartialView("_Form", new FormModel(def, values, mode, id, parent, cmd));
+        var specs = def.Fields.Select(f => f.Type switch
+        {
+            "interests" => "lookup:sothich",
+            "orderlines" => "lookup:bienthe",
+            "importlines" => "lookup:bienthe_nhap",
+            "variantlines" => "lookup:images",
+            "promodetail" => "lookup:sanpham",
+            _ => f.Options,
+        }).Where(s => !string.IsNullOrEmpty(s)).Distinct();
+        bool has(string type) => def.Fields.Any(f => f.Type == type);
+        return PartialView("_Form", new FormModel(def, values, mode, id, parent,
+            specs.ToDictionary(s => s!, s => cmd.Options(s)),
+            id > 0 && has("interests") ? cmd.CustomerInterests(id) : [],
+            id > 0 && has("importlines") ? cmd.ImportLines(id) : [],
+            id > 0 && has("questions") ? cmd.SurveyQuestions(id) : [],
+            id > 0 && has("questions") && cmd.SurveyHasAnswers(id)));
     }
 
     // Thêm/sửa dữ liệu: gọi ShopCommands.Save() theo entity, trả JSON {ok, message} cho admin.js.
@@ -53,8 +68,11 @@ public class CrudController(ShopCommands cmd) : Controller
         => Json(cmd.Act(action, id, new Form(Request.Form), Me()));
 }
 
-public record FormModel(EntityDef Def, Dictionary<string, string> Values, string Mode, int Id, int Parent, ShopCommands Cmd)
+public record FormModel(EntityDef Def, Dictionary<string, string> Values, string Mode, int Id, int Parent,
+    Dictionary<string, List<Opt>> OptionLists, HashSet<string> Interests, List<(string Name, int Qty, decimal Price, decimal Amount)> ImportLines,
+    List<(string Text, string Type, bool Required, string Options)> Questions, bool QuestionsLocked)
 {
     public string Val(string name) => Values.TryGetValue(name, out var v) ? v : "";
+    public List<Opt> Options(string? spec) => spec != null && OptionLists.TryGetValue(spec, out var l) ? l : [];
     public bool ReadOnly => Mode == "view";
 }

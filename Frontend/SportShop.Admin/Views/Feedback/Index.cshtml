@@ -1,8 +1,8 @@
-@model List<FeedbackItem>
+@model FeedbackVm
 @{
     ViewData["Title"] = "Phản hồi khách hàng";
-    var pending = Model.Where(f => !f.Answered).ToList();
-    var answered = Model.Where(f => f.Answered).ToList();
+    var pending = Model.Items.Where(f => !f.Answered).ToList();
+    var answered = Model.Items.Where(f => f.Answered).ToList();
 
     string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
     string StatusPill(FeedbackItem f) => f.Answered ? "[g]Đã trả lời" : f.Status == "dang_xu_ly" ? "[b]Đang xử lý" : "[o]Chưa trả lời";
@@ -28,9 +28,9 @@
             <kbd>Ctrl K</kbd>
         </label>
         <div id="fbItems">
-            @foreach (var f in Model)
+            @foreach (var f in Model.Items)
             {
-                var c = Data.Customer(f.CustomerId);
+                var c = Model.Customers[f.CustomerId];
                 bool isPending = !f.Answered;
                 <button type="button" class="msg @(f == pending.FirstOrDefault() ? "active" : "")" data-id="@f.Id" data-group="@(isPending ? "pending" : "answered")"
                         data-text="@(c.FullName + " " + f.Title + " " + f.Body)" @(isPending ? "" : "hidden")>
@@ -47,9 +47,9 @@
     </div>
 
     <div class="inbox-detail">
-        @foreach (var f in Model)
+        @foreach (var f in Model.Items)
         {
-            var c = Data.Customer(f.CustomerId);
+            var c = Model.Customers[f.CustomerId];
             <article class="detail" data-id="@f.Id" @(f == pending.FirstOrDefault() ? "" : "hidden")>
                 <header class="detail-head">
                     <span class="avatar">@Initials(c)</span>
@@ -80,7 +80,7 @@
                         <div class="reply-box done">
                             <div class="eyebrow">CÂU TRẢ LỜI</div>
                             <p>@f.Reply</p>
-                            <small class="muted">@(f.ReplyEmployeeId.HasValue ? Data.Employee(f.ReplyEmployeeId.Value).FirstName : "") · @(f.ReplyAt.HasValue ? f.ReplyAt.Value.ToString("HH:mm, dd/MM/yyyy") : "")</small>
+                            <small class="muted">@(f.ReplyEmployeeId.HasValue ? Model.EmployeeNames[f.ReplyEmployeeId.Value] : "") · @(f.ReplyAt.HasValue ? f.ReplyAt.Value.ToString("HH:mm, dd/MM/yyyy") : "")</small>
                         </div>
                     }
                     else

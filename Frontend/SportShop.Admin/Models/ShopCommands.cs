@@ -609,7 +609,7 @@ public class ShopCommands
             var km = One(c, """
                 SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
                 FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
-                WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
+                WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc FOR UPDATE OF ct
                 """, new { code }, tx) ?? throw new UserError("Mã voucher không hợp lệ hoặc đã hết hạn.");
             var member = One(c, "SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx);
             string tier = member == null ? "thuong" : MemberTier.Effective(S(member, "hang_thanh_vien"), decimal.Parse(Dec(member, "tong_chi_tieu"), CultureInfo.InvariantCulture));
@@ -620,11 +620,11 @@ public class ShopCommands
                 throw new UserError("Voucher dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
             if (S(km, "so_luong_gioi_han") is { Length: > 0 } lim && int.Parse(S(km, "so_luot_da_dung")) >= int.Parse(lim)) throw new UserError("Voucher đã hết lượt sử dụng.");
             int ctId = int.Parse(S(km, "ma_ctkm"));
-            string perText = S(km, "gioi_han_khach_hang");
-            if (perText.Length == 0 && (newCustomerOnly || needTier.Length > 0)) perText = "1";
-            if (perText.Length > 0 && int.TryParse(perText, out int per)
+            // Số lần mỗi khách được dùng: khách mới 1, hạng Bạc 2, hạng Vàng 3 (Catalog.VoucherUseLimit); mã khác theo giới hạn của chương trình
+            int? perLimit = Catalog.VoucherUseLimit(newCustomerOnly, needTier) ?? (int.TryParse(S(km, "gioi_han_khach_hang"), out int cfg) ? cfg : null);
+            if (perLimit is int per
                 && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customer", new { ctId, customer }, tx) >= per)
-                throw new UserError("Khách đã dùng hết số lần cho phép của voucher này.");
+                throw new UserError($"Khách đã dùng hết số lần cho phép của nhóm voucher này (tối đa {per} lần).");
             discount = Math.Round(subtotal * decimal.Parse(Dec(km, "phan_tram_giam"), CultureInfo.InvariantCulture) / 100, 0);
             if (S(km, "gia_tri_giam_toi_da") is { Length: > 0 }) discount = Math.Min(discount, decimal.Parse(Dec(km, "gia_tri_giam_toi_da"), CultureInfo.InvariantCulture));
             ctkm = ctId;

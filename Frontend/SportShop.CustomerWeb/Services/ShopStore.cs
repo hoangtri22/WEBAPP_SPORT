@@ -27,16 +27,45 @@ public class ShopStore(IConfiguration config, CartStore carts)
             .Select(r => new ShopCategory(I(r, "ma_loai"), S(r, "ten_loai"), I(r, "so_sp"))).ToList();
     }
 
-    // Tìm kiếm / lọc sản phẩm: theo loại, từ khóa (LIKE tên sản phẩm hoặc tên loại) và kiểu sắp xếp; giá thấp nhất/cao nhất và tồn kho tổng hợp từ BIEN_THE_SP.
+    // Tìm kiếm / lọc sản phẩm theo kiểu cũ (loại, từ khóa, sắp xếp): chuyển sang Search() để mọi nơi dùng chung một cách tìm.
     public List<ShopProduct> Products(int? category = null, string? keyword = null, string sort = "new", int? take = null)
+        => Search(new ProductQuery { Category = category, Keyword = keyword, Sort = sort, Take = take });
+
+    // Tìm kiếm sản phẩm dùng chung (ProductQuery): mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại (collation utf8mb4_unicode_ci nên không phân biệt hoa thường và dấu);
+    // bộ lọc nâng cao (khoảng giá, size, màu) áp lên biến thể còn bán và còn hàng; giá thấp nhất/cao nhất và tồn kho tổng hợp từ BIEN_THE_SP.
+    public List<ShopProduct> Search(ProductQuery q)
     {
-        string order = sort switch
+        string order = q.Sort switch
         {
             "price_asc" => "MIN(bt.gia_ban) IS NULL, MIN(bt.gia_ban) ASC",
             "price_desc" => "MAX(bt.gia_ban) DESC",
             "name" => "sp.ten_san_pham ASC",
             _ => "sp.ma_san_pham DESC",
         };
+        // Khách nhập ngược khoảng giá (từ lớn hơn đến) thì tự đổi chỗ
+        if (q.MinPrice > 0 && q.MaxPrice > 0 && q.MinPrice > q.MaxPrice) (q.MinPrice, q.MaxPrice) = (q.MaxPrice, q.MinPrice);
+        var p = new DynamicParameters();
+        var where = new List<string> { "sp.trang_thai = 'hien'" };
+        if (q.Category is int category) { where.Add("sp.ma_loai = @category"); p.Add("category", category); }
+
+        var words = q.Words;
+        for (int i = 0; i < words.Length; i++)
+        {
+            where.Add($"(sp.ten_san_pham LIKE @w{i} OR l.ten_loai LIKE @w{i})");
+            p.Add($"w{i}", "%" + words[i].Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%");
+        }
+
+        if (q.IsAdvanced)
+        {
+            var v = new List<string> { "v.ma_san_pham = sp.ma_san_pham", "v.trang_thai = 'hien'", "v.so_luong_ton > 0" };
+            if (q.MinPrice is > 0) { v.Add("v.gia_ban >= @minPrice"); p.Add("minPrice", q.MinPrice); }
+            if (q.MaxPrice is > 0) { v.Add("v.gia_ban <= @maxPrice"); p.Add("maxPrice", q.MaxPrice); }
+            if (!string.IsNullOrWhiteSpace(q.Size)) { v.Add("v.kich_co = @size"); p.Add("size", q.Size.Trim()); }
+            if (!string.IsNullOrWhiteSpace(q.Color)) { v.Add("v.mau_sac = @color"); p.Add("color", q.Color.Trim()); }
+            where.Add($"EXISTS (SELECT 1 FROM BIEN_THE_SP v WHERE {string.Join(" AND ", v)})");
+        }
+        p.Add("take", q.Take ?? 1000);
+
         using var c = Open();
         return c.Query($"""
             SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta,
@@ -46,14 +75,21 @@ public class ShopStore(IConfiguration config, CartStore carts)
             FROM SAN_PHAM sp
             JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
             LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
-            WHERE sp.trang_thai = 'hien'
-              AND (@category IS NULL OR sp.ma_loai = @category)
-              AND (@kw IS NULL OR sp.ten_san_pham LIKE @kw OR l.ten_loai LIKE @kw)
+            WHERE {string.Join(" AND ", where)}
             GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta
             ORDER BY {order}
             LIMIT @take
-            """, new { category, kw = string.IsNullOrWhiteSpace(keyword) ? null : "%" + keyword.Trim() + "%", take = take ?? 1000 })
-            .Cast<IDictionary<string, object?>>().Select(ToProduct).ToList();
+            """, p).Cast<IDictionary<string, object?>>().Select(ToProduct).ToList();
+    }
+
+    // Các size và màu đang có bán (biến thể hiện, còn hàng) để khách chọn trong tìm kiếm nâng cao.
+    public (List<string> Sizes, List<string> Colors) FilterOptions()
+    {
+        using var c = Open();
+        const string from = "FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE bt.trang_thai = 'hien' AND sp.trang_thai = 'hien' AND bt.so_luong_ton > 0";
+        var sizes = c.Query<string>($"SELECT DISTINCT bt.kich_co {from} AND bt.kich_co IS NOT NULL AND bt.kich_co <> '' ORDER BY bt.kich_co").ToList();
+        var colors = c.Query<string>($"SELECT DISTINCT bt.mau_sac {from} AND bt.mau_sac IS NOT NULL AND bt.mau_sac <> '' ORDER BY bt.mau_sac").ToList();
+        return (sizes, colors);
     }
 
     // Chi tiết một sản phẩm đang hiện và các biến thể (size, màu, giá, tồn kho, ảnh) trong BIEN_THE_SP.
@@ -198,10 +234,12 @@ public class ShopStore(IConfiguration config, CartStore carts)
     // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), còn lượt và chưa vượt giới hạn mỗi khách (mã khách mới / theo hạng mặc định 1 lần); trả về mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
-        var km = c.Query("""
+        // Đang đặt hàng (có giao dịch): khóa dòng chương trình để nhiều khách đặt cùng lúc lần lượt kiểm tra lượt dùng, không vượt giới hạn
+        string lockRow = tx != null ? " FOR UPDATE OF ct" : "";
+        var km = c.Query($"""
             SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
             FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
-            WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
+            WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc{lockRow}
             """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
         var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
@@ -213,10 +251,11 @@ public class ShopStore(IConfiguration config, CartStore carts)
             throw new OrderError("Mã dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
         if (NI(km, "so_luong_gioi_han") is int lim && I(km, "so_luot_da_dung") >= lim) throw new OrderError("Mã giảm giá đã hết lượt sử dụng.");
         int ctId = I(km, "ma_ctkm");
-        int? perLimit = NI(km, "gioi_han_khach_hang") ?? (newCustomerOnly || needTier is { Length: > 0 } ? 1 : null);
+        // Số lần mỗi khách được dùng: khách mới 1, hạng Bạc 2, hạng Vàng 3 (Catalog.VoucherUseLimit); mã khác theo giới hạn của chương trình
+        int? perLimit = Catalog.VoucherUseLimit(newCustomerOnly, needTier) ?? NI(km, "gioi_han_khach_hang");
         if (perLimit is int per
             && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customerId", new { ctId, customerId }, tx) >= per)
-            throw new OrderError("Bạn đã dùng hết số lần cho phép của mã này.");
+            throw new OrderError($"Bạn đã dùng hết số lần cho phép của nhóm mã này (tối đa {per} lần).");
         decimal discount = Math.Round(subtotal * D(km, "phan_tram_giam") / 100, 0);
         if (ND(km, "gia_tri_giam_toi_da") is decimal max) discount = Math.Min(discount, max);
         return (ctId, discount);

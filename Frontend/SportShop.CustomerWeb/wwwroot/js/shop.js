@@ -36,10 +36,10 @@ document.addEventListener('click', function (e) {
         var b = document.getElementById(id);
         if (b) b.addEventListener('click', function () { toggle(); });
     });
-    input.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter') return;
-        if (document.body.dataset.db === 'true') { if (input.value.trim()) location.href = '/Shop?q=' + encodeURIComponent(input.value.trim()); }
-        else showToast();
+    // Gửi biểu mẫu (Enter) chuyển đến /Shop?q=...; chưa kết nối CSDL hoặc chưa nhập gì thì không gửi.
+    bar.addEventListener('submit', function (e) {
+        if (document.body.dataset.db !== 'true') { e.preventDefault(); showToast(); }
+        else if (!input.value.trim()) e.preventDefault();
     });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') toggle(false);

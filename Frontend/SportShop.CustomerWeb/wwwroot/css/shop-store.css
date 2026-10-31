@@ -154,3 +154,20 @@
 .voucher-info strong { font-size: 14px; }
 .voucher-info small { color: var(--muted); font-size: 12.5px; }
 .voucher-save { color: var(--orange); font-size: 14px; white-space: nowrap; }
+
+/* Tìm kiếm nâng cao ở trang cửa hàng (Views/Shared/_AdvancedSearch.cshtml): khung gọn, các ô xếp thành hàng */
+.adv-search { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.adv-search summary { display: flex; align-items: center; gap: 7px; padding: 8px 14px; font-size: 13.5px; font-weight: 700; cursor: pointer; list-style: none; }
+.adv-search summary::-webkit-details-marker { display: none; }
+.adv-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 12px; align-items: end; padding: 2px 14px 12px; }
+.adv-form label { display: grid; gap: 3px; font-size: 12px; font-weight: 700; color: #334155; }
+.adv-form input, .adv-form select { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 400; }
+.adv-wide { grid-column: span 2; }
+.adv-keyword { display: flex; align-items: center; gap: 6px; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding-left: 10px; }
+.adv-keyword input { border: 0; height: 32px; outline: 0; padding-left: 0; }
+.adv-actions { display: flex; gap: 8px; }
+.adv-actions .btn { height: 34px; padding: 0 14px; font-size: 13px; border-radius: 8px; white-space: nowrap; }
+
+/* Nút "Tìm kiếm nâng cao" trong thanh tìm kiếm nhanh ở đầu trang (Views/Shared/_SearchBar.cshtml) */
+.shop-search-adv { flex: none; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--teal); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.shop-search-adv:hover { background: #edf8f6; border-color: var(--teal); }

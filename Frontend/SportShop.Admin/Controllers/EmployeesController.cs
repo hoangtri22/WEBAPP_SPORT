@@ -1,10 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
 public class EmployeesController(ShopData db) : Controller
 {
+    // Tài khoản vai trò Nhân viên không vào được trang Quản lý nhân viên (ẩn khỏi menu và chặn cả khi gõ thẳng đường dẫn).
+    public override void OnActionExecuting(ActionExecutingContext context)
+    {
+        if (User.IsInRole("Nhân viên")) context.Result = Forbid();
+        base.OnActionExecuting(context);
+    }
+
     // Quản lý nhân viên: danh sách từ ShopData.Employees (NHAN_VIEN + TAI_KHOAN); nhân viên đã nghỉ việc tách sang bảng riêng có nút Khôi phục.
     public IActionResult Index()
     {

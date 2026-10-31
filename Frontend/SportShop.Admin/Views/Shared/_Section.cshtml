@@ -19,10 +19,7 @@
                     <input type="search" placeholder="Tìm kiếm trong @hint..." autocomplete="off" />
                     <kbd>Ctrl K</kbd>
                 </label>
-                <div class="filter">
-                    <button type="button" class="btn-outline js-filter">@Icons.Svg("sliders", 18) <span class="filter-label">Bộ lọc</span> @Icons.Svg("chevron-down", 16)</button>
-                    <div class="filter-menu" hidden></div>
-                </div>
+                <button type="button" class="btn-outline js-adv" aria-expanded="false">@Icons.Svg("search", 18) Tìm kiếm nâng cao <span class="adv-count" hidden></span></button>
             }
             <span class="grow"></span>
             @if (Model.AddLabel != null)
@@ -30,6 +27,10 @@
                 <button type="button" class="btn-primary" data-crud="create" data-entity="@Model.Entity">@Icons.Svg("plus", 18) @Model.AddLabel</button>
             }
         </div>
+        @if (Model.Toolbar)
+        {
+            <div class="adv-panel" hidden></div>
+        }
     }
 
     <div class="table-wrap">

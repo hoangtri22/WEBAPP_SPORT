@@ -19,7 +19,6 @@ public class SuppliersController(ShopData db) : Controller
         {
             Title = "Quản lý nhà cung cấp",
             Subtitle = "Thông tin và trạng thái hợp tác của nhà cung cấp",
-            Note = "Xóa nhà cung cấp sẽ chuyển sang \"Ngừng hợp tác\" để giữ lịch sử nhập hàng và có thể khôi phục; nhà cung cấp ngừng hợp tác không được chọn khi lập phiếu nhập mới.",
             Sections =
             [
                 new() { Columns = ["Mã NCC", "Tên nhà cung cấp", "Số điện thoại", "Email", "Trạng thái"], Rows = suppliers, AddLabel = "Thêm nhà cung cấp", ShowActions = true, Entity = "supplier" },

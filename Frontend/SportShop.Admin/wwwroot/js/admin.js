@@ -298,51 +298,25 @@ function initForm(form) {
     });
 }
 
-// Bảng dữ liệu (.dtable): tìm kiếm, lọc theo trạng thái (pill) và phân trang ngay trên trình duyệt, không gọi máy chủ.
+// Bảng dữ liệu (.dtable): tìm kiếm (SearchKit.matches), tìm kiếm nâng cao theo từng cột (SearchKit.advancedPanel) và phân trang ngay trên trình duyệt, không gọi máy chủ.
 document.querySelectorAll('.dtable').forEach(function (card) {
     var pageSize = parseInt(card.dataset.pagesize, 10) || 8;
     var rows = Array.prototype.slice.call(card.querySelectorAll('tbody tr'));
     var search = card.querySelector('.search input');
-    var filterBtn = card.querySelector('.js-filter');
-    var menu = card.querySelector('.filter-menu');
     var countEl = card.querySelector('.count');
     var pagerEl = card.querySelector('.pager');
-    var state = { q: '', filter: '', page: 1 };
+    var state = { q: '', page: 1 };
 
     if (!pagerEl) return;
+    var adv = SearchKit.advancedPanel(card, rows, function () { state.page = 1; render(); });
 
-    var values = [];
-    rows.forEach(function (tr) {
-        var p = tr.querySelector('.pill');
-        if (p && values.indexOf(p.textContent.trim()) < 0) values.push(p.textContent.trim());
-    });
-    if (filterBtn) {
-        if (values.length === 0) { filterBtn.parentNode.style.display = 'none'; }
-        else {
-            menu.innerHTML = '';
-            ['Tất cả'].concat(values).forEach(function (v, i) {
-                var b = document.createElement('button');
-                b.type = 'button'; b.textContent = v; if (i === 0) b.className = 'on';
-                b.addEventListener('click', function () {
-                    state.filter = i === 0 ? '' : v; state.page = 1;
-                    menu.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
-                    filterBtn.querySelector('.filter-label').textContent = i === 0 ? 'Bộ lọc' : v;
-                    menu.hidden = true; render();
-                });
-                menu.appendChild(b);
-            });
-            filterBtn.addEventListener('click', function (e) { e.stopPropagation(); menu.hidden = !menu.hidden; });
-            document.addEventListener('click', function () { menu.hidden = true; });
-        }
-    }
-
-    if (search) search.addEventListener('input', function () { state.q = search.value.trim().toLowerCase(); state.page = 1; render(); });
+    if (search) search.addEventListener('input', function () { state.q = search.value; state.page = 1; render(); });
 
     function render() {
         var matched = rows.filter(function (tr) {
-            var okQ = !state.q || tr.textContent.toLowerCase().indexOf(state.q) >= 0;
-            var okF = !state.filter || Array.prototype.some.call(tr.querySelectorAll('.pill'), function (p) { return p.textContent.trim() === state.filter; });
-            return okQ && okF;
+            var okQ = SearchKit.matches(tr.textContent, state.q);
+            var okA = !adv || adv.matches(tr);
+            return okQ && okA;
         });
         var pages = Math.max(1, Math.ceil(matched.length / pageSize));
         if (state.page > pages) state.page = pages;

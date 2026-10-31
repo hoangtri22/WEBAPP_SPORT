@@ -3,14 +3,19 @@
     ViewData["Title"] = "Sản phẩm";
     var cats = (List<ShopCategory>)ViewBag.Categories;
     int? cat = ViewBag.Cat; string q = ViewBag.Q ?? ""; string sort = ViewBag.Sort ?? "new";
-    bool searching = !string.IsNullOrWhiteSpace(q);
+    var adv = (AdvancedSearchVm)ViewBag.Advanced;
+    var qBox = new SearchInputVm(q, "Tìm sản phẩm...", null, 17);
+    // Đang tìm theo từ khóa hoặc bộ lọc nâng cao: chỉ hiện kết quả, không hiện thanh lọc nhanh bên dưới
+    bool searching = !string.IsNullOrWhiteSpace(q) || adv.Query.IsAdvanced;
 }
 <section class="shop-page">
     <div class="shop-page-head">
         <span class="eyebrow">CỬA HÀNG</span>
-        <h1>@(string.IsNullOrEmpty(q) ? "Tất cả sản phẩm" : "Kết quả cho \"" + q + "\"")</h1>
-        <p>@Model.Count sản phẩm</p>
+        <h1>@(!string.IsNullOrWhiteSpace(q) ? "Kết quả cho \"" + q + "\"" : adv.Query.IsAdvanced ? "Kết quả tìm kiếm nâng cao" : "Tất cả sản phẩm")</h1>
+        <p>@Model.Count sản phẩm@(adv.Query.IsAdvanced ? " · " + adv.Query.AdvancedSummary() : "")</p>
     </div>
+
+    <partial name="_AdvancedSearch" model="adv" />
 
     @if (!searching)
     {
@@ -24,7 +29,7 @@
         </div>
         <div class="filter-right">
             <input type="hidden" name="cat" value="@cat" />
-            <label class="filter-search">@Icons.Svg("search", 17)<input type="search" name="q" value="@q" placeholder="Tìm sản phẩm..." /></label>
+            <label class="filter-search"><partial name="_SearchInput" model="qBox" /></label>
             <select name="sort" onchange="this.form.submit()">
                 <option value="new" selected="@(sort == "new")">Mới nhất</option>
                 <option value="price_asc" selected="@(sort == "price_asc")">Giá tăng dần</option>

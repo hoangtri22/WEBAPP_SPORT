@@ -13,6 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="~/js/tab-session.js" data-cookie="sportshop-shop-tab"></script>
     <title>@(ViewData["Title"] ?? "SPORTSHOP") - SPORTSHOP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -52,11 +53,7 @@
         </header>
     }
 
-    <div class="shop-search" id="shopSearch" hidden>
-        @Icons.Svg("search", 20)
-        <input id="shopSearchInput" placeholder="Bạn đang tìm sản phẩm nào?" autocomplete="off" />
-        <kbd>ESC</kbd>
-    </div>
+    <partial name="_SearchBar" />
 
     <main class="shop-main">
         @RenderBody()

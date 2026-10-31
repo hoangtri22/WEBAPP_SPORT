@@ -1,0 +1,6 @@
+@*
+    Ô nhập từ khóa tìm sản phẩm dùng lại ở nhiều nơi (thanh tìm kiếm đầu trang, bộ lọc cửa hàng, tìm kiếm nâng cao).
+    Luôn gửi giá trị với tên "q" để ShopController.Index đọc vào ProductQuery.Keyword.
+*@
+@model SearchInputVm
+@Icons.Svg("search", Model.IconSize)<input type="search" name="q" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="off" id="@Model.Id" />

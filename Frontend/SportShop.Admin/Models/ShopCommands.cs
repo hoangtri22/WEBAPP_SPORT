@@ -263,7 +263,7 @@ public class ShopCommands
             if (!Regex.IsMatch(u, @"^[A-Za-z0-9._-]{3,50}$")) throw new UserError("Tên đăng nhập gồm 3–50 ký tự chữ, số, dấu chấm, gạch ngang hoặc gạch dưới (không dấu, không khoảng trắng).");
             if (pw.Length < 6) throw new UserError("Mật khẩu cần có ít nhất 6 ký tự.");
             c.Execute("INSERT INTO TAI_KHOAN (ten_dang_nhap, email, so_dien_thoai, mat_khau, ma_vai_tro, trang_thai) VALUES (@u, @email, @phone, @pw, @role, 'hoat_dong')",
-                new { u, email, phone = phone.NullIfEmpty(), pw, role }, tx);
+                new { u, email, phone = phone.NullIfEmpty(), pw = SportShop.CustomerWeb.Services.PasswordStorage.Hash(pw), role }, tx);
             return "Đã thêm tài khoản " + u + ".";
         }
         string status = f.S("trang_thai");
@@ -273,7 +273,7 @@ public class ShopCommands
         if (pw.Length > 0 && pw.Length < 6) throw new UserError("Mật khẩu mới cần có ít nhất 6 ký tự.");
         c.Execute("UPDATE TAI_KHOAN SET email=@email, so_dien_thoai=@phone, ma_vai_tro=@role, trang_thai=@status WHERE ma_tai_khoan=@id",
             new { email, phone = phone.NullIfEmpty(), role, status, id }, tx);
-        if (pw.Length >= 6) c.Execute("UPDATE TAI_KHOAN SET mat_khau=@pw WHERE ma_tai_khoan=@id", new { pw, id }, tx);
+        if (pw.Length >= 6) c.Execute("UPDATE TAI_KHOAN SET mat_khau=@pw WHERE ma_tai_khoan=@id", new { pw = SportShop.CustomerWeb.Services.PasswordStorage.Hash(pw), id }, tx);
         return "Đã cập nhật tài khoản " + username + ".";
     }
 
@@ -300,7 +300,7 @@ public class ShopCommands
                     INSERT INTO TAI_KHOAN (ten_dang_nhap, email, so_dien_thoai, mat_khau, ma_vai_tro, trang_thai)
                     VALUES (@u, @email, @phone, @pw, (SELECT ma_vai_tro FROM VAI_TRO WHERE ten_vai_tro = 'Khách hàng'), 'hoat_dong');
                     SELECT LAST_INSERT_ID();
-                    """, new { u, email, phone = phone.NullIfEmpty(), pw }, tx);
+                    """, new { u, email, phone = phone.NullIfEmpty(), pw = SportShop.CustomerWeb.Services.PasswordStorage.Hash(pw) }, tx);
             }
             id = c.ExecuteScalar<int>("""
                 INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, gioi_tinh, ngay_sinh, so_dien_thoai)
@@ -425,7 +425,7 @@ public class ShopCommands
             int acc = c.ExecuteScalar<int>("""
                 INSERT INTO TAI_KHOAN (ten_dang_nhap, email, so_dien_thoai, mat_khau, ma_vai_tro, trang_thai)
                 VALUES (@u, @email, @phone, @pw, @role, 'hoat_dong'); SELECT LAST_INSERT_ID();
-                """, new { u, email, phone = f.S("so_dien_thoai").NullIfEmpty(), pw, role }, tx);
+                """, new { u, email, phone = f.S("so_dien_thoai").NullIfEmpty(), pw = SportShop.CustomerWeb.Services.PasswordStorage.Hash(pw), role }, tx);
             c.Execute("""
                 INSERT INTO NHAN_VIEN (ma_tai_khoan, ho_lot, ten, gioi_tinh, ngay_sinh, luong_co_ban, chuc_vu, trang_thai)
                 VALUES (@acc, @last, @first, @gender, @birth, @salary, @position, 'dang_lam')
@@ -582,6 +582,10 @@ public class ShopCommands
         if (pay == 0) throw new UserError("Vui lòng chọn phương thức thanh toán.");
         if (ship < 0) throw new UserError("Phí vận chuyển không được âm.");
 
+        // Match mobile checkout lock order: customer, variants by ID, promotion.
+        if (c.ExecuteScalar<int?>("SELECT ma_khach_hang FROM KHACH_HANG WHERE ma_khach_hang=@customer AND da_xoa=0 FOR UPDATE", new { customer }, tx) is null)
+            throw new UserError("Khách hàng không tồn tại hoặc đã bị xóa.");
+
         var v = f.All("dong_bien_the"); var q = f.All("dong_so_luong");
         var lines = new Dictionary<int, int>();
         for (int i = 0; i < v.Length; i++)
@@ -595,9 +599,9 @@ public class ShopCommands
 
         decimal subtotal = 0;
         var priced = new List<(int Variant, int Qty, decimal Price)>();
-        foreach (var (variant, qty) in lines)
+        foreach (var (variant, qty) in lines.OrderBy(line => line.Key))
         {
-            var price = c.ExecuteScalar<decimal?>("SELECT gia_ban FROM BIEN_THE_SP WHERE ma_bien_the=@variant AND trang_thai='hien'", new { variant }, tx)
+            var price = c.ExecuteScalar<decimal?>("SELECT bt.gia_ban FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham WHERE bt.ma_bien_the=@variant AND bt.trang_thai='hien' AND sp.trang_thai='hien' FOR UPDATE", new { variant }, tx)
                 ?? throw new UserError("Có sản phẩm không tồn tại hoặc đang bị ẩn.");
             priced.Add((variant, qty, price)); subtotal += qty * price;
         }
@@ -609,7 +613,7 @@ public class ShopCommands
             var km = One(c, """
                 SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
                 FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
-                WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc FOR UPDATE OF ct
+                WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
                 """, new { code }, tx) ?? throw new UserError("Mã voucher không hợp lệ hoặc đã hết hạn.");
             var member = One(c, "SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customer", new { customer }, tx);
             string tier = member == null ? "thuong" : MemberTier.Effective(S(member, "hang_thanh_vien"), decimal.Parse(Dec(member, "tong_chi_tieu"), CultureInfo.InvariantCulture));
@@ -662,6 +666,13 @@ public class ShopCommands
     // Cập nhật trạng thái đơn / thanh toán / vận chuyển: hủy đơn thì hoàn tồn kho và hoàn tiền (RefundInvoice()); đơn đã giao và đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string UpdateOrder(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
+        // Read immutable ownership outside this transaction so waiting for its customer lock
+        // does not establish a stale repeatable-read snapshot for invoice/loyalty queries.
+        int? customer;
+        using (var lookup = new MySqlConnection(_cs))
+            customer = lookup.ExecuteScalar<int?>("SELECT ma_khach_hang FROM DON_HANG WHERE ma_don_hang=@id", new { id });
+        if (customer is null || c.ExecuteScalar<int?>("SELECT ma_khach_hang FROM KHACH_HANG WHERE ma_khach_hang=@customer FOR UPDATE", new { customer }, tx) is null)
+            throw new UserError("Không tìm thấy đơn hàng hoặc khách hàng.");
         var o = One(c, "SELECT trang_thai_don_hang, trang_thai_thanh_toan FROM DON_HANG WHERE ma_don_hang=@id FOR UPDATE", new { id }, tx)
             ?? throw new UserError("Không tìm thấy đơn hàng.");
         string oldStatus = S(o, "trang_thai_don_hang"), oldPay = S(o, "trang_thai_thanh_toan");
@@ -677,6 +688,8 @@ public class ShopCommands
         if (status == "da_huy")
         {
             if (reason.Length == 0) throw new UserError("Vui lòng nhập lý do hủy.");
+            foreach (var variant in c.Query<int>("SELECT ma_bien_the FROM CHI_TIET_DON_HANG WHERE ma_don_hang=@id ORDER BY ma_bien_the", new { id }, tx))
+                c.ExecuteScalar<int>("SELECT ma_bien_the FROM BIEN_THE_SP WHERE ma_bien_the=@variant FOR UPDATE", new { variant }, tx);
             c.Execute("UPDATE BIEN_THE_SP bt JOIN CHI_TIET_DON_HANG ct ON ct.ma_bien_the = bt.ma_bien_the SET bt.so_luong_ton = bt.so_luong_ton + ct.so_luong WHERE ct.ma_don_hang = @id", new { id }, tx);
             RefundVoucher(c, tx, id);
             msg = "Đã hủy đơn hàng và hoàn lại tồn kho.";

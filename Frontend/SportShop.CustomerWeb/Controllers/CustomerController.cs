@@ -105,7 +105,7 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
             stars is < 1 or > 5 ? "Vui lòng chọn số sao đánh giá." :
             content.Length == 0 ? "Vui lòng nhập nội dung phản hồi." :
             content.Length > 1000 ? "Nội dung phản hồi tối đa 1000 ký tự." : null;
-        if (error == null) store.SendFeedback(CustomerId, product, stars, content);
+        if (error == null) error = store.AddPurchasedFeedback(CustomerId, product, stars, content, order);
 
         TempData["Notice"] = error ?? "Cảm ơn bạn! Phản hồi đã được gửi đến SPORTSHOP.";
         return order.HasValue ? RedirectToAction(nameof(Orders)) : RedirectToAction(nameof(Feedback));

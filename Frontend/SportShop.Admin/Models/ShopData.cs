@@ -184,7 +184,7 @@ public class ShopData
             LIMIT 1
             """, new { u = username.Trim() }).FirstOrDefault();
 
-        if (r == null || !string.Equals(S(r, "mat_khau"), password, StringComparison.Ordinal))
+        if (r == null || !SportShop.CustomerWeb.Services.PasswordStorage.Verify(S(r, "mat_khau"), password))
             return LoginResult.Fail("Sai tên đăng nhập hoặc mật khẩu.");
         if (S(r, "trang_thai") != "hoat_dong")
             return LoginResult.Fail("Tài khoản đã bị khóa hoặc đã xóa.");
@@ -262,7 +262,7 @@ public class ShopData
                 Phone = NS(r, "so_dien_thoai") ?? S(r, "tk_sdt"),
                 Email = S(r, "email"),
                 Username = S(r, "ten_dang_nhap"),
-                Password = S(r, "mat_khau"),
+                Password = "Được bảo vệ",
                 Locked = S(r, "tk_trang_thai") is "bi_khoa" or "da_xoa",
                 Deleted = S(r, "da_xoa") is "1" or "True",
                 Interests = interests[id].ToArray(),

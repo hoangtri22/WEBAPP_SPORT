@@ -54,7 +54,7 @@ public class MyOrder
     };
     public string StatusTone => Status switch { "da_giao" => "p-g", "da_huy" => "p-r", "dang_giao" => "p-b", _ => "p-o" };
     public string PayText => PayStatus == "da_thanh_toan" ? "Đã thanh toán" : "Chưa thanh toán";
-    public bool CanCancel => Status == "cho_xac_nhan";
+    public bool CanCancel => Status == "cho_xac_nhan" && PayStatus != "da_thanh_toan";
     public int Step => Status switch { "cho_xac_nhan" => 0, "dang_chuan_bi" => 1, "dang_giao" => 2, "da_giao" => 3, _ => -1 };
 }
 

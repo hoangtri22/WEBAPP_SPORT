@@ -8,7 +8,7 @@ namespace SportShop.CustomerWeb.Services;
 public class ShopStore(IConfiguration config, CartStore carts)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
-    MySqlConnection Open() => new(_cs);
+    MySqlConnection Open() => StoreDatabase.Connection(_cs);
 
     public const decimal FreeShipFrom = 500_000;
     public const decimal ShipFee = 30_000;
@@ -108,79 +108,81 @@ public class ShopStore(IConfiguration config, CartStore carts)
 
     static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
 
-    // Đọc giỏ hàng {mã biến thể: số lượng} của khách đăng nhập từ CartStore (App_Data/carts.json).
-    public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? carts.Get(id) : [];
-
-    void SaveCart(ISession s, Dictionary<int, int> cart)
-    {
-        if (CustomerOf(s) is > 0 and var id) carts.Save(id, cart);
-    }
-
-    public void ClearCart(ISession s) => SaveCart(s, []);
+    public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? GetCart(id) : [];
+    public Dictionary<int, int> GetCart(int customerId) => carts.Get(customerId);
+    public void ClearCart(ISession s) { if (CustomerOf(s) > 0) ClearCart(CustomerOf(s)); }
+    public void ClearCart(int customerId) => carts.Save(customerId, []);
     public int CartCount(ISession s) => GetCart(s).Values.Sum();
 
-    // Thêm vào giỏ: kiểm tra biến thể đang bán và tồn kho trong BIEN_THE_SP, cộng dồn số lượng rồi lưu qua CartStore.
-    public string? AddToCart(ISession s, int variantId, int qty)
+    public string? AddToCart(ISession session, int variantId, int qty) => AddToCart(CustomerOf(session), variantId, qty);
+
+    // Both hosts use this operation, with a customer lock to prevent lost cart updates.
+    public string? AddToCart(int customerId, int variantId, int qty)
     {
-        if (CustomerOf(s) == 0) return "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.";
-        if (qty <= 0) return "Số lượng không hợp lệ.";
+        if (customerId <= 0) return "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.";
+        if (qty is <= 0 or > 999 || variantId <= 0) return "Số lượng không hợp lệ.";
+        return carts.Mutate<string?>(customerId, cart =>
+        {
+            using var c = Open();
+            var stock = c.ExecuteScalar<int?>("""
+                SELECT bt.so_luong_ton FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham
+                WHERE bt.ma_bien_the=@variantId AND bt.trang_thai='hien' AND sp.trang_thai='hien'
+                """, new { variantId });
+            if (stock is null) return "Sản phẩm này hiện không bán.";
+            long want = (long)cart.GetValueOrDefault(variantId) + qty;
+            if (want > 999) return "Mỗi biến thể được mua tối đa 999 sản phẩm.";
+            if (want > stock) return stock == 0 ? "Sản phẩm đã hết hàng." : $"Chỉ còn {stock} sản phẩm trong kho.";
+            cart[variantId] = (int)want;
+            return null;
+        });
+    }
+
+    public void SetQty(ISession session, int variantId, int qty)
+    {
+        if (CustomerOf(session) > 0) SetQty(CustomerOf(session), variantId, qty);
+    }
+
+    public string? SetQty(int customerId, int variantId, int qty) => carts.Mutate<string?>(customerId, cart =>
+    {
+        if (!cart.ContainsKey(variantId)) return "Không tìm thấy sản phẩm trong giỏ hàng.";
+        if (qty <= 0) { cart.Remove(variantId); return null; }
+        if (qty > 999) return "Số lượng không hợp lệ.";
         using var c = Open();
-        var stock = c.ExecuteScalar<int?>("SELECT so_luong_ton FROM BIEN_THE_SP WHERE ma_bien_the=@variantId AND trang_thai='hien'", new { variantId });
-        if (stock == null) return "Sản phẩm này hiện không bán.";
-        var cart = GetCart(s);
-        int want = cart.GetValueOrDefault(variantId) + qty;
-        if (want > stock) return stock == 0 ? "Sản phẩm đã hết hàng." : $"Chỉ còn {stock} sản phẩm trong kho.";
-        cart[variantId] = want;
-        SaveCart(s, cart);
+        var stock = c.ExecuteScalar<int?>("""
+            SELECT bt.so_luong_ton FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham
+            WHERE bt.ma_bien_the=@variantId AND bt.trang_thai='hien' AND sp.trang_thai='hien'
+            """, new { variantId });
+        if (stock is null || stock < qty) return "Sản phẩm không còn bán hoặc không đủ tồn kho.";
+        cart[variantId] = qty;
         return null;
-    }
+    });
 
-    // Đặt lại số lượng một dòng giỏ (không quá 0 thì xóa dòng) và lưu qua CartStore.
-    public void SetQty(ISession s, int variantId, int qty)
-    {
-        var cart = GetCart(s);
-        if (qty <= 0) cart.Remove(variantId); else if (cart.ContainsKey(variantId)) cart[variantId] = qty;
-        SaveCart(s, cart);
-    }
+    public List<CartLine> CartLines(ISession session) => CustomerOf(session) > 0 ? CartLines(CustomerOf(session)) : [];
 
-    // Dựng các dòng giỏ hàng: tên, size, màu, ảnh, giá, tồn kho từ BIEN_THE_SP/SAN_PHAM; tự bỏ biến thể không còn bán.
-    public List<CartLine> CartLines(ISession s)
+    public List<CartLine> CartLines(int customerId)
     {
-        var cart = GetCart(s);
+        // Retain unavailable lines in storage until checkout rejects them or the user removes them.
+        var cart = GetCart(customerId);
         if (cart.Count == 0) return [];
         var ids = cart.Keys.ToArray();
         using var c = Open();
-        var lines = c.Query("""
-            SELECT bt.ma_bien_the, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, bt.hinh_anh, bt.gia_ban, bt.so_luong_ton
-            FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
-            WHERE bt.ma_bien_the IN @ids AND bt.trang_thai = 'hien' AND sp.trang_thai = 'hien'
+        return c.Query("""
+            SELECT bt.ma_bien_the, sp.ma_san_pham, sp.ten_san_pham, bt.kich_co, bt.mau_sac, bt.hinh_anh, bt.gia_ban,
+                   CASE WHEN bt.trang_thai='hien' AND sp.trang_thai='hien' THEN bt.so_luong_ton ELSE 0 END AS stock
+            FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham WHERE bt.ma_bien_the IN @ids
             """, new { ids }).Cast<IDictionary<string, object?>>()
-            .Select(r => new CartLine(I(r, "ma_bien_the"), I(r, "ma_san_pham"), S(r, "ten_san_pham"), NS(r, "kich_co"), NS(r, "mau_sac"), NS(r, "hinh_anh"),
-                D(r, "gia_ban"), cart[I(r, "ma_bien_the")], I(r, "so_luong_ton"))).OrderBy(l => l.Name).ToList();
-        if (lines.Count != cart.Count) SaveCart(s, lines.ToDictionary(l => l.VariantId, l => l.Qty));
-        return lines;
+            .Select(r => new CartLine(I(r,"ma_bien_the"),I(r,"ma_san_pham"),S(r,"ten_san_pham"),NS(r,"kich_co"),NS(r,"mau_sac"),NS(r,"hinh_anh"),
+                D(r,"gia_ban"),cart[I(r,"ma_bien_the")],I(r,"stock"))).OrderBy(l => l.Name).ToList();
     }
 
-
-    static readonly string[] DefaultPayMethods =
-        ["Thanh toán khi nhận hàng (COD)", "Chuyển khoản ngân hàng", "Ví điện tử (MoMo, ZaloPay)", "Thẻ ATM / Visa / Mastercard"];
-
-    // Phương thức thanh toán: thêm 4 phương thức mặc định vào PHUONG_THUC_THANH_TOAN nếu chưa có, rồi trả về mã và tên.
+    // The additive migration provisions the existing four simulated web payment methods.
     public List<PaymentMethod> PaymentMethods()
     {
         using var c = Open();
-        var list = new List<PaymentMethod>();
-        foreach (var name in DefaultPayMethods)
-        {
-            c.Execute("""
-                INSERT INTO PHUONG_THUC_THANH_TOAN (ten_phuong_thuc_thanh_toan, trang_thai)
-                SELECT @name, 'hoat_dong' FROM DUAL
-                WHERE NOT EXISTS (SELECT 1 FROM PHUONG_THUC_THANH_TOAN WHERE ten_phuong_thuc_thanh_toan = @name)
-                """, new { name });
-            int id = c.ExecuteScalar<int>("SELECT ma_phuong_thuc_thanh_toan FROM PHUONG_THUC_THANH_TOAN WHERE ten_phuong_thuc_thanh_toan = @name", new { name });
-            list.Add(new PaymentMethod(id, name));
-        }
-        return list;
+        return c.Query<PaymentMethod>("""
+            SELECT ma_phuong_thuc_thanh_toan AS Id,ten_phuong_thuc_thanh_toan AS Name
+            FROM PHUONG_THUC_THANH_TOAN WHERE trang_thai='hoat_dong' ORDER BY ma_phuong_thuc_thanh_toan
+            """).ToList();
     }
 
     // Người nhận mặc định khi thanh toán: lấy từ SO_DIA_CHI (ưu tiên địa chỉ mặc định), không có thì lấy họ tên và SĐT trong KHACH_HANG.
@@ -202,7 +204,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
             SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
             FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
             WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
-            """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
+            """ + (tx is null ? "" : " FOR UPDATE"), new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
         var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
         string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
@@ -232,82 +234,109 @@ public class ShopStore(IConfiguration config, CartStore carts)
     // Phí vận chuyển: miễn phí từ FreeShipFrom (500.000đ), còn lại ShipFee (30.000đ).
     public static decimal ShippingFor(decimal subtotal) => subtotal >= FreeShipFrom || subtotal == 0 ? 0 : ShipFee;
 
-    // Đặt hàng: kiểm tra người nhận, khóa và kiểm tra tồn kho từng biến thể, áp voucher; trong một transaction ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, trừ tồn kho BIEN_THE_SP và lưu SO_DIA_CHI nếu khách chưa có.
-    public (int? OrderId, string? Error) PlaceOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
+    // Atomic mobile checkout. Replay returns the original order without reading or clearing a newer cart.
+    public (int? OrderId, string? Error, bool Replayed) PlaceCartOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, string requestKey)
     {
-        if (cart.Count == 0) return (null, "Giỏ hàng đang trống.");
-        if (string.IsNullOrWhiteSpace(to.Name) || string.IsNullOrWhiteSpace(to.Phone) || string.IsNullOrWhiteSpace(to.Address))
-            return (null, "Vui lòng nhập đủ họ tên, số điện thoại và địa chỉ nhận hàng.");
-        if (!System.Text.RegularExpressions.Regex.IsMatch(to.Phone.Trim(), @"^0\d{9}$")) return (null, "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
-        var methods = PaymentMethods();
-        if (!methods.Any(m => m.Id == payMethod)) payMethod = methods[0].Id;
+        if (string.IsNullOrWhiteSpace(requestKey) || requestKey.Length > 128 || requestKey.Any(ch => ch < 33 || ch > 126))
+            return (null, "Idempotency-Key phải gồm 1–128 ký tự ASCII hiển thị.", false);
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Json.JsonSerializer.Serialize(new { Name = to.Name.Trim(), Phone = to.Phone.Trim(), Address = to.Address.Trim(), payMethod, Voucher = voucher?.Trim() ?? "" }))));
+        using var c = Open();
+        c.Open();
+        using var tx = c.BeginTransaction();
         try
         {
-            using var c = Open();
-            c.Open();
-            using var tx = c.BeginTransaction();
-            try
-            {
-                decimal subtotal = 0;
-                var priced = new List<(int Variant, int Qty, decimal Price)>();
-                foreach (var (variant, qty) in cart.OrderBy(k => k.Key))
-                {
-                    var r = c.Query("""
-                        SELECT bt.gia_ban, bt.so_luong_ton, sp.ten_san_pham
-                        FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
-                        WHERE bt.ma_bien_the=@variant AND bt.trang_thai='hien' AND sp.trang_thai='hien' FOR UPDATE
-                        """, new { variant }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
-                        ?? throw new OrderError("Có sản phẩm trong giỏ không còn bán, vui lòng kiểm tra lại giỏ hàng.");
-                    if (qty > I(r, "so_luong_ton")) throw new OrderError($"\"{S(r, "ten_san_pham")}\" chỉ còn {I(r, "so_luong_ton")} sản phẩm trong kho.");
-                    priced.Add((variant, qty, D(r, "gia_ban")));
-                    subtotal += qty * D(r, "gia_ban");
-                }
-
-                int? ctkm = null; decimal discount = 0;
-                if (!string.IsNullOrWhiteSpace(voucher))
-                {
-                    var v = ApplyVoucher(c, tx, voucher.Trim(), customerId, subtotal);
-                    ctkm = v.CtkmId; discount = v.Discount;
-                }
-                decimal ship = ShippingFor(subtotal);
-                decimal total = Math.Max(0, subtotal - discount) + ship;
-
-                int order = c.ExecuteScalar<int>("""
-                    INSERT INTO DON_HANG (ma_khach_hang, ma_nhan_vien, ngay_dat, ten_nguoi_nhan, sdt_nguoi_nhan, dia_chi_giao_hang, ma_ctkm,
-                                          tam_tinh, tong_tien_giam_gia, tong_thanh_toan, ma_phuong_thuc_thanh_toan, trang_thai_thanh_toan, trang_thai_don_hang)
-                    VALUES (@customerId, NULL, NOW(), @name, @phone, @addr, @ctkm, @subtotal, @discount, @total, @payMethod, 'chua_thanh_toan', 'cho_xac_nhan');
-                    SELECT LAST_INSERT_ID();
-                    """, new { customerId, name = to.Name.Trim(), phone = to.Phone.Trim(), addr = to.Address.Trim(), ctkm, subtotal, discount, total, payMethod }, tx);
-
-                foreach (var (variant, qty, price) in priced)
-                {
-                    c.Execute("UPDATE BIEN_THE_SP SET so_luong_ton = so_luong_ton - @qty WHERE ma_bien_the=@variant", new { qty, variant }, tx);
-                    c.Execute("INSERT INTO CHI_TIET_DON_HANG (ma_don_hang, ma_bien_the, so_luong, don_gia, giam_gia, thanh_tien) VALUES (@order, @variant, @qty, @price, 0, @amount)",
-                        new { order, variant, qty, price, amount = qty * price }, tx);
-                }
-                c.Execute("INSERT INTO VAN_CHUYEN (ma_don_hang, ma_nhan_vien, ten_don_vi_van_chuyen, ma_van_don, phi_van_chuyen, trang_thai) VALUES (@order, NULL, 'Giao hàng tiêu chuẩn', NULL, @ship, 'cho_lay_hang')",
-                    new { order, ship }, tx);
-                if (ctkm != null)
-                {
-                    c.Execute("INSERT INTO LUOT_SU_DUNG_KHUYEN_MAI (ma_ctkm, ma_khach_hang, ma_don_hang, so_tien_giam, ngay_su_dung) VALUES (@ctkm, @customerId, @order, @discount, NOW())", new { ctkm, customerId, order, discount }, tx);
-                    c.Execute("UPDATE CTKM SET so_luot_da_dung = so_luot_da_dung + 1 WHERE ma_ctkm=@ctkm", new { ctkm }, tx);
-                }
-                if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM SO_DIA_CHI WHERE ma_khach_hang=@customerId", new { customerId }, tx) == 0)
-                    c.Execute("INSERT INTO SO_DIA_CHI (ma_khach_hang, ten_nguoi_nhan, sdt_nguoi_nhan, dia_chi_chi_tiet, la_mac_dinh) VALUES (@customerId, @name, @phone, @addr, 1)",
-                        new { customerId, name = to.Name.Trim(), phone = to.Phone.Trim(), addr = to.Address.Trim() }, tx);
-
-                tx.Commit();
-                return (order, null);
-            }
-            catch { tx.Rollback(); throw; }
+            CartStore.LockCustomer(c, tx, customerId);
+            var prior = c.QueryFirstOrDefault<OrderRequestRow>(
+                "SELECT request_hash AS Hash,order_id AS Id FROM MOBILE_ORDER_REQUEST WHERE customer_id=@customerId AND request_key=@requestKey",
+                new { customerId, requestKey }, tx);
+            if (prior is { } old)
+                return old.Hash == hash ? (old.Id, null, true) : (null, "Idempotency-Key đã được sử dụng với nội dung khác.", false);
+            var cart = carts.ReadLocked(c, tx, customerId);
+            var orderId = WriteOrder(c, tx, customerId, to, payMethod, voucher, cart);
+            c.Execute("INSERT INTO MOBILE_ORDER_REQUEST(customer_id,request_key,request_hash,order_id) VALUES (@customerId,@requestKey,@hash,@orderId)",
+                new { customerId, requestKey, hash, orderId }, tx);
+            CartStore.WriteLocked(c, tx, customerId, []);
+            tx.Commit();
+            return (orderId, null, false);
         }
-        catch (OrderError e) { return (null, e.Message); }
-        catch (MySqlException e) { return (null, "Không đặt hàng được: " + e.Message); }
+        catch (OrderError error) { return (null, error.Message, false); }
     }
 
+    // Compatibility entry point for web callers supplying an explicit cart; shares the same transaction writer.
+    public (int? OrderId, string? Error) PlaceOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
+    {
+        using var c = Open();
+        c.Open();
+        using var tx = c.BeginTransaction();
+        try
+        {
+            CartStore.LockCustomer(c, tx, customerId);
+            var order = WriteOrder(c, tx, customerId, to, payMethod, voucher, cart);
+            tx.Commit();
+            return (order, null);
+        }
+        catch (OrderError error) { return (null, error.Message); }
+    }
+
+    int WriteOrder(MySqlConnection c, MySqlTransaction tx, int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
+    {
+        if (cart.Count == 0) throw new OrderError("Giỏ hàng đang trống.");
+        if (cart.Any(x => x.Key <= 0 || x.Value is <= 0 or > 999)) throw new OrderError("Số lượng không hợp lệ.");
+        if (string.IsNullOrWhiteSpace(to.Name) || to.Name.Length > 100 || string.IsNullOrWhiteSpace(to.Address) || to.Address.Length > 255)
+            throw new OrderError("Vui lòng nhập họ tên (tối đa 100 ký tự) và địa chỉ (tối đa 255 ký tự).");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(to.Phone.Trim(), @"^0\d{9}$"))
+            throw new OrderError("Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
+        if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM PHUONG_THUC_THANH_TOAN WHERE ma_phuong_thuc_thanh_toan=@payMethod AND trang_thai='hoat_dong'", new { payMethod }, tx) != 1)
+            throw new OrderError("Phương thức thanh toán không hợp lệ hoặc đã ngừng hoạt động.");
+        decimal subtotal = 0;
+        var priced = new List<(int Variant,int Qty,decimal Price)>();
+        foreach (var (variant, qty) in cart.OrderBy(k => k.Key))
+        {
+            var row = c.Query("""
+                SELECT bt.gia_ban,bt.so_luong_ton,sp.ten_san_pham
+                FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham
+                WHERE bt.ma_bien_the=@variant AND bt.trang_thai='hien' AND sp.trang_thai='hien' FOR UPDATE
+                """, new { variant },tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
+                ?? throw new OrderError("Có sản phẩm trong giỏ không còn bán, vui lòng kiểm tra lại giỏ hàng.");
+            if (qty > I(row,"so_luong_ton")) throw new OrderError($"{S(row,"ten_san_pham")} không đủ tồn kho.");
+            decimal price = D(row,"gia_ban");
+            priced.Add((variant,qty,price));
+            subtotal += qty * price;
+        }
+        int? ctkm = null; decimal discount = 0;
+        if (!string.IsNullOrWhiteSpace(voucher))
+        {
+            var promotion = ApplyVoucher(c,tx,voucher.Trim(),customerId,subtotal);
+            ctkm = promotion.CtkmId; discount = Math.Clamp(promotion.Discount,0,subtotal);
+        }
+        decimal ship = ShippingFor(subtotal), total = Math.Max(0,subtotal-discount)+ship;
+        int order = c.ExecuteScalar<int>("""
+            INSERT INTO DON_HANG(ma_khach_hang,ma_nhan_vien,ngay_dat,ten_nguoi_nhan,sdt_nguoi_nhan,dia_chi_giao_hang,ma_ctkm,
+                tam_tinh,tong_tien_giam_gia,tong_thanh_toan,ma_phuong_thuc_thanh_toan,trang_thai_thanh_toan,trang_thai_don_hang)
+            VALUES (@customerId,NULL,NOW(),@name,@phone,@address,@ctkm,@subtotal,@discount,@total,@payMethod,'chua_thanh_toan','cho_xac_nhan');
+            SELECT LAST_INSERT_ID();
+            """,new { customerId,name=to.Name.Trim(),phone=to.Phone.Trim(),address=to.Address.Trim(),ctkm,subtotal,discount,total,payMethod },tx);
+        foreach(var (variant,qty,price) in priced)
+        {
+            c.Execute("UPDATE BIEN_THE_SP SET so_luong_ton=so_luong_ton-@qty WHERE ma_bien_the=@variant",new {qty,variant},tx);
+            c.Execute("INSERT INTO CHI_TIET_DON_HANG(ma_don_hang,ma_bien_the,so_luong,don_gia,giam_gia,thanh_tien) VALUES (@order,@variant,@qty,@price,0,@amount)",
+                new {order,variant,qty,price,amount=qty*price},tx);
+        }
+        c.Execute("INSERT INTO VAN_CHUYEN(ma_don_hang,ma_nhan_vien,ten_don_vi_van_chuyen,ma_van_don,phi_van_chuyen,trang_thai) VALUES (@order,NULL,'Giao hàng tiêu chuẩn',NULL,@ship,'cho_lay_hang')",new {order,ship},tx);
+        if (ctkm is not null)
+        {
+            c.Execute("INSERT INTO LUOT_SU_DUNG_KHUYEN_MAI(ma_ctkm,ma_khach_hang,ma_don_hang,so_tien_giam,ngay_su_dung) VALUES (@ctkm,@customerId,@order,@discount,NOW())",new {ctkm,customerId,order,discount},tx);
+            c.Execute("UPDATE CTKM SET so_luot_da_dung=so_luot_da_dung+1 WHERE ma_ctkm=@ctkm",new {ctkm},tx);
+        }
+        if(c.ExecuteScalar<int>("SELECT COUNT(*) FROM SO_DIA_CHI WHERE ma_khach_hang=@customerId",new {customerId},tx)==0)
+            c.Execute("INSERT INTO SO_DIA_CHI(ma_khach_hang,ten_nguoi_nhan,sdt_nguoi_nhan,dia_chi_chi_tiet,la_mac_dinh) VALUES (@customerId,@name,@phone,@address,1)",
+                new {customerId,name=to.Name.Trim(),phone=to.Phone.Trim(),address=to.Address.Trim()},tx);
+        return order;
+    }
 
     // Đơn hàng của khách (DON_HANG, PHUONG_THUC_THANH_TOAN, VAN_CHUYEN, HOA_DON) kèm các dòng CHI_TIET_DON_HANG; truyền orderId để lấy một đơn.
-    public List<MyOrder> Orders(int customerId, int? orderId = null)
+    public List<MyOrder> Orders(int customerId, int? orderId = null, int? page = null, int pageSize = 20, string? status = null)
     {
         using var c = Open();
         var orders = c.Query("""
@@ -319,8 +348,10 @@ public class ShopStore(IConfiguration config, CartStore carts)
             LEFT JOIN VAN_CHUYEN vc ON vc.ma_don_hang = dh.ma_don_hang
             LEFT JOIN HOA_DON hd ON hd.ma_don_hang = dh.ma_don_hang
             WHERE dh.ma_khach_hang = @customerId AND (@orderId IS NULL OR dh.ma_don_hang = @orderId)
+              AND (@status IS NULL OR dh.trang_thai_don_hang=@status)
             ORDER BY dh.ma_don_hang DESC
-            """, new { customerId, orderId }).Cast<IDictionary<string, object?>>().ToList();
+            """ + (page.HasValue ? " LIMIT @pageSize OFFSET @offset" : ""),
+            new { customerId, orderId, status, pageSize, offset = ((long)(page ?? 1)-1)*pageSize }).Cast<IDictionary<string, object?>>().ToList();
         if (orders.Count == 0) return [];
 
         var ids = orders.Select(o => I(o, "ma_don_hang")).ToArray();
@@ -343,15 +374,24 @@ public class ShopStore(IConfiguration config, CartStore carts)
         }).ToList();
     }
 
+    public long OrderCount(int customerId, string? status = null)
+    {
+        using var c = Open();
+        return c.ExecuteScalar<long>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customerId AND (@status IS NULL OR trang_thai_don_hang=@status)",new {customerId,status});
+    }
+
     // Khách hủy đơn: chỉ khi đơn còn cho_xac_nhan; trong transaction cộng lại tồn kho BIEN_THE_SP, chuyển DON_HANG sang da_huy và VAN_CHUYEN sang that_bai.
     public string? CancelOrder(int customerId, int orderId)
     {
         using var c = Open();
         c.Open();
         using var tx = c.BeginTransaction();
+        CartStore.LockCustomer(c, tx, customerId);
         var status = c.ExecuteScalar<string>("SELECT trang_thai_don_hang FROM DON_HANG WHERE ma_don_hang=@orderId AND ma_khach_hang=@customerId FOR UPDATE", new { orderId, customerId }, tx);
         if (status == null) return "Không tìm thấy đơn hàng.";
         if (status != "cho_xac_nhan") return "Đơn hàng đã được cửa hàng xử lý nên không thể tự hủy. Vui lòng liên hệ cửa hàng.";
+        if (c.ExecuteScalar<string>("SELECT trang_thai_thanh_toan FROM DON_HANG WHERE ma_don_hang=@orderId", new { orderId }, tx) == "da_thanh_toan")
+            return "Đơn hàng đã thanh toán. Vui lòng liên hệ cửa hàng để hủy và hoàn tiền.";
         c.Execute("UPDATE BIEN_THE_SP bt JOIN CHI_TIET_DON_HANG ct ON ct.ma_bien_the = bt.ma_bien_the SET bt.so_luong_ton = bt.so_luong_ton + ct.so_luong WHERE ct.ma_don_hang = @orderId", new { orderId }, tx);
         c.Execute("UPDATE DON_HANG SET trang_thai_don_hang='da_huy', ly_do_huy='Khách hàng tự hủy đơn' WHERE ma_don_hang=@orderId", new { orderId }, tx);
         c.Execute("UPDATE VAN_CHUYEN SET trang_thai='that_bai' WHERE ma_don_hang=@orderId", new { orderId }, tx);
@@ -370,6 +410,12 @@ public class ShopStore(IConfiguration config, CartStore carts)
         c.Execute("DELETE FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_don_hang = @orderId", new { orderId }, tx);
     }
 
+
+    sealed class OrderRequestRow
+    {
+        public string Hash { get; set; } = "";
+        public int Id { get; set; }
+    }
 
     static ShopProduct ToProduct(IDictionary<string, object?> r) =>
         new(I(r, "ma_san_pham"), S(r, "ten_san_pham"), S(r, "ten_loai"), S(r, "don_vi_tinh"), NS(r, "mo_ta"), NS(r, "hinh_anh"), ND(r, "gia_min"), ND(r, "gia_max"), I(r, "ton"));

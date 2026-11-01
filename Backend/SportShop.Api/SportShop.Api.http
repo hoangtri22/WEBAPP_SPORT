@@ -1,0 +1,218 @@
+@baseUrl = http://localhost:5080
+@accessToken = REPLACE_WITH_ACCESS_TOKEN_FROM_LOGIN
+@refreshToken = REPLACE_WITH_CURRENT_REFRESH_TOKEN
+@username = REPLACE_WITH_CUSTOMER_USERNAME
+@password = REPLACE_WITH_USER_PASSWORD
+@newPassword = REPLACE_WITH_NEW_USER_PASSWORD
+@email = customer@example.test
+@phone = 0901234567
+@productId = 1
+@variantId = 1
+@paymentMethodId = 1
+@orderId = 1
+@surveyId = 1
+@questionId = 1
+@optionId = 1
+@pageSlug = giao-hang
+@idempotencyKey = REPLACE_WITH_NEW_UUID_FOR_THIS_ORDER
+
+# Điền các biến cục bộ trước khi gửi; không commit token/mật khẩu thực.
+# Lấy ID sản phẩm/biến thể/method/survey/question/option từ response thật.
+# Giữ nguyên key và body khi retry cùng ý định đặt đơn; ý định mới dùng key mới.
+
+### Host sống, không cần DB
+GET {{baseUrl}}/health/live
+Accept: application/json
+
+### Kết nối và schema mobile, bao gồm bảng của migrations 001–003
+GET {{baseUrl}}/health/ready
+Accept: application/json
+
+### OpenAPI chỉ ở Development
+GET {{baseUrl}}/openapi/v1.json
+
+### Danh mục
+GET {{baseUrl}}/api/v1/categories
+
+### Phân trang, sắp xếp sản phẩm
+GET {{baseUrl}}/api/v1/products?page=1&pageSize=20&sort=price_asc&inStockOnly=true
+
+### Tìm kiếm theo tên sản phẩm/loại, gồm cả hết hàng
+GET {{baseUrl}}/api/v1/products?q=giay&inStockOnly=false
+
+### Chi tiết và biến thể
+GET {{baseUrl}}/api/v1/products/{{productId}}
+
+### Voucher còn hiệu lực
+GET {{baseUrl}}/api/v1/promotions
+
+### Sở thích
+GET {{baseUrl}}/api/v1/interests
+
+### Mọi phương thức active, mô phỏng như web; GET không seed
+GET {{baseUrl}}/api/v1/payment-methods
+
+### Danh sách các trang hỗ trợ/giới thiệu (công khai)
+GET {{baseUrl}}/api/v1/pages
+
+### Nội dung trang, bảy slug trong API_INVENTORY.md
+GET {{baseUrl}}/api/v1/pages/{{pageSlug}}
+
+### Đăng ký khách mới, response 201 có access/refresh token
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "phone": "{{phone}}",
+  "password": "{{password}}"
+}
+
+### Login bằng username hoặc email; lưu token response vào biến local
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"{{username}}","password":"{{password}}"}
+
+### Refresh xoay cả hai token; chỉ gửi refresh hiện tại một lần
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken":"{{refreshToken}}"}
+
+### Hồ sơ, hạng/điểm/số đơn và sở thích riêng
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{accessToken}}
+
+### Thay thông tin hồ sơ; interests dùng tên lấy từ GET /interests
+PUT {{baseUrl}}/api/v1/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Nguyễn Minh An",
+  "email": "{{email}}",
+  "phone": "{{phone}}",
+  "birth": "2000-01-01",
+  "gender": "Nam",
+  "interests": []
+}
+
+### Giỏ MySQL dùng chung với web
+GET {{baseUrl}}/api/v1/cart
+Authorization: Bearer {{accessToken}}
+
+### Thêm biến thể, cộng vào số lượng đang có
+POST {{baseUrl}}/api/v1/cart/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"variantId":{{variantId}},"quantity":1}
+
+### Thay số lượng dòng, 1–999 và không vượt tồn
+PUT {{baseUrl}}/api/v1/cart/items/{{variantId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"quantity":2}
+
+### Checkout: người nhận mặc định, giỏ, methods và eligible vouchers
+GET {{baseUrl}}/api/v1/checkout
+Authorization: Bearer {{accessToken}}
+
+### Voucher phù hợp tài khoản và giỏ hiện tại
+GET {{baseUrl}}/api/v1/checkout/vouchers
+Authorization: Bearer {{accessToken}}
+
+### Quote không giữ giá/tồn; thay null bằng mã từ eligible vouchers để áp dụng
+POST {{baseUrl}}/api/v1/checkout/quote
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"voucher":null}
+
+### Đặt giỏ trên server, 201 mới hoặc 200 replay cùng key/body
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{accessToken}}
+Idempotency-Key: {{idempotencyKey}}
+Content-Type: application/json
+
+{
+  "name": "Nguyễn Minh An",
+  "phone": "{{phone}}",
+  "address": "ĐỊA CHỈ NHẬN HÀNG CỦA BẠN",
+  "paymentMethodId": {{paymentMethodId}},
+  "voucher": null
+}
+
+### Lịch sử đơn riêng, có page/pageSize và status tùy chọn
+GET {{baseUrl}}/api/v1/orders?page=1&pageSize=20&status=cho_xac_nhan
+Authorization: Bearer {{accessToken}}
+
+### Chi tiết đơn; có thể poll khi màn hình đang mở
+GET {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{accessToken}}
+
+### Chỉ tự hủy đơn chờ chưa thanh toán, paid cần cửa hàng xử lý hoàn
+POST {{baseUrl}}/api/v1/orders/{{orderId}}/cancel
+Authorization: Bearer {{accessToken}}
+
+### Sản phẩm đã mua và nhận để đánh giá
+GET {{baseUrl}}/api/v1/me/feedback/eligible-products
+Authorization: Bearer {{accessToken}}
+
+### Lịch sử phản hồi, trạng thái và câu trả lời mới nhất
+GET {{baseUrl}}/api/v1/me/feedback?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### Gửi đánh giá; bỏ orderId nếu kiểm tra theo mọi đơn đã nhận của khách
+POST {{baseUrl}}/api/v1/me/feedback
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"productId":{{productId}},"stars":5,"content":"Sản phẩm phù hợp.","orderId":{{orderId}}}
+
+### Danh sách khảo sát được giao riêng
+GET {{baseUrl}}/api/v1/me/surveys?page=1&pageSize=20
+Authorization: Bearer {{accessToken}}
+
+### Chi tiết khảo sát, câu hỏi/type/required/options
+GET {{baseUrl}}/api/v1/me/surveys/{{surveyId}}
+Authorization: Bearer {{accessToken}}
+
+### Nộp toàn bộ answers một lần; ví dụ câu một lựa chọn
+POST {{baseUrl}}/api/v1/me/surveys/{{surveyId}}/responses
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"answers":[{"questionId":{{questionId}},"options":[{{optionId}}],"text":null}]}
+
+### Xóa một dòng giỏ, gọi lại vẫn thành công
+DELETE {{baseUrl}}/api/v1/cart/items/{{variantId}}
+Authorization: Bearer {{accessToken}}
+
+### Xóa toàn bộ giỏ riêng, response 204
+DELETE {{baseUrl}}/api/v1/cart
+Authorization: Bearer {{accessToken}}
+
+### Đổi mật khẩu, response 204 và mọi phiên mobile cũ mất hiệu lực
+POST {{baseUrl}}/api/v1/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"currentPassword":"{{password}}","newPassword":"{{newPassword}}"}
+
+### Logout phiên hiện tại, cần access còn hiệu lực
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### Ảnh tĩnh công khai (thay URL bằng imageUrl trong DTO)
+GET {{baseUrl}}/images/giay-pegasus.jpg
+
+### Kho upload công khai (thay filename bằng file ảnh do Admin đã tải)
+GET {{baseUrl}}/uploads/REPLACE_WITH_EXISTING_IMAGE.jpg
+
+### Lỗi validation 400, không gọi DB
+GET {{baseUrl}}/api/v1/products?page=0&pageSize=101
+Accept: application/problem+json

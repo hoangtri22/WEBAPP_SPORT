@@ -10,10 +10,9 @@ public class CustomerStore(IConfiguration config)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
 
-    MySqlConnection Open() => new(_cs);
+    MySqlConnection Open() => StoreDatabase.Connection(_cs);
 
-    static bool SamePassword(string stored, string entered)
-        => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(entered));
+    static bool SamePassword(string stored, string entered) => PasswordStorage.Verify(stored, entered);
 
 
     // Đăng nhập: tìm TAI_KHOAN theo tên đăng nhập hoặc email (JOIN VAI_TRO, KHACH_HANG), so mật khẩu bằng SamePassword(); chỉ nhận tài khoản khách đang hoạt động.
@@ -22,7 +21,7 @@ public class CustomerStore(IConfiguration config)
         using var c = Open();
         var r = c.QueryFirstOrDefault<LoginRow>("""
             SELECT tk.mat_khau AS Password, tk.trang_thai AS AccountStatus, vt.ten_vai_tro AS Role,
-                   kh.ma_khach_hang AS CustomerId
+                   kh.ma_khach_hang AS CustomerId, kh.da_xoa AS Deleted
             FROM TAI_KHOAN tk
             JOIN VAI_TRO vt ON vt.ma_vai_tro = tk.ma_vai_tro
             LEFT JOIN KHACH_HANG kh ON kh.ma_tai_khoan = tk.ma_tai_khoan
@@ -36,12 +35,18 @@ public class CustomerStore(IConfiguration config)
             return (null, "Tài khoản đã bị khóa. Vui lòng liên hệ cửa hàng để được hỗ trợ.");
         if (r.CustomerId == null)
             return (null, "Đây là tài khoản nhân viên, vui lòng đăng nhập ở trang quản trị.");
+        if (r.Deleted || r.Role != "Khách hàng")
+            return (null, "Tài khoản khách hàng không còn hoạt động.");
+        if (!PasswordStorage.IsEncoded(r.Password))
+            c.Execute("UPDATE TAI_KHOAN tk JOIN KHACH_HANG kh ON kh.ma_tai_khoan=tk.ma_tai_khoan SET tk.mat_khau=@encoded WHERE kh.ma_khach_hang=@id AND tk.mat_khau=@previous",
+                new { encoded = PasswordStorage.Hash(password), id = r.CustomerId.Value, previous = r.Password });
         return (r.CustomerId, null);
     }
 
     // Đăng ký: kiểm tra trùng tên đăng nhập / email trong TAI_KHOAN, rồi trong một transaction thêm TAI_KHOAN (vai trò "Khách hàng") và KHACH_HANG.
     public Dictionary<string, string> Register(string username, string email, string phone, string password)
     {
+        username = username.Trim(); email = email.Trim(); phone = phone.Trim();
         var errors = new Dictionary<string, string>();
         using var c = Open();
         c.Open();
@@ -57,7 +62,7 @@ public class CustomerStore(IConfiguration config)
             VALUES (@username, @email, @phone, @password,
                     (SELECT ma_vai_tro FROM VAI_TRO WHERE ten_vai_tro = 'Khách hàng'), 'hoat_dong');
             SELECT LAST_INSERT_ID();
-            """, new { username, email, phone, password }, tx);
+            """, new { username, email, phone, password = PasswordStorage.Hash(password) }, tx);
         c.Execute("""
             INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, so_dien_thoai) VALUES (@accountId, '', @username, @phone)
             """, new { accountId, username, phone }, tx);
@@ -67,6 +72,16 @@ public class CustomerStore(IConfiguration config)
 
 
     CustomerProfile? _current;
+    // Kiểm tra trạng thái tài khoản/vai trò và xóa mềm tại DB trước khi dùng lại Session web.
+    public bool IsActiveCustomer(int customerId)
+    {
+        using var c = Open();
+        return c.ExecuteScalar<int>("""
+            SELECT COUNT(*) FROM KHACH_HANG kh JOIN TAI_KHOAN tk ON tk.ma_tai_khoan=kh.ma_tai_khoan
+            JOIN VAI_TRO vt ON vt.ma_vai_tro=tk.ma_vai_tro
+            WHERE kh.ma_khach_hang=@customerId AND kh.da_xoa=0 AND tk.trang_thai='hoat_dong' AND vt.ten_vai_tro='Khách hàng'
+            """, new { customerId }) == 1;
+    }
     // Hồ sơ khách đang đăng nhập theo customer_id trong Session (gọi GetProfile(), giữ lại trong request).
     public CustomerProfile? Current(ISession session)
     {
@@ -112,6 +127,11 @@ public class CustomerStore(IConfiguration config)
     public string? UpdateProfile(int customerId, string fullName, string email, string phone, DateTime? birth, string gender, IEnumerable<string> interests)
     {
         var words = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return "Vui lòng nhập họ và tên.";
+        if (words[^1].Length > 30 || string.Join(' ', words[..^1]).Length > 70) return "Họ hoặc tên quá dài.";
+        var requestedInterests = interests.Distinct().ToArray();
+        var validInterests = Interests(customerId).All;
+        if (requestedInterests.Any(i => !validInterests.Contains(i))) return "Sở thích không hợp lệ.";
         string first = words[^1], last = string.Join(' ', words[..^1]);
 
         using var c = Open();
@@ -128,7 +148,7 @@ public class CustomerStore(IConfiguration config)
         c.Execute("UPDATE TAI_KHOAN SET email = @email, so_dien_thoai = @phone WHERE ma_tai_khoan = @accountId",
             new { email, phone, accountId }, tx);
         c.Execute("DELETE FROM KHACH_HANG_SO_THICH WHERE ma_khach_hang = @customerId", new { customerId }, tx);
-        foreach (var name in interests.Distinct())
+        foreach (var name in requestedInterests)
             c.Execute("""
                 INSERT INTO KHACH_HANG_SO_THICH (ma_khach_hang, ma_so_thich)
                 SELECT @customerId, ma_so_thich FROM SO_THICH WHERE ten_so_thich = @name
@@ -173,7 +193,8 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId });
         if (r == null) return "Không tìm thấy tài khoản.";
         if (!SamePassword(r.Password, currentPassword)) return "Mật khẩu hiện tại không đúng.";
-        c.Execute("UPDATE TAI_KHOAN SET mat_khau = @newPassword WHERE ma_tai_khoan = @accountId", new { newPassword, accountId = r.AccountId });
+        if (c.Execute("UPDATE TAI_KHOAN SET mat_khau = @newPassword WHERE ma_tai_khoan = @accountId AND mat_khau=@previous", new { newPassword = PasswordStorage.Hash(newPassword), accountId = r.AccountId, previous = r.Password }) != 1)
+            return "Mật khẩu đã thay đổi. Vui lòng thử lại.";
         return null;
     }
 
@@ -238,7 +259,7 @@ public class CustomerStore(IConfiguration config)
         return c.Query<SurveyItem>("""
             SELECT ks.ma_khao_sat AS Id, ks.tieu_de AS Title, COALESCE(ks.mo_ta, '') AS Description,
                    ks.ngay_ket_thuc AS Deadline, k.trang_thai AS Status, k.ngay_hoan_thanh AS CompletedAt,
-                   ks.trang_thai = 'da_gui' AND NOW() <= ks.ngay_ket_thuc AS IsOpenFlag,
+                   ks.trang_thai = 'da_gui' AND NOW() BETWEEN ks.ngay_bat_dau AND ks.ngay_ket_thuc AS IsOpenFlag,
                    (SELECT COUNT(*) FROM CAU_HOI_KHAO_SAT q WHERE q.ma_khao_sat = ks.ma_khao_sat) AS QuestionCount
             FROM KHAO_SAT_KHACH_HANG k JOIN KHAO_SAT ks ON ks.ma_khao_sat = k.ma_khao_sat
             WHERE k.ma_khach_hang = @customerId AND ks.trang_thai <> 'nhap'
@@ -267,23 +288,24 @@ public class CustomerStore(IConfiguration config)
     // Nộp khảo sát: kiểm tra còn hạn và câu bắt buộc; trong transaction ghi TRA_LOI_KHAO_SAT và đánh dấu KHAO_SAT_KHACH_HANG là hoan_thanh.
     public string? SubmitSurvey(int surveyId, int customerId, Dictionary<int, (List<int> Options, string? Text)> answers)
     {
-        var survey = Surveys(customerId).FirstOrDefault(s => s.Id == surveyId);
-        if (survey == null) return "Khảo sát này không được gửi đến tài khoản của bạn.";
-        if (survey.Status == "hoan_thanh") return "Bạn đã hoàn thành khảo sát này rồi.";
-        if (!survey.IsOpen) return "Khảo sát đã hết hạn.";
-
-        var questions = Questions(surveyId);
-        foreach (var q in questions.Where(q => q.Required))
-            if (!answers.TryGetValue(q.Id, out var a) || (a.Options.Count == 0 && string.IsNullOrWhiteSpace(a.Text)))
-                return "Vui lòng trả lời đầy đủ các câu hỏi bắt buộc.";
-
         using var c = Open();
         c.Open();
         using var tx = c.BeginTransaction();
+        var survey = c.QuerySingleOrDefault<SubmissionRow>("""
+            SELECT k.trang_thai AS Status, ks.trang_thai='da_gui' AND NOW() BETWEEN ks.ngay_bat_dau AND ks.ngay_ket_thuc AS IsOpen
+            FROM KHAO_SAT_KHACH_HANG k JOIN KHAO_SAT ks ON ks.ma_khao_sat=k.ma_khao_sat
+            WHERE k.ma_khao_sat=@surveyId AND k.ma_khach_hang=@customerId FOR UPDATE
+            """, new { surveyId, customerId }, tx);
+        if (survey == null) return "Khảo sát này không được gửi đến tài khoản của bạn.";
+        if (survey.Status == "hoan_thanh") return "Bạn đã hoàn thành khảo sát này rồi.";
+        if (!survey.IsOpen) return "Khảo sát đã hết hạn hoặc chưa bắt đầu.";
+        var questions = Questions(surveyId);
+        var validation = ValidateSurveyAnswers(questions, answers);
+        if (validation != null) return validation;
         foreach (var q in questions)
         {
             if (!answers.TryGetValue(q.Id, out var a)) continue;
-            var valid = a.Options.Where(o => q.Options.Any(x => x.Id == o)).ToList();
+            var valid = a.Options.Distinct().ToList();
             foreach (var o in valid)
                 c.Execute("""
                     INSERT INTO TRA_LOI_KHAO_SAT (ma_khao_sat, ma_khach_hang, ma_cau_hoi, ma_lua_chon) VALUES (@surveyId, @customerId, @qid, @o)
@@ -301,8 +323,77 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
+    /// <summary>One shared validator for mobile JSON and web survey forms.</summary>
+    public static string? ValidateSurveyAnswers(List<SurveyQ> questions, Dictionary<int, (List<int> Options, string? Text)> answers)
+    {
+        if (answers.Keys.Any(id => questions.All(q => q.Id != id))) return "Câu hỏi không thuộc khảo sát này.";
+        foreach (var q in questions)
+        {
+            if (!answers.TryGetValue(q.Id, out var a))
+            {
+                if (q.Required) return "Vui lòng trả lời đầy đủ các câu hỏi bắt buộc.";
+                continue;
+            }
+            if (a.Options == null || a.Options.Count > 100 || a.Text?.Length > 500) return "Câu trả lời không hợp lệ.";
+            if (a.Options.Count != a.Options.Distinct().Count()) return "Lựa chọn bị trùng.";
+            if (q.Type == "text")
+            {
+                if (a.Options.Count > 0) return "Câu hỏi văn bản không nhận lựa chọn.";
+                if (q.Required && string.IsNullOrWhiteSpace(a.Text)) return "Vui lòng trả lời đầy đủ các câu hỏi bắt buộc.";
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(a.Text) || a.Options.Any(id => q.Options.All(o => o.Id != id))) return "Lựa chọn không thuộc câu hỏi này.";
+                if (q.Type != "many" && a.Options.Count > 1) return "Câu hỏi này chỉ được chọn một đáp án.";
+                if (q.Required && a.Options.Count == 0) return "Vui lòng trả lời đầy đủ các câu hỏi bắt buộc.";
+            }
+        }
+        return null;
+    }
+
+    public string? AddPurchasedFeedback(int customerId, int productId, int stars, string content, int? orderId = null)
+    {
+        if (stars is < 1 or > 5 || string.IsNullOrWhiteSpace(content) || content.Length > 1000) return "Phản hồi không hợp lệ.";
+        using var c = Open();
+        var allowed = c.ExecuteScalar<int>("""
+            SELECT COUNT(*) FROM DON_HANG d JOIN CHI_TIET_DON_HANG ct ON ct.ma_don_hang=d.ma_don_hang
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the=ct.ma_bien_the JOIN SAN_PHAM sp ON sp.ma_san_pham=bt.ma_san_pham
+            WHERE d.ma_khach_hang=@customerId AND d.trang_thai_don_hang='da_giao' AND sp.ma_san_pham=@productId
+              AND sp.trang_thai='hien' AND (@orderId IS NULL OR d.ma_don_hang=@orderId)
+            """, new { customerId, productId, orderId });
+        if (allowed == 0) return "Bạn chỉ gửi được phản hồi cho sản phẩm đã mua và đã nhận hàng.";
+        SendFeedback(customerId, productId, stars, content.Trim());
+        return null;
+    }
+
+    public List<MobileFeedback> MobileFeedbacks(int customerId)
+    {
+        using var c = Open();
+        return c.Query<MobileFeedback>("""
+            SELECT ph.ma_phan_hoi AS Id,ph.ma_san_pham AS ProductId,sp.ten_san_pham AS ProductName,ph.so_sao AS Stars,
+                   ph.noi_dung AS Content,ph.ngay_gui AS SentAt,ph.trang_thai AS Status,
+                   (SELECT t.noi_dung FROM TRA_LOI_PHAN_HOI t WHERE t.ma_phan_hoi=ph.ma_phan_hoi ORDER BY t.ma_tra_loi DESC LIMIT 1) AS Reply
+            FROM PHAN_HOI ph LEFT JOIN SAN_PHAM sp ON sp.ma_san_pham=ph.ma_san_pham
+            WHERE ph.ma_khach_hang=@customerId ORDER BY ph.ma_phan_hoi DESC
+            """, new { customerId }).ToList();
+    }
+
+    public sealed class MobileFeedback
+    {
+        public int Id { get; set; }
+        public int? ProductId { get; set; }
+        public string? ProductName { get; set; }
+        public int? Stars { get; set; }
+        public string Content { get; set; } = "";
+        public DateTime SentAt { get; set; }
+        public string Status { get; set; } = "";
+        public string? Reply { get; set; }
+    }
+
+    class SubmissionRow { public string Status { get; set; } = ""; public bool IsOpen { get; set; } }
+
     class PasswordRow { public int AccountId { get; set; } public string Password { get; set; } = ""; }
-    class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } }
+    class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } public bool Deleted { get; set; } }
     class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public decimal Spent { get; set; } public int Points { get; set; } public long Orders { get; set; } }
     class FeedbackDbRow { public int Id { get; set; } public string Product { get; set; } = ""; public string Text { get; set; } = ""; public DateTime SentAt { get; set; } public string Status { get; set; } = ""; public string? Reply { get; set; } }
 }

@@ -15,6 +15,12 @@ Công nghệ: ASP.NET Core MVC (.NET 10), Dapper + MySqlConnector, MySQL 8.
 WEBAPP_SPORT/
 ├── Backend/
 │   ├── Database/sports_shop.sql       # Script MySQL: tạo CSDL sports_shop (35 bảng) + dữ liệu demo
+│   ├── SportShop.Api/                 # REST API v1 cho toàn bộ chức năng User, cổng 5080
+│   ├── SportShop.Application/         # Interface và use case backend
+│   ├── SportShop.Contracts/           # DTO JSON thuần C#
+│   ├── SportShop.Infrastructure/      # Truy vấn MySQL bằng Dapper
+│   ├── SportShop.Shared/              # Service/model gốc dùng chung Web và API
+│   ├── SportShop.Api.Tests/           # Kiểm thử HTTP và MySQL riêng
 │   └── Images/                        # Ảnh sản phẩm, hai web phục vụ tại đường dẫn /images
 ├── Frontend/
 │   ├── SportShop.Admin/               # Web quản trị
@@ -29,9 +35,10 @@ WEBAPP_SPORT/
 
 Yêu cầu: Visual Studio có .NET 10 SDK và MySQL 8.
 
-1. **Tạo CSDL:** mở MySQL Workbench, kết nối tới server, chọn File → Open SQL Script → `Backend/Database/sports_shop.sql`, bấm ⚡
-   (Ctrl + Shift + Enter, chạy cả script). Kết quả đúng là schema `sports_shop` có **35 bảng**.
-2. **Cấu hình kết nối:** tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` của **cả hai** web:
+1. **Tạo/nâng cấp CSDL:** database mới dùng `Backend/Database/sports_shop.sql` (35 bảng gốc). Database đã có giữ nguyên dữ liệu;
+   áp dụng lần lượt `Backend/Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql` trước khi chạy bản mới.
+   Migration tạo thêm bảng token/giỏ/idempotency và bổ sung phương thức thanh toán mô phỏng nếu thiếu; không tự chạy lúc startup.
+2. **Cấu hình kết nối:** tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` của **cả hai** web và API khi chạy API:
 
    ```json
    {
@@ -49,6 +56,7 @@ Yêu cầu: Visual Studio có .NET 10 SDK và MySQL 8.
 |---|---|
 | Web quản trị | http://localhost:5188 |
 | Web khách hàng | http://localhost:5003 |
+| API MobileApp (chạy riêng) | http://localhost:5080 |
 
 Sau khi sửa code C# hoặc file `.cshtml` thì dừng và chạy lại web; sửa CSS / JS thì chỉ cần Ctrl + F5 trên trình duyệt.
 
@@ -68,12 +76,13 @@ Muốn thử mã cho khách mới thì đăng ký một tài khoản mới ở w
 - **Tài khoản:** đăng ký, đăng nhập, đăng xuất, sửa thông tin cá nhân (kèm sở thích thể thao), tự đổi mật khẩu.
   Sai mật khẩu 5 lần thì tạm khóa đăng nhập 5 phút (`Services/LoginThrottle.cs`).
 - **Mua hàng:** trang chủ, danh sách sản phẩm (lọc theo loại, tìm kiếm, sắp xếp), chi tiết sản phẩm chọn size / màu
-  (mỗi màu có ảnh riêng), giỏ hàng, thanh toán, trang khuyến mãi. Chỉ hiện sản phẩm đang bán và còn tồn kho.
+  (mỗi màu có ảnh riêng), giỏ hàng, thanh toán, trang khuyến mãi. Sản phẩm đang bán có thể hiển thị hết hàng; trang chủ nổi bật chọn sản phẩm còn tồn.
   - Phải đăng nhập mới thêm vào giỏ được; giỏ của từng tài khoản được lưu lại giữa các lần đăng nhập
-    (`App_Data/carts.json`, git bỏ qua, tự tạo khi chạy).
+    trong MySQL dùng chung mobile. File `App_Data/carts.json` cũ được import một lần theo khách và giữ nguyên làm bản sao;
+    cấu hình `Commerce:LegacyCartPath` của hai host trỏ cùng file nếu deploy khác thư mục.
   - Thanh toán: điền sẵn người nhận từ sổ địa chỉ, phương thức thanh toán giả lập, miễn phí giao hàng từ 500.000₫.
     Mục **Mã giảm giá** chỉ liệt kê các mã khách dùng được, kèm số tiền giảm theo đơn hiện tại (xem *Quy tắc voucher*).
-- **Đơn hàng của tôi:** theo dõi trạng thái chờ xác nhận → đang chuẩn bị → đang giao → đã giao; tự hủy đơn khi còn chờ xác nhận;
+- **Đơn hàng của tôi:** theo dõi trạng thái chờ xác nhận → đang chuẩn bị → đang giao → đã giao; tự hủy đơn khi còn chờ xác nhận và chưa thanh toán;
   đánh giá sản phẩm trong đơn đã giao.
 - **Phản hồi và khảo sát:** chỉ gửi phản hồi cho sản phẩm đã mua và đã nhận; xem câu trả lời của cửa hàng; làm khảo sát được gửi tới.
 - **Trang thông tin:** đổi trả, giao hàng, chọn size, liên hệ, giới thiệu… (nội dung ở `Models/InfoPages.cs`).
@@ -103,7 +112,7 @@ Tài khoản và nhân viên chỉ vai trò Quản lý mới thêm / sửa / xó
 
 ### Từng chức năng
 
-- **Khách hàng:** sửa mọi thông tin trừ mật khẩu (mật khẩu do khách tự đổi, chỉ Quản lý xem được), phân nhóm khách, ghi chú chăm sóc
+- **Khách hàng:** sửa thông tin cá nhân, phân nhóm khách, ghi chú chăm sóc
   và lịch hẹn liên hệ lại. Khách đã xóa không còn hiện khi lập đơn, tính nhóm khách, gửi khảo sát và trong thống kê.
 - **Đơn hàng:** lập đơn tại quầy (trừ tồn kho, kiểm tra voucher) và duyệt đơn khách đặt online.
   - Đơn chưa thanh toán chỉ ở "Chờ xác nhận" / "Đang chuẩn bị" / "Đang giao"; phải chuyển "Đã thanh toán" mới chọn được "Đã giao" hoặc "Đã hủy".
@@ -178,7 +187,7 @@ không chạy. Xóa CSDL sẽ mất mọi dữ liệu đã nhập thêm.
 - **Web quản trị báo "Lỗi kết nối CSDL":** kiểm tra dịch vụ MySQL đang chạy (`services.msc`), đúng cổng và mật khẩu trong `appsettings.Local.json`.
   Máy có nhiều server MySQL (ví dụ cổng 3306 và 3307) thì cổng trong file phải đúng server đã chạy script.
   Web khách hàng không kết nối được thì các chức năng cần dữ liệu hiện thông báo cần kết nối cơ sở dữ liệu.
-- **`Table '...' doesn't exist` hoặc `Unknown column 'da_xoa'`:** CSDL trên máy cũ hơn script, chạy lại script hoặc lệnh `ALTER TABLE` ở trên.
+- **`Table '...' doesn't exist` hoặc `Unknown column 'da_xoa'`:** kiểm tra schema cũ và các migration 001–003; thêm `da_xoa` bằng lệnh `ALTER TABLE` ở trên nếu thiếu. Không chạy lại script tạo DB để nâng cấp dữ liệu đang có.
 - **Mã nhân viên ở góc phải (ví dụ NV011) không đúng sau khi tạo lại CSDL:** mã này lưu trong cookie đăng nhập cũ; đăng xuất rồi đăng nhập lại.
   Nếu không, các thao tác ghi người thực hiện (lập đơn, phiếu nhập, trả lời phản hồi) sẽ báo lỗi.
 - **Không đăng nhập được web quản trị, báo "Tài khoản khách hàng không được đăng nhập trang quản trị":** tài khoản chưa gắn với hồ sơ
@@ -187,8 +196,30 @@ không chạy. Xóa CSDL sẽ mất mọi dữ liệu đã nhập thêm.
 
 ## Chưa làm
 
-- App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) và Web API cho app.
-- Mã hóa mật khẩu (hiện lưu dạng văn bản theo thiết kế CSDL của nhóm).
+- App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) chưa có project; REST API đã có tài khoản/hồ sơ, catalog, giỏ/checkout/đơn, phản hồi/khảo sát và trang thông tin.
 - Tự áp dụng khuyến mãi theo sản phẩm và theo mốc đơn hàng ở bước thanh toán (hiện chỉ áp dụng mã voucher).
 - Gửi chiến dịch thông báo thật qua email / SMS (hiện chỉ ghi nhận chiến dịch đã gửi).
 - Tách lượt dùng voucher theo từng mã trong cùng một chương trình (cần thêm cột lưu mã voucher vào CSDL).
+
+## Phân tích và thiết kế API cho MobileApp
+
+REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới dùng hash có salt;
+đăng nhập hợp lệ nâng cấp dữ liệu plaintext demo cũ. Mobile dùng opaque bearer access/refresh token, refresh rotation và thu hồi phiên;
+đặt đơn có `Idempotency-Key`. Đơn đã thanh toán cần cửa hàng xử lý hoàn tiền, khách không tự hủy để tránh lệch hóa đơn/điểm.
+Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI chưa được triển khai.
+
+- [Kiểm kê 64 chức năng Web User và API](API_INVENTORY.md).
+- [Contract, request/response và lỗi Mobile API](MOBILE_API_DOCUMENTATION.md).
+- [Hướng dẫn chạy backend, migration và tích hợp mobile](MOBILE_INTEGRATION_GUIDE.md).
+- [Báo cáo kiểm thử và giới hạn xác minh](MOBILE_API_TEST_REPORT.md).
+- [Đối chiếu từng màn hình Web → Mobile](Backend/docs/mobile-feature-parity.md).
+- [Danh mục file mới/sửa và mã phase-one có sẵn](Backend/docs/mobile-api-change-manifest.md).
+
+Verifier cuối trên instance MySQL sạch: **142/142 PASS, 0 FAIL, 0 SKIP**, build solution **0 lỗi/0 cảnh báo**.
+[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json); app/UI native chưa triển khai và chưa kiểm thử.
+
+- [Phân tích hiện trạng mã nguồn, khả năng tái sử dụng và các điểm cần xử lý](Backend/docs/project-analysis.md).
+- [Thiết kế API v1: endpoint, DTO, xác thực, giỏ hàng, checkout và kế hoạch triển khai](Backend/docs/mobile-api-design.md).
+- [Bản đồ CSDL và migration dự kiến](Backend/docs/database-readiness.md).
+- [Chạy REST API, cấu hình và ví dụ request](Backend/SportShop.Api/README.md).
+- [Tiến độ API và phần web được giữ nguyên](Backend/docs/api-implementation-status.md).

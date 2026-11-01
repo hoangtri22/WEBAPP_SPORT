@@ -85,14 +85,13 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
             TempData["ShopError"] = "Có sản phẩm vượt quá tồn kho, vui lòng chỉnh lại số lượng trong giỏ hàng.";
             return RedirectToAction(nameof(Index));
         }
-        var (orderId, error) = shop.PlaceOrder(CustomerId, to, payMethod, voucher, shop.GetCart(HttpContext.Session));
+        var (orderId, error, _) = shop.PlaceCartOrder(CustomerId, to, payMethod, voucher, Guid.NewGuid().ToString("N"));
         if (orderId == null)
         {
             var vm = BuildCheckout(lines, to, payMethod, voucher);
             vm.Error = error;
             return View(vm);
         }
-        shop.ClearCart(HttpContext.Session);
         return RedirectToAction(nameof(Done), new { id = orderId });
     }
 

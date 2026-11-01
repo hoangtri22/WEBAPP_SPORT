@@ -1,4 +1,14 @@
 <Solution>
+  <Folder Name="/Backend/">
+    <Project Path="Backend/SportShop.Api/SportShop.Api.csproj" />
+    <Project Path="Backend/SportShop.Application/SportShop.Application.csproj" />
+    <Project Path="Backend/SportShop.Contracts/SportShop.Contracts.csproj" />
+    <Project Path="Backend/SportShop.Infrastructure/SportShop.Infrastructure.csproj" />
+    <Project Path="Backend/SportShop.Shared/SportShop.Shared.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Backend/SportShop.Api.Tests/SportShop.Api.Tests.csproj" />
+  </Folder>
   <Folder Name="/Frontend/">
     <Project Path="Frontend/SportShop.Admin/SportShop.Admin.csproj" />
     <Project Path="Frontend/SportShop.CustomerWeb/SportShop.CustomerWeb.csproj" />

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SportShop.Application/SportShop.Application.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Dapper" Version="2.1.89" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
+    <!-- One implementation compiled once for both hosts; preserve Razor model namespaces. -->
+    <Compile Include="../../Frontend/SportShop.CustomerWeb/Services/**/*.cs" Link="Services/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Frontend/SportShop.CustomerWeb/Models/**/*.cs" Link="Models/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

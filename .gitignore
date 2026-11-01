@@ -17,3 +17,7 @@ Frontend/Uploads/*
 
 # Giỏ hàng của từng tài khoản (dữ liệu chạy thử, không đưa lên GitHub)
 Frontend/SportShop.CustomerWeb/App_Data/
+
+# Isolated local integration-test data (never the running shop database)
+.test-artifacts/
+Backend/TestResults/

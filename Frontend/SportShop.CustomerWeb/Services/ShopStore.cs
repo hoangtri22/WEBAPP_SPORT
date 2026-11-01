@@ -5,7 +5,7 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
-public class ShopStore(IConfiguration config, CartStore carts)
+public class ShopStore(IConfiguration config, CartStore carts, CatalogCache catalog)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
     MySqlConnection Open() => new(_cs);
@@ -14,82 +14,67 @@ public class ShopStore(IConfiguration config, CartStore carts)
     public const decimal ShipFee = 30_000;
 
 
-    // Danh mục sản phẩm (LOAI_SP) kèm số sản phẩm đang bán còn hàng; bỏ loại lưu trữ Catalog.ArchivedCategory.
+    // Danh mục sản phẩm (LOAI_SP) kèm số sản phẩm đang bán còn hàng; bỏ loại lưu trữ Catalog.ArchivedCategory. Lấy từ CatalogCache (nạp MySQL, giữ 10 phút).
     public List<ShopCategory> Categories()
     {
-        using var c = Open();
-        return c.Query("""
-            SELECT l.ma_loai, l.ten_loai,
-                   (SELECT COUNT(*) FROM SAN_PHAM s WHERE s.ma_loai = l.ma_loai AND s.trang_thai = 'hien'
-                      AND EXISTS (SELECT 1 FROM BIEN_THE_SP b WHERE b.ma_san_pham = s.ma_san_pham AND b.trang_thai = 'hien' AND b.so_luong_ton > 0)) AS so_sp
-            FROM LOAI_SP l WHERE l.ten_loai <> @archived ORDER BY l.ma_loai
-            """, new { archived = Catalog.ArchivedCategory }).Cast<IDictionary<string, object?>>()
-            .Select(r => new ShopCategory(I(r, "ma_loai"), S(r, "ten_loai"), I(r, "so_sp"))).ToList();
+        var snap = catalog.Get();
+        return snap.Categories.Select(l => new ShopCategory(l.Id, l.Name,
+            snap.Products.Count(p => p.CategoryId == l.Id && p.Variants.Any(v => v.Visible && v.Stock > 0)))).ToList();
     }
 
     // Tìm kiếm / lọc sản phẩm theo kiểu cũ (loại, từ khóa, sắp xếp): chuyển sang Search() để mọi nơi dùng chung một cách tìm.
     public List<ShopProduct> Products(int? category = null, string? keyword = null, string sort = "new", int? take = null)
         => Search(new ProductQuery { Category = category, Keyword = keyword, Sort = sort, Take = take });
 
-    // Tìm kiếm sản phẩm dùng chung (ProductQuery): mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại (collation utf8mb4_unicode_ci nên không phân biệt hoa thường và dấu);
-    // bộ lọc nâng cao (khoảng giá, size, màu) áp lên biến thể còn bán và còn hàng; giá thấp nhất/cao nhất và tồn kho tổng hợp từ BIEN_THE_SP.
+    // Chữ thường và bỏ dấu thanh / dấu mũ (giữ nguyên "đ") để so khớp như collation utf8mb4_unicode_ci của MySQL: không phân biệt hoa thường và dấu.
+    static string Fold(string? s) => new string((s ?? "").Normalize(System.Text.NormalizationForm.FormD)
+        .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark).ToArray()).Normalize(System.Text.NormalizationForm.FormC).ToLowerInvariant();
+
+    // Khóa sắp xếp: như Fold nhưng "đ" đứng cùng "d" (cách MySQL xếp tên và màu: Cam, Đen, Đỏ, Hồng).
+    static string SortKey(string? s) => Fold(s).Replace('đ', 'd');
+
+    // Tìm kiếm sản phẩm dùng chung (ProductQuery), lọc ngay trên danh mục trong CatalogCache (không truy vấn MySQL mỗi lần gõ): mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại (không phân biệt hoa thường và dấu);
+    // bộ lọc nâng cao (khoảng giá, size, màu) áp lên biến thể còn bán và còn hàng; giá thấp nhất/cao nhất và tồn kho tổng hợp từ các biến thể đang bán.
     public List<ShopProduct> Search(ProductQuery q)
     {
-        string order = q.Sort switch
-        {
-            "price_asc" => "MIN(bt.gia_ban) IS NULL, MIN(bt.gia_ban) ASC",
-            "price_desc" => "MAX(bt.gia_ban) DESC",
-            "name" => "sp.ten_san_pham ASC",
-            _ => "sp.ma_san_pham DESC",
-        };
         // Khách nhập ngược khoảng giá (từ lớn hơn đến) thì tự đổi chỗ
         if (q.MinPrice > 0 && q.MaxPrice > 0 && q.MinPrice > q.MaxPrice) (q.MinPrice, q.MaxPrice) = (q.MaxPrice, q.MinPrice);
-        var p = new DynamicParameters();
-        var where = new List<string> { "sp.trang_thai = 'hien'" };
-        if (q.Category is int category) { where.Add("sp.ma_loai = @category"); p.Add("category", category); }
+        var words = q.Words.Select(Fold).ToArray();
+        string size = Fold(q.Size?.Trim()), color = Fold(q.Color?.Trim());
 
-        var words = q.Words;
-        for (int i = 0; i < words.Length; i++)
+        var found = new List<(CatalogProduct P, decimal? Min, decimal? Max, int Stock)>();
+        foreach (var p in catalog.Get().Products)
         {
-            where.Add($"(sp.ten_san_pham LIKE @w{i} OR l.ten_loai LIKE @w{i})");
-            p.Add($"w{i}", "%" + words[i].Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%");
+            if (q.Category is int category && p.CategoryId != category) continue;
+            var text = Fold(p.Name) + "\n" + Fold(p.Category);
+            if (words.Any(w => !text.Contains(w))) continue;
+            if (q.IsAdvanced && !p.Variants.Any(v => v.Visible && v.Stock > 0
+                && !(q.MinPrice is > 0 && v.Price < q.MinPrice) && !(q.MaxPrice is > 0 && v.Price > q.MaxPrice)
+                && (size.Length == 0 || Fold(v.Size) == size) && (color.Length == 0 || Fold(v.Color) == color))) continue;
+            var visible = p.Variants.Where(v => v.Visible).ToList();
+            found.Add((p, visible.Count == 0 ? null : visible.Min(v => v.Price), visible.Count == 0 ? null : visible.Max(v => v.Price), visible.Sum(v => v.Stock)));
         }
 
-        if (q.IsAdvanced)
+        IEnumerable<(CatalogProduct P, decimal? Min, decimal? Max, int Stock)> sorted = q.Sort switch
         {
-            var v = new List<string> { "v.ma_san_pham = sp.ma_san_pham", "v.trang_thai = 'hien'", "v.so_luong_ton > 0" };
-            if (q.MinPrice is > 0) { v.Add("v.gia_ban >= @minPrice"); p.Add("minPrice", q.MinPrice); }
-            if (q.MaxPrice is > 0) { v.Add("v.gia_ban <= @maxPrice"); p.Add("maxPrice", q.MaxPrice); }
-            if (!string.IsNullOrWhiteSpace(q.Size)) { v.Add("v.kich_co = @size"); p.Add("size", q.Size.Trim()); }
-            if (!string.IsNullOrWhiteSpace(q.Color)) { v.Add("v.mau_sac = @color"); p.Add("color", q.Color.Trim()); }
-            where.Add($"EXISTS (SELECT 1 FROM BIEN_THE_SP v WHERE {string.Join(" AND ", v)})");
-        }
-        p.Add("take", q.Take ?? 1000);
-
-        using var c = Open();
-        return c.Query($"""
-            SELECT sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta,
-                   (SELECT b2.hinh_anh FROM BIEN_THE_SP b2 WHERE b2.ma_san_pham = sp.ma_san_pham AND b2.hinh_anh IS NOT NULL
-                    ORDER BY b2.trang_thai = 'an', b2.ma_bien_the LIMIT 1) AS hinh_anh,
-                   MIN(bt.gia_ban) AS gia_min, MAX(bt.gia_ban) AS gia_max, IFNULL(SUM(bt.so_luong_ton), 0) AS ton
-            FROM SAN_PHAM sp
-            JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
-            LEFT JOIN BIEN_THE_SP bt ON bt.ma_san_pham = sp.ma_san_pham AND bt.trang_thai = 'hien'
-            WHERE {string.Join(" AND ", where)}
-            GROUP BY sp.ma_san_pham, sp.ten_san_pham, l.ten_loai, sp.don_vi_tinh, sp.mo_ta
-            ORDER BY {order}
-            LIMIT @take
-            """, p).Cast<IDictionary<string, object?>>().Select(ToProduct).ToList();
+            "price_asc" => found.OrderBy(x => x.Min == null).ThenBy(x => x.Min).ThenByDescending(x => x.P.Id),
+            "price_desc" => found.OrderByDescending(x => x.Max).ThenByDescending(x => x.P.Id),
+            "name" => found.OrderBy(x => SortKey(x.P.Name), StringComparer.Ordinal),
+            _ => found.OrderByDescending(x => x.P.Id),
+        };
+        return sorted.Take(q.Take ?? 1000).Select(x => new ShopProduct(x.P.Id, x.P.Name, x.P.Category, x.P.Unit, x.P.Description,
+            // Ảnh đại diện: biến thể có ảnh, ưu tiên biến thể đang bán rồi theo mã
+            x.P.Variants.Where(v => v.Image != null).OrderBy(v => !v.Visible).ThenBy(v => v.Id).FirstOrDefault()?.Image,
+            x.Min, x.Max, x.Stock)).ToList();
     }
 
     // Các size và màu đang có bán (biến thể hiện, còn hàng) để khách chọn trong tìm kiếm nâng cao.
     public (List<string> Sizes, List<string> Colors) FilterOptions()
     {
-        using var c = Open();
-        const string from = "FROM BIEN_THE_SP bt JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham WHERE bt.trang_thai = 'hien' AND sp.trang_thai = 'hien' AND bt.so_luong_ton > 0";
-        var sizes = c.Query<string>($"SELECT DISTINCT bt.kich_co {from} AND bt.kich_co IS NOT NULL AND bt.kich_co <> '' ORDER BY bt.kich_co").ToList();
-        var colors = c.Query<string>($"SELECT DISTINCT bt.mau_sac {from} AND bt.mau_sac IS NOT NULL AND bt.mau_sac <> '' ORDER BY bt.mau_sac").ToList();
-        return (sizes, colors);
+        var sellable = catalog.Get().Products.SelectMany(p => p.Variants).Where(v => v.Visible && v.Stock > 0).ToList();
+        List<string> Distinct(IEnumerable<string?> values) => values.Where(s => !string.IsNullOrEmpty(s)).Select(s => s!)
+            .GroupBy(Fold).Select(g => g.First()).OrderBy(SortKey, StringComparer.Ordinal).ToList();
+        return (Distinct(sellable.Select(v => v.Size)), Distinct(sellable.Select(v => v.Color)));
     }
 
     // Chi tiết một sản phẩm đang hiện và các biến thể (size, màu, giá, tồn kho, ảnh) trong BIEN_THE_SP.
@@ -336,6 +321,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
                         new { customerId, name = to.Name.Trim(), phone = to.Phone.Trim(), addr = to.Address.Trim() }, tx);
 
                 tx.Commit();
+                catalog.Clear();
                 return (order, null);
             }
             catch { tx.Rollback(); throw; }
@@ -396,6 +382,7 @@ public class ShopStore(IConfiguration config, CartStore carts)
         c.Execute("UPDATE VAN_CHUYEN SET trang_thai='that_bai' WHERE ma_don_hang=@orderId", new { orderId }, tx);
         RefundVoucher(c, tx, orderId);
         tx.Commit();
+        catalog.Clear();
         return null;
     }
 

@@ -21,6 +21,7 @@ builder.Services.AddSingleton<DbStatus>();
 builder.Services.AddScoped<CustomerStore>();
 builder.Services.AddScoped<ShopStore>();
 builder.Services.AddSingleton<CartStore>();
+builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddAntiforgery(o => o.Cookie.SameSite = SameSiteMode.Strict);
 

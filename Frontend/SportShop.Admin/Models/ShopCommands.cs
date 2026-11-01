@@ -1114,6 +1114,77 @@ public class ShopCommands
     });
 
 
+    // Nhập sản phẩm từ file Excel (.xlsx, cùng mẫu với nút "Xuất Excel" ở trang Quản lý sản phẩm): cột A–I = Tên sản phẩm, Loại sản phẩm, Đơn vị tính, Mô tả, Kích cỡ, Màu sắc, Giá bán, Giá vốn, Tồn kho.
+    // Sản phẩm chưa có (theo tên) thì thêm vào SAN_PHAM; biến thể chưa có (theo kích cỡ + màu) thì thêm vào BIEN_THE_SP, đã có thì cập nhật giá và tồn kho. Có dòng lỗi thì không ghi gì và báo các dòng đó.
+    public Result ImportProducts(Stream file) => Run((c, tx) =>
+    {
+        ClosedXML.Excel.IXLWorksheet sheet;
+        try { sheet = new ClosedXML.Excel.XLWorkbook(file).Worksheets.First(); }
+        catch (Exception) { throw new UserError("Không đọc được file. Vui lòng chọn đúng file Excel (.xlsx)."); }
+        if (!sheet.Cell(1, 1).GetString().Contains("sản phẩm", StringComparison.OrdinalIgnoreCase))
+            throw new UserError("File không đúng mẫu: dòng đầu phải là tiêu đề các cột (Tên sản phẩm, Loại sản phẩm, Đơn vị tính, Mô tả, Kích cỡ, Màu sắc, Giá bán, Giá vốn, Tồn kho). Hãy bấm \"Xuất Excel\" để lấy file mẫu.");
+
+        var categories = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in c.Query("SELECT ma_loai, ten_loai FROM LOAI_SP", transaction: tx)) categories.TryAdd((string)r.ten_loai, (int)r.ma_loai);
+        var products = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in c.Query("SELECT ma_san_pham, ten_san_pham FROM SAN_PHAM ORDER BY ma_san_pham", transaction: tx)) products.TryAdd((string)r.ten_san_pham, (int)r.ma_san_pham);
+        var variants = new Dictionary<(int, string, string), int>();
+        foreach (var r in c.Query("SELECT ma_bien_the, ma_san_pham, kich_co, mau_sac FROM BIEN_THE_SP ORDER BY ma_bien_the", transaction: tx))
+            variants.TryAdd(((int)r.ma_san_pham, (((string?)r.kich_co) ?? "").ToLowerInvariant(), (((string?)r.mau_sac) ?? "").ToLowerInvariant()), (int)r.ma_bien_the);
+
+        var errors = new List<string>();
+        int addedProducts = 0, addedVariants = 0, updatedVariants = 0;
+        var seen = new HashSet<(string, string, string)>();
+        for (int row = 2; row <= sheet.LastRowUsed()?.RowNumber(); row++)
+        {
+            string Cell(int col) => sheet.Cell(row, col).GetString().Trim();
+            string name = Cell(1), cat = Cell(2), unit = Cell(3), desc = Cell(4), size = Cell(5), color = Cell(6), priceText = Cell(7), costText = Cell(8), stockText = Cell(9);
+            if (name + cat + unit + desc + size + color + priceText + costText + stockText == "") continue;
+            if (name == "") { errors.Add($"Dòng {row}: thiếu tên sản phẩm."); continue; }
+            if (!categories.TryGetValue(cat, out int catId)) { errors.Add($"Dòng {row}: loại sản phẩm \"{cat}\" không có trong hệ thống."); continue; }
+            bool isNew = !products.TryGetValue(name, out int productId);
+            if (isNew && unit == "") { errors.Add($"Dòng {row}: sản phẩm mới cần có đơn vị tính."); continue; }
+
+            bool hasVariant = size + color + priceText + costText + stockText != "";
+            decimal price = 0, cost = 0; int stock = 0;
+            if (hasVariant)
+            {
+                if (!decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.InvariantCulture, out price) && !decimal.TryParse(priceText, NumberStyles.Number, new CultureInfo("vi-VN"), out price) || price <= 0)
+                { errors.Add($"Dòng {row}: giá bán phải là số lớn hơn 0."); continue; }
+                if (costText != "" && (!decimal.TryParse(costText, NumberStyles.Number, CultureInfo.InvariantCulture, out cost) && !decimal.TryParse(costText, NumberStyles.Number, new CultureInfo("vi-VN"), out cost) || cost < 0))
+                { errors.Add($"Dòng {row}: giá vốn không hợp lệ."); continue; }
+                if (stockText != "" && (!int.TryParse(stockText, NumberStyles.Number, CultureInfo.InvariantCulture, out stock) || stock < 0))
+                { errors.Add($"Dòng {row}: tồn kho phải là số nguyên không âm."); continue; }
+                if (!seen.Add((name.ToLowerInvariant(), size.ToLowerInvariant(), color.ToLowerInvariant()))) { errors.Add($"Dòng {row}: trùng biến thể (cùng sản phẩm, kích cỡ, màu) với một dòng phía trên."); continue; }
+            }
+            if (errors.Count > 0) continue;
+
+            if (isNew)
+            {
+                productId = c.ExecuteScalar<int>("INSERT INTO SAN_PHAM (ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai) VALUES (@catId, @name, @unit, @desc, 'hien'); SELECT LAST_INSERT_ID();",
+                    new { catId, name, unit, desc = desc.NullIfEmpty() }, tx);
+                products[name] = productId;
+                addedProducts++;
+            }
+            if (!hasVariant) continue;
+            if (variants.TryGetValue((productId, size.ToLowerInvariant(), color.ToLowerInvariant()), out int variantId))
+            {
+                c.Execute("UPDATE BIEN_THE_SP SET gia_ban=@price, gia_von=@cost, so_luong_ton=@stock WHERE ma_bien_the=@variantId", new { price, cost, stock, variantId }, tx);
+                updatedVariants++;
+            }
+            else
+            {
+                c.Execute("INSERT INTO BIEN_THE_SP (ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton, trang_thai) VALUES (@productId, @size, @color, @price, @cost, @stock, 'hien')",
+                    new { productId, size = size.NullIfEmpty(), color = color.NullIfEmpty(), price, cost, stock }, tx);
+                addedVariants++;
+            }
+        }
+        if (errors.Count > 0)
+            throw new UserError("Không nhập được, vui lòng sửa file rồi thử lại. " + string.Join(" ", errors.Take(5)) + (errors.Count > 5 ? $" (và {errors.Count - 5} lỗi khác)" : ""));
+        if (addedProducts + addedVariants + updatedVariants == 0) throw new UserError("File không có dòng dữ liệu nào để nhập.");
+        return $"Đã nhập từ Excel: thêm {addedProducts} sản phẩm, thêm {addedVariants} biến thể, cập nhật {updatedVariants} biến thể.";
+    });
+
     // Chạy thao tác ghi trong một transaction MySQL; lỗi nghiệp vụ (UserError) hoặc lỗi MySQL được đổi thành Result(false, thông báo).
     Result Run(Func<MySqlConnection, MySqlTransaction, string> work)
     {

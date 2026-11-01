@@ -1,0 +1,99 @@
+@using SportShop.Admin.Controllers
+@model StatsVm
+@{
+    ViewData["Title"] = "Thống kê doanh thu";
+    string kindText = StatsController.KindList.First(k => k.Key == Model.Kind).Text;
+    var query = new { from = Model.From.ToString("yyyy-MM-dd"), to = Model.To.ToString("yyyy-MM-dd"), group = Model.Group };
+    string Cell(decimal v, StatCol c) => c.Money ? Fmt.Money(v) : v.ToString("N0");
+}
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SPORTSHOP ADMIN</div>
+        <h1 class="page-title">Thống kê doanh thu</h1>
+        <p class="page-sub">Tổng tiền hóa đơn theo thời gian, nhân viên, khách hàng và sản phẩm</p>
+    </div>
+    <div class="head-actions">
+        <a class="btn-outline" asp-action="Export" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Xuất Excel</a>
+        <button type="button" class="btn-primary" onclick="window.print()">@Icons.Svg("printer", 18) In / Lưu PDF</button>
+    </div>
+</div>
+
+<div class="print-only report-head">
+    <h2>SPORTSHOP – BÁO CÁO THỐNG KÊ DOANH THU</h2>
+    <p>@kindText · Từ ngày @Model.From.ToString("dd/MM/yyyy") đến ngày @Model.To.ToString("dd/MM/yyyy")</p>
+    <p>Ngày lập: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
+</div>
+
+<form class="card range" method="get" asp-action="Index">
+    <input type="hidden" name="kind" value="@Model.Kind" />
+    <div class="range-input">
+        @Icons.Svg("calendar", 20)
+        <input type="date" name="from" value="@query.from" aria-label="Từ ngày" />
+        <span>–</span>
+        <input type="date" name="to" value="@query.to" aria-label="Đến ngày" />
+    </div>
+    <div class="select-wrap plain">
+        <select name="group" aria-label="Nhóm theo (bảng theo kỳ và theo khách hàng)">
+            <option value="month" selected="@(Model.Group == "month")">Nhóm theo tháng</option>
+            <option value="quarter" selected="@(Model.Group == "quarter")">Nhóm theo quý</option>
+            <option value="year" selected="@(Model.Group == "year")">Nhóm theo năm</option>
+        </select>
+    </div>
+    <button type="submit" class="btn-primary">Xem thống kê</button>
+</form>
+
+<div class="stat-tabs">
+    @foreach (var k in StatsController.KindList)
+    {
+        <a class="@(k.Key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@k.Key" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-group="@Model.Group">@k.Text</a>
+    }
+</div>
+
+<div class="kpis kpis-3">
+    <div class="kpi"><small>Số hóa đơn</small><div class="kpi-num">@Model.Invoices.ToString("N0")</div></div>
+    <div class="kpi"><small>Tổng tiền hóa đơn</small><div class="kpi-num">@Fmt.Money(Model.Total)</div></div>
+    <div class="kpi"><small>Giá trị trung bình</small><div class="kpi-num">@Fmt.Money(Model.Invoices == 0 ? 0 : Model.Total / Model.Invoices)</div></div>
+</div>
+
+@foreach (var t in Model.Tables)
+{
+    <div class="card stat-card">
+        <div class="card-title">@t.Title</div>
+        @if (t.Key == "product")
+        {
+            <p class="stat-note">Tính theo thành tiền từng dòng sản phẩm, chưa trừ giảm giá toàn đơn và chưa cộng phí vận chuyển nên tổng có thể khác tổng tiền hóa đơn.</p>
+        }
+        <div class="table-scroll">
+            <table class="tbl stat-tbl">
+                <thead>
+                    <tr>
+                        <th>@t.First</th>
+                        @foreach (var c in t.Cols) { <th class="num">@c.Name</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in t.Rows)
+                    {
+                        <tr>
+                            <td>@r.Label</td>
+                            @for (int i = 0; i < t.Cols.Count; i++) { <td class="num">@Cell(r.Values[i], t.Cols[i])</td> }
+                        </tr>
+                    }
+                    @if (t.Rows.Count == 0)
+                    {
+                        <tr><td colspan="@(t.Cols.Count + 1)" class="muted">Không có hóa đơn trong khoảng thời gian này.</td></tr>
+                    }
+                </tbody>
+                @if (t.Rows.Count > 0)
+                {
+                    <tfoot>
+                        <tr>
+                            <td>Tổng cộng</td>
+                            @for (int i = 0; i < t.Cols.Count; i++) { <td class="num">@Cell(t.Total[i], t.Cols[i])</td> }
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+}

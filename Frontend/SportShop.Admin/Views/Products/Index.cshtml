@@ -37,6 +37,11 @@
             <button type="button" class="active" id="viewGrid" title="Dạng lưới">@Icons.Svg("layout-grid", 20)</button>
             <button type="button" id="viewList" title="Dạng danh sách">@Icons.Svg("list", 20)</button>
         </div>
+        <a class="btn-outline" asp-action="ExportExcel">@Icons.Svg("download", 18) Xuất Excel</a>
+        <form method="post" asp-action="ImportExcel" enctype="multipart/form-data" class="import-form" id="importForm">
+            <input type="file" name="file" id="importFile" accept=".xlsx" hidden />
+            <button type="button" class="btn-outline" onclick="document.getElementById('importFile').click()">@Icons.Svg("send", 18) Nhập Excel</button>
+        </form>
         <button type="button" class="btn-primary" data-crud="create" data-entity="product">@Icons.Svg("plus", 18) Thêm sản phẩm</button>
     </div>
 
@@ -113,6 +118,11 @@
                 empty.hidden = shown > 0;
             }
             search.addEventListener('input', apply); cat.addEventListener('change', apply);
+
+            // Nhập Excel: chọn file xong gửi luôn; kết quả lần nhập trước (TempData) báo bằng thông báo nhỏ
+            document.getElementById('importFile').addEventListener('change', function () { if (this.files.length) document.getElementById('importForm').submit(); });
+            var importOk = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ImportOk"] as string)), importError = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ImportError"] as string));
+            if (importOk) showToast(importOk); else if (importError) showToast(importError, true);
         })();
     </script>
 }

@@ -143,7 +143,7 @@ public static class CrudDefs
             new("gia_tri_giam_toi_da", "Giảm tối đa (đ)", "number", Hint: "Không bắt buộc."),
             new("hang_ap_dung", "Hạng áp dụng", "select", false, "|Mọi hạng;thuong|Thường;bac|Bạc;vang|Vàng;VIP|VIP"),
             new("so_luong_gioi_han", "Số lượt tối đa", "number", Hint: "Để trống = không giới hạn."),
-            new("gioi_han_khach_hang", "Tối đa mỗi khách (lần)", "number"),
+            new("gioi_han_khach_hang", "Tối đa mỗi khách (lần)", "number", Hint: "Mã khách mới luôn 1 lần, mã hạng Bạc 2 lần, hạng Vàng 3 lần (bỏ qua ô này); mã khác dùng giá trị ở đây."),
         ]),
 
         new EntityDef("campaign", "chiến dịch thông báo",

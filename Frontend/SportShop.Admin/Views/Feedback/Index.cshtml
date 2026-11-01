@@ -114,10 +114,10 @@
             }
 
             function render() {
-                var q = document.getElementById('fbSearch').value.trim().toLowerCase();
+                var q = document.getElementById('fbSearch').value;
                 var first = null;
                 items.forEach(function (m) {
-                    var ok = m.dataset.group === tab && (!q || m.dataset.text.toLowerCase().indexOf(q) >= 0);
+                    var ok = m.dataset.group === tab && SearchKit.matches(m.dataset.text, q);
                     m.hidden = !ok;
                     if (ok && !first) first = m;
                 });

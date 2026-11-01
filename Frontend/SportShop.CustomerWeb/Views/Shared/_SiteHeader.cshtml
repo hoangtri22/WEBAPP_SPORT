@@ -24,6 +24,7 @@
         <a class="@On("surveys")" asp-controller="Customer" asp-action="Surveys">Khảo sát</a>
     </nav>
     <div class="shop-actions">
+        <button type="button" id="searchToggle" aria-label="Tìm kiếm" title="Tìm kiếm">@Icons.Svg("search", 20)</button>
         <a class="cart-button @(controller == "Cart" ? "active" : "")" asp-controller="Cart" asp-action="Index" aria-label="Giỏ hàng" title="Giỏ hàng">@Icons.Svg("shopping-bag", 20)@if (cartCount > 0) {<i class="cart-count">@cartCount</i>}</a>
         @if (loggedIn)
         {

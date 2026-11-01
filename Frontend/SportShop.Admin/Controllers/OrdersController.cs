@@ -18,7 +18,6 @@ public class OrdersController(ShopData db) : Controller
         {
             Title = "Quản lý đơn đặt hàng và giao hàng",
             Subtitle = "Tiếp nhận, xử lý và theo dõi giao hàng",
-            Note = "Trạng thái đơn: chờ xác nhận → đang chuẩn bị → đang giao → đã giao, hoặc đã hủy (kèm lý do, hàng được hoàn lại tồn kho). Đơn đã thanh toán được lập hóa đơn, xem ở trang \"Quản lý hóa đơn\".",
             Sections = [new() { Columns = ["Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
         });
     }

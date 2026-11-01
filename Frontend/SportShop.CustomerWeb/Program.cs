@@ -30,6 +30,9 @@ builder.Services.AddAntiforgery(o => o.Cookie.SameSite = SameSiteMode.Strict);
 
 var app = builder.Build();
 
+// Mỗi tab trình duyệt một phiên đăng nhập riêng (Services/TabCookies.cs + wwwroot/js/tab-session.js); phải đứng đầu để session / chống giả mạo thấy đúng cookie của tab
+app.UseMiddleware<TabCookieMiddleware>("sportshop-shop-tab");
+
 app.Use(async (ctx, next) =>
 {
     ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";

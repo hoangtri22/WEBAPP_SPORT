@@ -104,9 +104,9 @@
             btnList.onclick = function () { setView(false); };
 
             function apply() {
-                var q = search.value.trim().toLowerCase(), c = cat.value, shown = 0;
+                var q = search.value, c = cat.value, shown = 0;
                 document.querySelectorAll('#prodGrid .prod, #prodList tbody tr').forEach(function (el) {
-                    var ok = (!c || el.dataset.cat === c) && (!q || el.dataset.text.toLowerCase().indexOf(q) >= 0);
+                    var ok = (!c || el.dataset.cat === c) && SearchKit.matches(el.dataset.text, q);
                     el.style.display = ok ? '' : 'none';
                     if (ok && el.classList.contains('prod')) shown++;
                 });

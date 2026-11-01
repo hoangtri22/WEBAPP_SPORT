@@ -1,0 +1,47 @@
+@*
+    Tìm kiếm nâng cao ở trang cửa hàng: từ khóa, loại, khoảng giá, size, màu và cách sắp xếp.
+    Gửi bằng GET đến /Shop (ShopController.Index → ProductQuery → ShopStore.Search), tự mở ra khi đang dùng bộ lọc nâng cao.
+*@
+@model AdvancedSearchVm
+@{
+    var q = Model.Query;
+    var keywordBox = new SearchInputVm(q.Keyword, "Tên sản phẩm hoặc loại...", null, 17);
+}
+<details class="adv-search" open="@(q.IsAdvanced || q.ShowAdvanced)">
+    <summary>@Icons.Svg("search", 17) Tìm kiếm nâng cao</summary>
+    <form method="get" asp-controller="Shop" asp-action="Index" class="adv-form">
+        <label class="adv-wide"><span>Từ khóa</span><span class="adv-keyword"><partial name="_SearchInput" model="keywordBox" /></span></label>
+        <label><span>Loại sản phẩm</span>
+            <select name="cat">
+                <option value="">Tất cả loại</option>
+                @foreach (var c in Model.Categories) { <option value="@c.Id" selected="@(q.Category == c.Id)">@c.Name</option> }
+            </select>
+        </label>
+        <label><span>Giá từ (₫)</span><input type="number" name="min" min="0" step="1000" value="@(q.MinPrice is > 0 ? q.MinPrice.Value.ToString("0.##") : "")" placeholder="0" /></label>
+        <label><span>Giá đến (₫)</span><input type="number" name="max" min="0" step="1000" value="@(q.MaxPrice is > 0 ? q.MaxPrice.Value.ToString("0.##") : "")" placeholder="Không giới hạn" /></label>
+        <label><span>Size</span>
+            <select name="size">
+                <option value="">Mọi size</option>
+                @foreach (var s in Model.Sizes) { <option selected="@(s == q.Size)">@s</option> }
+            </select>
+        </label>
+        <label><span>Màu sắc</span>
+            <select name="color">
+                <option value="">Mọi màu</option>
+                @foreach (var c in Model.Colors) { <option selected="@(c == q.Color)">@c</option> }
+            </select>
+        </label>
+        <label><span>Sắp xếp</span>
+            <select name="sort">
+                <option value="new" selected="@(q.Sort == "new")">Mới nhất</option>
+                <option value="price_asc" selected="@(q.Sort == "price_asc")">Giá tăng dần</option>
+                <option value="price_desc" selected="@(q.Sort == "price_desc")">Giá giảm dần</option>
+                <option value="name" selected="@(q.Sort == "name")">Tên A–Z</option>
+            </select>
+        </label>
+        <div class="adv-actions">
+            <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+            <a class="btn btn-secondary" asp-controller="Shop" asp-action="Index">Xóa bộ lọc</a>
+        </div>
+    </form>
+</details>

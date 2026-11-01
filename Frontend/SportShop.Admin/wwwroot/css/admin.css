@@ -117,11 +117,6 @@ body.collapsed .help { justify-content: center; padding: 10px; }
 .search:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
 kbd { font-family: inherit; font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
-.filter { position: relative; }
-.filter .btn-outline { padding: 0 16px; }
-.filter-menu { position: absolute; top: 50px; left: 0; z-index: 10; min-width: 200px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px rgba(16, 24, 40, .12); padding: 6px; }
-.filter-menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 8px; }
-.filter-menu button:hover, .filter-menu button.on { background: var(--teal-soft); color: var(--teal-dark); }
 .select-wrap { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--muted); }
 .select-wrap select { border: 0; outline: 0; background: none; font: inherit; color: var(--ink); cursor: pointer; }
 .select-wrap.plain { color: var(--ink); }
@@ -303,7 +298,6 @@ body.bare { align-items: center; justify-content: center; min-height: 100vh; bac
 .login input { width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; font: inherit; }
 .login input:focus { outline: 0; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
 .login .btn-primary { width: 100%; margin-top: 22px; height: 48px; }
-.login-hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 14px; }
 .login-error { background: #fdecec; border: 1px solid #fbd5d5; color: var(--red); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-top: 4px; }
 
 @media (max-width: 1200px) {
@@ -430,3 +424,18 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
 
 .quick-reason { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; }
 .quick-reason[hidden] { display: none; }
+
+/* Tìm kiếm nâng cao của bảng (.dtable): khung gọn chọn lọc theo từng cột, dựng bởi search-kit.js */
+.adv-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--teal); color: #fff; font-size: 11px; font-weight: 700; }
+.adv-count[hidden], .adv-panel[hidden] { display: none; }
+.toolbar .js-adv { height: 40px; padding: 0 14px; font-size: 13.5px; }
+.adv-panel { margin: 0 24px 12px; padding: 10px 14px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fafbfc; }
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; }
+.adv-field { display: grid; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.adv-field input, .adv-field select { width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 400; color: var(--ink); }
+.adv-field input:focus, .adv-field select:focus { outline: 0; border-color: var(--teal); box-shadow: 0 0 0 2px rgba(15, 118, 110, .12); }
+.adv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.adv-span2 { grid-column: span 2; }
+@media (max-width: 560px) { .adv-span2 { grid-column: auto; } }
+.adv-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+.adv-foot .btn-outline { height: 30px; padding: 0 12px; font-size: 12.5px; border-radius: 8px; }

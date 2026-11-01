@@ -36,6 +36,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="~/js/tab-session.js" data-cookie="sportshop-admin-tab"></script>
     <title>@(ViewData["Title"] ?? "SportShop") - SportShop Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -56,7 +57,7 @@ else
             <span class="brand-name">SPORT<b>SHOP</b></span>
         </div>
         <nav class="nav">
-            @foreach (var it in items)
+            @foreach (var it in items.Where(i => !(i.key == "employees" && role == "Nhân viên")))
             {
                 <a class="nav-item @(menu == it.key ? "active" : "")" asp-controller="@it.controller" asp-action="@it.action" title="@it.text">
                     @Icons.Svg(it.icon, 22)
@@ -95,6 +96,7 @@ else
     <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
     <aside class="drawer" id="drawer" hidden aria-label="Biểu mẫu"></aside>
 }
+<script src="~/js/search-kit.js" asp-append-version="true"></script>
 <script src="~/js/admin.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

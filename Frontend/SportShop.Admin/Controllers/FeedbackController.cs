@@ -29,7 +29,6 @@ public class FeedbackController(ShopData db) : Controller
         {
             Title = "Khảo sát",
             Subtitle = "Thu thập ý kiến và xem thống kê kết quả",
-            Note = "Dạng câu hỏi: một lựa chọn, nhiều lựa chọn, thang điểm, văn bản. Mỗi khách chỉ có một lượt trả lời cho mỗi khảo sát.",
             Sections = [new() { Columns = ["Tên khảo sát", "Câu hỏi", "Lượt phản hồi", "Ngày kết thúc", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "survey" }]
         });
     }

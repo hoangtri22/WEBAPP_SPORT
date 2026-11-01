@@ -1,0 +1,13 @@
+@*
+    Thanh tìm kiếm nhanh mở từ nút tìm kiếm trên đầu trang (shop.js: nút #searchToggle, Ctrl + K để mở, ESC để đóng).
+    Gõ từ khóa rồi Enter chuyển đến /Shop?q=...; nút "Tìm kiếm nâng cao" chuyển đến trang cửa hàng với khung tìm kiếm nâng cao đã mở.
+    Dùng chung cho mọi trang (Views/Shared/_Layout.cshtml và _CustomerLayout.cshtml).
+*@
+@{
+    var headerSearch = new SearchInputVm(null, "Bạn đang tìm sản phẩm nào?", "shopSearchInput");
+}
+<form class="shop-search" id="shopSearch" method="get" asp-controller="Shop" asp-action="Index" hidden>
+    <partial name="_SearchInput" model="headerSearch" />
+    <a class="shop-search-adv" asp-controller="Shop" asp-action="Index" asp-route-adv="1">Tìm kiếm nâng cao</a>
+    <kbd>ESC</kbd>
+</form>

@@ -2,7 +2,8 @@
 
 API ASP.NET Core .NET 10 chạy riêng với hai web MVC, mặc định cổng **5080**. Catalog, tài khoản/hồ sơ, giỏ/checkout/đơn,
 feedback, khảo sát và trang thông tin dùng cùng database/service với Web User. Thư viện `SportShop.Shared` compile-link service/model gốc,
-không sao chép business logic hoặc tham chiếu host MVC. Không tự chạy migration lúc startup. App MAUI chưa triển khai.
+không sao chép business logic hoặc tham chiếu host MVC. Không tự chạy migration lúc startup.
+App MAUI Android đã có catalog đầu tiên; [chạy trên điện thoại thật qua USB](../../MobileApp/README.md).
 
 ## Các endpoint đã có
 

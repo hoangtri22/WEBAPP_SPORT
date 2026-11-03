@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.MainPage" x:DataType="vm:CatalogViewModel"
+             BackgroundColor="#F5F7FA" Title="SportShop">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Padding="18,12,18,0" RowSpacing="14">
+        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+            <VerticalStackLayout Spacing="0">
+                <Label Text="SPORTSHOP" FontFamily="OpenSansSemibold" FontSize="24" CharacterSpacing="2" TextColor="#102C46" />
+                <Label Text="CHUYỂN ĐỘNG MỖI NGÀY" FontSize="10" CharacterSpacing="1.6" TextColor="#607487" />
+            </VerticalStackLayout>
+            <Border Grid.Column="1" BackgroundColor="#E7F2EB" StrokeThickness="0"
+                    StrokeShape="RoundRectangle 12" Padding="10,6" VerticalOptions="Center">
+                <Label Text="BỘ SƯU TẬP" FontSize="10" FontFamily="OpenSansSemibold" TextColor="#237044" />
+            </Border>
+        </Grid>
+        <Border Grid.Row="1" BackgroundColor="#102C46" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="20,18">
+            <VerticalStackLayout Spacing="6">
+                <Label Text="SẴN SÀNG BỨT PHÁ" TextColor="#F8AC73" FontSize="10" CharacterSpacing="2" />
+                <Label Text="Mỗi ngày,&#10;một bước tiến." TextColor="White" FontSize="27" FontFamily="OpenSansSemibold" LineHeight="1.1" />
+                <Label Text="Khám phá đồ thể thao dành cho bạn." TextColor="#C5D5E2" FontSize="12" />
+            </VerticalStackLayout>
+        </Border>
+        <Border Grid.Row="2" BackgroundColor="White" Stroke="#DFE6ED" StrokeShape="RoundRectangle 14">
+            <SearchBar Placeholder="Tìm giày, áo, dụng cụ…" Text="{Binding SearchText}"
+                       SearchCommand="{Binding SearchCommand}" MaxLength="100" IsEnabled="{Binding IsIdle}"
+                       BackgroundColor="Transparent" TextColor="#102C46" PlaceholderColor="#718293"
+                       CancelButtonColor="#102C46" FontSize="14" AutomationId="ProductSearch" />
+        </Border>
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" VerticalOptions="Center">
+            <VerticalStackLayout Spacing="3">
+                <Label Text="Khám phá sản phẩm" FontSize="18" FontFamily="OpenSansSemibold" TextColor="#102C46" />
+                <Label Text="{Binding ResultSummary}" TextColor="#607487" FontSize="12" AutomationId="ProductCount" />
+            </VerticalStackLayout>
+            <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               Color="#C55A24" HeightRequest="26" WidthRequest="26" />
+        </Grid>
+        <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="10">
+            <Border IsVisible="{Binding HasError}" BackgroundColor="#FFF0E8" Stroke="#F1C8B2"
+                    StrokeShape="RoundRectangle 14" Padding="14" AutomationId="CatalogError">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Chưa tải được sản phẩm" TextColor="#8B3D1A" FontFamily="OpenSansSemibold" FontSize="14" />
+                    <Label Text="{Binding ErrorMessage}" TextColor="#8B3D1A" FontSize="12" />
+                    <Button Text="Thử lại" Command="{Binding RetryCommand}" IsEnabled="{Binding IsIdle}"
+                            HorizontalOptions="Start" BackgroundColor="#102C46" TextColor="White" AutomationId="RetryCatalog" />
+                </VerticalStackLayout>
+            </Border>
+            <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsRefreshing}"
+                         RefreshColor="#102C46" AutomationId="RefreshCatalog">
+                <CollectionView ItemsSource="{Binding Products}" SelectionMode="None" AutomationId="ProductList">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="10" VerticalItemSpacing="12" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout Padding="18,28" Spacing="8" IsVisible="{Binding ShowEmpty}">
+                            <Label Text="Chưa có sản phẩm phù hợp" FontFamily="OpenSansSemibold"
+                                   FontSize="17" TextColor="#102C46" HorizontalTextAlignment="Center" />
+                            <Label Text="Thử từ khóa khác hoặc kéo xuống để tải lại." FontSize="13"
+                                   TextColor="#607487" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ProductCard">
+                            <Border BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 16">
+                                <VerticalStackLayout Spacing="0">
+                                    <Grid HeightRequest="152" BackgroundColor="#EDF1F5">
+                                        <Label Text="SPORTSHOP" FontSize="12" CharacterSpacing="1.5" TextColor="#8B9AA9"
+                                               HorizontalOptions="Center" VerticalOptions="Center" />
+                                        <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="8"
+                                               SemanticProperties.Description="{Binding Name}" />
+                                    </Grid>
+                                    <VerticalStackLayout Padding="12" Spacing="6">
+                                        <Label Text="{Binding CategoryName}" TextColor="#667D8F" FontSize="10" MaxLines="1" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding Name}" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                               FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="42" />
+                                        <Label Text="{Binding PriceText}" TextColor="#B64D1B" FontFamily="OpenSansSemibold" FontSize="15" />
+                                        <Label Text="{Binding StockText}" TextColor="#237044" FontSize="10" />
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.Footer>
+                        <VerticalStackLayout Padding="0,16,0,24" Spacing="12">
+                            <Button Text="Xem thêm sản phẩm" Command="{Binding LoadMoreCommand}"
+                                    IsVisible="{Binding HasMore}" IsEnabled="{Binding IsIdle}"
+                                    BackgroundColor="#102C46" TextColor="White" CornerRadius="12" AutomationId="LoadMore" />
+                            <Label Text="CÙNG BẠN TRÊN MỌI HÀNH TRÌNH" FontSize="9" CharacterSpacing="1.1"
+                                   TextColor="#718293" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.Footer>
+                </CollectionView>
+            </RefreshView>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -5,7 +5,7 @@ Hệ thống cho một cửa hàng đồ thể thao, gồm:
 - **Web quản trị** (`Frontend/SportShop.Admin`) cho Quản lý và Nhân viên: khách hàng, nhân viên, sản phẩm, nhập hàng, đơn hàng,
   hóa đơn, khuyến mãi, phản hồi, khảo sát, báo cáo thống kê.
 - **Web khách hàng** (`Frontend/SportShop.CustomerWeb`) để khách xem sản phẩm, mua hàng, theo dõi đơn, gửi phản hồi và làm khảo sát.
-- **App di động** (`MobileApp`, .NET MAUI) cho khách hàng — chức năng tương tự web khách hàng, sẽ làm sau.
+- **App di động** (`MobileApp`, .NET MAUI Android) cho khách hàng — đã có màn hình catalog lấy sản phẩm và ảnh từ API; các luồng mua hàng làm tiếp.
 - **Cơ sở dữ liệu MySQL** dùng chung cho cả hai web (`Backend/Database/sports_shop.sql`).
 
 Công nghệ: ASP.NET Core MVC (.NET 10), Dapper + MySqlConnector, MySQL 8.
@@ -27,7 +27,7 @@ WEBAPP_SPORT/
 │   ├── SportShop.Admin/               # Web quản trị
 │   ├── SportShop.CustomerWeb/         # Web khách hàng
 │   └── Uploads/                       # Ảnh tải lên từ web quản trị, hai web phục vụ tại /uploads (git bỏ qua)
-├── MobileApp/                         # App điện thoại cho khách hàng (.NET MAUI), chưa làm
+├── MobileApp/                         # MAUI Android: catalog thật, tìm kiếm, phân trang; script chạy USB
 ├── Admin Dashboard for SPORTSHOP/     # Mã nguồn thiết kế Figma (React), chỉ để tham khảo giao diện
 └── SportShop.slnx                     # Solution mở bằng Visual Studio
 ```
@@ -218,7 +218,7 @@ ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER ton
 
 ## Chưa làm
 
-- App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) chưa có project; REST API đã có tài khoản/hồ sơ, catalog, giỏ/checkout/đơn, phản hồi/khảo sát và trang thông tin.
+- App điện thoại (`MobileApp`, .NET MAUI Android) đã có catalog, ảnh từ API, tìm kiếm, kéo làm mới và phân trang. Tiếp theo: chi tiết sản phẩm, tài khoản, giỏ và đặt hàng. [Chạy Android thật qua USB](MobileApp/README.md).
 - Tự áp dụng khuyến mãi theo sản phẩm và theo mốc đơn hàng ở bước thanh toán (hiện chỉ áp dụng mã voucher).
 - Gửi chiến dịch thông báo thật qua email / SMS (hiện chỉ ghi nhận chiến dịch đã gửi).
 - Tách lượt dùng voucher theo từng mã trong cùng một chương trình (cần thêm cột lưu mã voucher vào CSDL).
@@ -228,7 +228,7 @@ ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER ton
 REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới dùng hash có salt;
 đăng nhập hợp lệ nâng cấp dữ liệu plaintext demo cũ. Mobile dùng opaque bearer access/refresh token, refresh rotation và thu hồi phiên;
 đặt đơn có `Idempotency-Key`. Đơn đã thanh toán cần cửa hàng xử lý hoàn tiền, khách không tự hủy để tránh lệch hóa đơn/điểm.
-Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI chưa được triển khai.
+Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI Android đã có màn hình catalog đầu tiên.
 
 - [Kiểm kê 64 chức năng Web User và API](API_INVENTORY.md).
 - [Contract, request/response và lỗi Mobile API](MOBILE_API_DOCUMENTATION.md).
@@ -238,7 +238,8 @@ Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI
 - [Danh mục file mới/sửa và mã phase-one có sẵn](Backend/docs/mobile-api-change-manifest.md).
 
 Verifier cuối trên instance MySQL sạch: **142/142 PASS, 0 FAIL, 0 SKIP**, build solution **0 lỗi/0 cảnh báo**.
-[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json); app/UI native chưa triển khai và chưa kiểm thử.
+[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json). Bằng chứng trên dành cho API;
+[nghiệm thu màn hình MAUI Android trên điện thoại thật](MobileApp/ANDROID_DEVICE_TEST_REPORT.md).
 
 - [Phân tích hiện trạng mã nguồn, khả năng tái sử dụng và các điểm cần xử lý](Backend/docs/project-analysis.md).
 - [Thiết kế API v1: endpoint, DTO, xác thực, giỏ hàng, checkout và kế hoạch triển khai](Backend/docs/mobile-api-design.md).

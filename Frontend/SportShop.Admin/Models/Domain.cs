@@ -8,6 +8,8 @@ namespace SportShop.Admin.Models;
 public record Category(int Id, string Name);
 public record ReportOrder(DateTime Date, decimal Revenue, decimal Cost);
 public record ReportProduct(string Name, int Qty, decimal Revenue, decimal Cost);
+public record InvoiceRow(string Number, DateTime Date, decimal Total, string Employee, string Customer);
+public record InvoiceLine(DateTime Date, string Product, decimal Amount);
 
 public record Variant(int Id, int ProductId, string? Size, string? Color, decimal Price, decimal Cost, int Stock);
 

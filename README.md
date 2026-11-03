@@ -5,7 +5,7 @@ Hệ thống cho một cửa hàng đồ thể thao, gồm:
 - **Web quản trị** (`Frontend/SportShop.Admin`) cho Quản lý và Nhân viên: khách hàng, nhân viên, sản phẩm, nhập hàng, đơn hàng,
   hóa đơn, khuyến mãi, phản hồi, khảo sát, báo cáo thống kê.
 - **Web khách hàng** (`Frontend/SportShop.CustomerWeb`) để khách xem sản phẩm, mua hàng, theo dõi đơn, gửi phản hồi và làm khảo sát.
-- **App di động** (`MobileApp`, .NET MAUI Android) cho khách hàng — đã có màn hình catalog lấy sản phẩm và ảnh từ API; các luồng mua hàng làm tiếp.
+- **App di động** (`MobileApp`, .NET MAUI) cho khách hàng — chức năng tương tự web khách hàng, sẽ làm sau.
 - **Cơ sở dữ liệu MySQL** dùng chung cho cả hai web (`Backend/Database/sports_shop.sql`).
 
 Công nghệ: ASP.NET Core MVC (.NET 10), Dapper + MySqlConnector, MySQL 8.
@@ -15,19 +15,21 @@ Công nghệ: ASP.NET Core MVC (.NET 10), Dapper + MySqlConnector, MySQL 8.
 ```
 WEBAPP_SPORT/
 ├── Backend/
-│   ├── Database/sports_shop.sql       # Script MySQL: tạo CSDL sports_shop (35 bảng) + dữ liệu demo
-│   ├── SportShop.Api/                 # REST API v1 cho toàn bộ chức năng User, cổng 5080
-│   ├── SportShop.Application/         # Interface và use case backend
-│   ├── SportShop.Contracts/           # DTO JSON thuần C#
-│   ├── SportShop.Infrastructure/      # Truy vấn MySQL bằng Dapper
-│   ├── SportShop.Shared/              # Service/model gốc dùng chung Web và API
-│   ├── SportShop.Api.Tests/           # Kiểm thử HTTP và MySQL riêng
-│   └── Images/                        # Ảnh sản phẩm, hai web phục vụ tại đường dẫn /images
+│   ├── Database/
+│   │   ├── sports_shop.sql            # Script MySQL: Schema 35 bảng gốc + dữ liệu demo
+│   │   └── Migrations/                # Các bản vá nâng cấp CSDL (Auth mobile, Giỏ DB, Phương thức TT)
+│   ├── SportShop.Api/                 # REST Web API v1 cho Mobile App (Port :5080)
+│   ├── SportShop.Application/         # Use cases và interfaces backend
+│   ├── SportShop.Contracts/           # Data Transfer Objects (DTO) cho API
+│   ├── SportShop.Infrastructure/      # Xử lý truy vấn MySQL Dapper cho API
+│   ├── SportShop.Shared/              # Services/Models dùng chung giữa Web và API
+│   ├── SportShop.Api.Tests/           # Bộ kiểm thử tự động (Unit & Integration Tests)
+│   └── Images/                        # Kho ảnh sản phẩm gốc (phục vụ qua /images)
 ├── Frontend/
 │   ├── SportShop.Admin/               # Web quản trị
 │   ├── SportShop.CustomerWeb/         # Web khách hàng
 │   └── Uploads/                       # Ảnh tải lên từ web quản trị, hai web phục vụ tại /uploads (git bỏ qua)
-├── MobileApp/                         # MAUI Android: catalog thật, tìm kiếm, phân trang; script chạy USB
+├── MobileApp/                         # App điện thoại cho khách hàng (.NET MAUI), chưa làm
 ├── Admin Dashboard for SPORTSHOP/     # Mã nguồn thiết kế Figma (React), chỉ để tham khảo giao diện
 └── SportShop.slnx                     # Solution mở bằng Visual Studio
 ```
@@ -45,149 +47,120 @@ Yêu cầu: Visual Studio có .NET 10 SDK và MySQL 8.
   "Default": "Server=localhost;Port=3306;Database=sports_shop;User=root;Password=MAT_KHAU_CUA_BAN;"
 }
 ```
-
-> **Lưu ý bảo mật:** Không đưa mật khẩu lên GitHub. Có thể tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` với nội dung tương tự — file này đã được `.gitignore` bỏ qua tự động. Nội dung trong `appsettings.Local.json` sẽ tự ghi đè `appsettings.json` khi chạy.
-
-## Bước 3 – Chạy web
-
-### 🟣 Visual Studio (khuyến nghị)
-
-Yêu cầu: **Visual Studio 2022** trở lên (có cài workload **ASP.NET and web development**) và **.NET 10 SDK**.
-
-1. Mở file `SportShop.slnx` bằng Visual Studio.
-2. Chuột phải vào **Solution** trong Solution Explorer → **Configure Startup Projects…**
-3. Chọn **Multiple startup projects**, đặt cả hai dự án thành **Start**:
-   - `SportShop.Admin` → Start
-   - `SportShop.CustomerWeb` → Start
-4. Ở thanh toolbar, chọn Debug Target là **`http`** (tránh lỗi chứng chỉ HTTPS).
-5. Bấm **F5** (chạy có debug) hoặc **Ctrl + F5** (chạy không debug).
-
-Hai cửa sổ trình duyệt sẽ tự mở:
-
-| Dự án | Địa chỉ |
-|---|---|
-| Web quản trị | http://localhost:5188 |
-| Web khách hàng | http://localhost:5003 |
-
-> Sau khi sửa file `.cs` hoặc `.cshtml`: dừng và bấm **F5** lại. Sau khi sửa `.css` / `.js`: chỉ cần **Ctrl + F5** trên trình duyệt.
+*(Mẹo: Bạn có thể tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` với nội dung trên để không bao giờ bị lộ mật khẩu khi đẩy code lên GitHub).*
 
 ---
 
-### 🔵 Visual Studio Code
+## 🚀 Hướng dẫn chạy dự án
 
-Yêu cầu: **Visual Studio Code**, extension **[C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit)** và **.NET 10 SDK**.
+### 🟣 Cách 1: Chạy bằng Visual Studio (Bản tím) - *Khuyến nghị*
+1. Nhấp đúp mở file **`SportShop.slnx`** bằng Visual Studio 2022 trở lên.
+2. Chuột phải vào **Solution 'SportShop'** trong cửa sổ Solution Explorer ➔ Chọn **Configure Startup Projects...**
+3. Tích chọn **Multiple startup projects**, cài đặt:
+   - `SportShop.Admin` ➔ Chọn **Start**
+   - `SportShop.CustomerWeb` ➔ Chọn **Start**
+   - *(Tùy chọn)* `SportShop.Api` ➔ Chọn **Start** (nếu muốn chạy cả REST API)
+4. Trên thanh công cụ phía trên, đổi cấu hình Debug Target sang **`http`** (để tránh lỗi chứng chỉ SSL).
+5. Nhấn **F5** (chạy kèm Debug) hoặc **Ctrl + F5** (chạy trực tiếp).
+6. Trình duyệt sẽ tự động mở 2 trang:
+   - **Web Quản trị:** [http://localhost:5188](http://localhost:5188)
+   - **Web Khách hàng:** [http://localhost:5003](http://localhost:5003)
 
-Mở hai terminal riêng (Terminal → New Terminal) và chạy lần lượt:
+---
 
-**Terminal 1 – Web quản trị:**
+### 🔵 Cách 2: Chạy bằng Visual Studio Code (Bản xanh)
+
+#### Cách A: Chạy trực tiếp qua Terminal
+Mở thư mục dự án trong VS Code, mở 2 tab Terminal (`Ctrl + \``) và chạy:
+
+**Terminal 1 (Web Quản trị):**
 ```bash
 dotnet run --project Frontend/SportShop.Admin --launch-profile http
 ```
 
-**Terminal 2 – Web khách hàng:**
+**Terminal 2 (Web Khách hàng):**
 ```bash
 dotnet run --project Frontend/SportShop.CustomerWeb --launch-profile http
 ```
 
-Hoặc dùng **`dotnet watch`** để tự reload khi sửa code:
-
-```bash
-# Terminal 1
-dotnet watch --project Frontend/SportShop.Admin --launch-profile http
-
-# Terminal 2
-dotnet watch --project Frontend/SportShop.CustomerWeb --launch-profile http
+#### Cách B: Chạy ngầm (Tắt Terminal đi web vẫn chạy bình thường)
+Mở Terminal trong VS Code chạy 2 lệnh sau:
+```powershell
+Start-Process dotnet -ArgumentList "run --project Frontend/SportShop.Admin --launch-profile http" -WindowStyle Hidden
+Start-Process dotnet -ArgumentList "run --project Frontend/SportShop.CustomerWeb --launch-profile http" -WindowStyle Hidden
 ```
+*Sau khi gõ xong, bạn có thể bấm nút 🗑️ xóa tab Terminal hoặc tắt luôn cửa sổ Terminal, web vẫn chạy ngầm dưới nền Windows.*
 
-Sau khi khởi động, mở trình duyệt và truy cập:
-
-| Web | Địa chỉ |
-|---|---|
-| Web quản trị | http://localhost:5188 |
-| Web khách hàng | http://localhost:5003 |
-| API MobileApp (chạy riêng) | http://localhost:5080 |
-
-> **Mẹo VS Code:** Có thể tạo file `.vscode/tasks.json` để chạy cả hai lệnh bằng một lần bấm **Ctrl + Shift + B**. Xem thêm tài liệu [VS Code Tasks](https://code.visualstudio.com/docs/editor/tasks).
+🛑 **Khi nào test xong muốn tắt hẳn web ngầm:**
+Mở Terminal gõ lệnh:
+```powershell
+Stop-Process -Name dotnet -Force
+```
 
 ---
 
-## Tài khoản demo
+### 📱 Mẹo: Kết nối điện thoại bằng Dev Tunnels trong VS Code
+Để vừa mở web trên laptop, vừa mở trên điện thoại (dùng 4G hoặc Wi-Fi bất kỳ) mà không cần cấu hình IP:
+1. Nhìn xuống bảng điều khiển dưới chân VS Code ➔ Chọn tab **PORTS** (Cổng).
+2. Bấm **Forward a Port** ➔ Nhập `5003` ➔ Bấm Enter.
+3. Chuột phải vào dòng port `5003` ➔ Chọn **Port Visibility** ➔ Chọn **Public**.
+4. Copy link HTTPS ở cột **Forwarded Address** (dạng `https://xxxx-5003.asse.devtunnels.ms`) gửi sang điện thoại và mở bằng trình duyệt (bấm nút **Continue** ở màn hình xác thực đầu tiên là vào web ngay).
 
-Mật khẩu đều là `123456`.
+---
 
-| Web | Tài khoản |
-|---|---|
-| Web quản trị | `admin` (Quản lý), `nv_lan`, `nv_tuan`, `nv_hoa`… (Nhân viên) |
-| Web khách hàng | `kh_an` (Vàng), `kh_khanh` (Bạc), `kh_binh`, `kh_mai`, `kh_linh`… (Thường); `kh_dung` bị khóa |
+## 🔑 Tài khoản demo
 
-Muốn thử mã cho khách mới thì đăng ký một tài khoản mới ở web khách hàng rồi đặt đơn đầu tiên.
+Tất cả tài khoản demo đều có mật khẩu: **`123456`**
 
-## Web khách hàng
+| Hệ thống | Tài khoản | Vai trò / Phân hạng | Ghi chú |
+|---|---|---|---|
+| **Web Quản trị** | `admin` | Quản lý (Admin) | Toàn quyền xem doanh thu, nhân viên, cấu hình |
+| | `nv_lan`, `nv_tuan` | Nhân viên bán hàng | Bán hàng, duyệt đơn (bị chặn vào QL nhân viên) |
+| **Web Khách hàng** | `kh_an` | Hạng Vàng (Gold) | Chi tiêu > 5tr, áp dụng được voucher Vàng |
+| | `kh_khanh` | Hạng Bạc (Silver) | Chi tiêu > 2tr, áp dụng được voucher Bạc |
+| | `kh_binh`, `kh_mai` | Hạng Thường | Khách hàng chuẩn |
+| | `kh_dung` | Bị khóa | Tài khoản demo bị khóa |
 
-- **Tài khoản:** đăng ký, đăng nhập, đăng xuất, sửa thông tin cá nhân (kèm sở thích thể thao), tự đổi mật khẩu.
-  Sai mật khẩu 5 lần thì tạm khóa đăng nhập 5 phút (`Services/LoginThrottle.cs`).
-- **Mua hàng:** trang chủ, danh sách sản phẩm (lọc theo loại, tìm kiếm, sắp xếp), chi tiết sản phẩm chọn size / màu
-  (mỗi màu có ảnh riêng), giỏ hàng, thanh toán, trang khuyến mãi. Chỉ hiện sản phẩm đang bán và còn tồn kho.
-  - Phải đăng nhập mới thêm vào giỏ được; giỏ của từng tài khoản được lưu lại giữa các lần đăng nhập
-    trong MySQL dùng chung mobile. File `App_Data/carts.json` cũ được import một lần theo khách và giữ nguyên làm bản sao;
-    cấu hình `Commerce:LegacyCartPath` của hai host trỏ cùng file nếu deploy khác thư mục.
-  - Thanh toán: điền sẵn người nhận từ sổ địa chỉ, phương thức thanh toán giả lập, miễn phí giao hàng từ 500.000₫.
-    Mục **Mã giảm giá** chỉ liệt kê các mã khách dùng được, kèm số tiền giảm theo đơn hiện tại (xem *Quy tắc voucher*).
-- **Đơn hàng của tôi:** theo dõi trạng thái chờ xác nhận → đang chuẩn bị → đang giao → đã giao; tự hủy đơn khi còn chờ xác nhận;
-  đánh giá sản phẩm trong đơn đã giao.
-- **Phản hồi và khảo sát:** chỉ gửi phản hồi cho sản phẩm đã mua và đã nhận; xem câu trả lời của cửa hàng; làm khảo sát được gửi tới.
-- **Trang thông tin:** đổi trả, giao hàng, chọn size, liên hệ, giới thiệu… (nội dung ở `Models/InfoPages.cs`).
+---
 
-Mã nguồn chính: `Services/CustomerStore.cs` (tài khoản, phản hồi, khảo sát), `Services/ShopStore.cs` (sản phẩm, giỏ hàng, voucher, đặt hàng, đơn hàng), `Services/CartStore.cs` (lưu giỏ hàng), `Services/TabCookies.cs` (đa phiên theo tab).
+## 📸 Giao diện các màn hình & Thư viện ảnh chụp
 
-## Web quản trị
+*(Ảnh chụp thực tế nằm trong thư mục `docs/screenshots/`; bấm vào ảnh để xem cỡ lớn).*
 
-Đăng nhập bằng tài khoản Quản lý hoặc Nhân viên đang làm việc (tài khoản phải gắn với một hồ sơ nhân viên).
-Tài khoản và nhân viên chỉ vai trò Quản lý mới thêm / sửa / xóa được. Tài khoản Nhân viên không truy cập được trang Quản lý nhân viên dù gõ thẳng đường dẫn.
+### A. Màn hình Web Khách hàng (`SportShop.CustomerWeb`)
 
-- **Đa phiên theo tab:** tương tự web khách hàng, mỗi tab trình duyệt giữ phiên đăng nhập riêng.
+| Màn hình | Chức năng nổi bật | Ảnh chụp |
+|---|---|---|
+| **Trang chủ (`/`)** | Banner khuyến mãi, danh mục thể thao trực quan, 8 sản phẩm nổi bật mới nhất. | <a href="docs/screenshots/customer_home.png"><img src="docs/screenshots/customer_home.png" width="280" alt="customer_home"></a> |
+| **Cửa hàng (`/Shop`)** | Lưới sản phẩm, bộ lọc theo danh mục, sắp xếp theo giá và tên, phân trang. | <a href="docs/screenshots/customer_shop.png"><img src="docs/screenshots/customer_shop.png" width="280" alt="customer_shop"></a> |
+| **Tìm kiếm nâng cao** | Lọc chi tiết sản phẩm theo khoảng giá (Min - Max), kích cỡ (Size) và màu sắc. | <a href="docs/screenshots/customer_search_adv.png"><img src="docs/screenshots/customer_search_adv.png" width="280" alt="customer_search_adv"></a> |
+| **Chi tiết sản phẩm** | Đổi ảnh theo màu sắc được chọn, kiểm tra tồn kho theo từng size, mua ngay / thêm giỏ. | <a href="docs/screenshots/customer_product_detail.png"><img src="docs/screenshots/customer_product_detail.png" width="280" alt="customer_product_detail"></a> |
+| **Đơn hàng của tôi** | Luồng 4 bước theo dõi trạng thái đơn hàng, nút tự hủy đơn chờ, xem chi tiết đơn. | <a href="docs/screenshots/customer_orders.png"><img src="docs/screenshots/customer_orders.png" width="280" alt="customer_orders"></a> |
+| **Đánh giá & Phản hồi** | Đánh giá sao (1 - 5⭐) cho sản phẩm đã mua thành công, xem phản hồi của cửa hàng. | <a href="docs/screenshots/customer_feedback.png"><img src="docs/screenshots/customer_feedback.png" width="280" alt="customer_feedback"></a> |
+| **Khảo sát khách hàng** | Giao diện làm khảo sát trải nghiệm dịch vụ (câu hỏi trắc nghiệm & ý kiến tự luận). | <a href="docs/screenshots/customer_surveys.png"><img src="docs/screenshots/customer_surveys.png" width="280" alt="customer_surveys"></a> |
+| **Hồ sơ cá nhân** | Quản lý thông tin, cập nhật sở thích thể thao, đổi mật khẩu bảo mật (khóa 5p nếu sai 5 lần). | <a href="docs/screenshots/customer_profile.png"><img src="docs/screenshots/customer_profile.png" width="280" alt="customer_profile"></a> |
+| **Đăng nhập / Đăng ký** | Giao diện đăng thực hiện đại, hỗ trợ chuyển đổi giữa đăng ký mới và đăng nhập. | <a href="docs/screenshots/customer_auth.png"><img src="docs/screenshots/customer_auth.png" width="280" alt="customer_auth"></a> |
 
-### Cách dùng chung cho mọi danh sách
+---
 
-- Bảng có tìm kiếm nhanh, tìm kiếm nâng cao theo từng cột và phân trang ngay trên trình duyệt.
-- **Bấm vào một dòng** để mở trang chi tiết (giữ Ctrl để mở tab mới).
-- **Rê chuột vào một dòng** (màn hình rộng từ 1200px) thì chi tiết hiện ở khung bên phải, kèm nút "Chỉnh sửa" và "Mở trang chi tiết".
-- Nút thêm / sửa mở biểu mẫu ở ngăn bên phải và ghi thẳng vào MySQL.
-- **Xóa mềm** cho tài khoản, khách hàng, nhân viên, nhà cung cấp, khuyến mãi: mục bị xóa chuyển xuống bảng riêng ở cuối trang và có nút **Khôi phục**. Dữ liệu liên quan (đơn hàng, phiếu nhập…) luôn được giữ.
+### B. Quy trình Giỏ hàng & Lúc mua hàng (Trọng tâm)
 
-### Từng chức năng
+Quy trình mua hàng từ khi chọn sản phẩm tới khi hoàn tất thanh toán:
 
-- **Khách hàng:** sửa mọi thông tin trừ mật khẩu (mật khẩu do khách tự đổi, chỉ Quản lý xem được), phân nhóm khách, ghi chú chăm sóc
-  và lịch hẹn liên hệ lại. Khách đã xóa không còn hiện khi lập đơn, tính nhóm khách, gửi khảo sát và trong thống kê.
-- **Đơn hàng:** lập đơn tại quầy (trừ tồn kho, kiểm tra voucher) và duyệt đơn khách đặt online.
-  - Đơn chưa thanh toán chỉ ở "Chờ xác nhận" / "Đang chuẩn bị" / "Đang giao"; phải chuyển "Đã thanh toán" mới chọn được "Đã giao" hoặc "Đã hủy".
-  - Chuyển "Đã giao": tự lập hóa đơn, cộng doanh thu, tổng chi tiêu, điểm tích lũy (1 điểm / 10.000₫) và nâng hạng thành viên.
-  - Hủy đơn: bắt buộc nhập lý do, hoàn tồn kho, hoàn tiền nếu đã thanh toán và trả lại lượt dùng voucher.
-  - "Đã giao" và "Đã hủy" là trạng thái cuối.
-- **Hóa đơn:** xem và in; không sửa được để giữ số liệu đối soát.
-- **Sản phẩm và nhập hàng:** loại sản phẩm, sản phẩm, biến thể (size, màu, giá bán, giá vốn, tồn, ảnh), nhà cung cấp.
-  - Ảnh gắn với từng biến thể: chọn ảnh có sẵn hoặc tải từ máy (JPG, PNG, WEBP, GIF, tối đa 5 MB, lưu ở `Frontend/Uploads`).
-  - Phiếu nhập cộng tồn kho và cập nhật giá vốn; chọn được cả sản phẩm chưa có biến thể (tự tạo biến thể mặc định). Phiếu nhập đã lập không sửa / xóa được.
-- **Khuyến mãi và marketing:** chương trình giảm theo sản phẩm / đơn hàng / voucher; chiến dịch thông báo theo nhóm khách.
-- **Phản hồi và khảo sát:** hộp thư phản hồi (phản hồi chưa trả lời in đậm), trả lời hoặc ẩn phản hồi; tạo, gửi, đóng khảo sát và xem thống kê kết quả.
-- **Báo cáo thống kê** (lọc theo khoảng ngày): doanh thu, số đơn, giá trị trung bình, lợi nhuận so với kỳ trước, biểu đồ doanh thu, sản phẩm bán chạy, lợi nhuận theo sản phẩm, hiệu quả khuyến mãi, khách theo độ tuổi, sở thích, hiệu suất nhân viên, tồn kho nhiều.
+| Bước quy trình | Mô tả trải nghiệm | Ảnh chụp |
+|---|---|---|
+| **1. Thêm vào giỏ** | Popup thông báo thêm sản phẩm thành công, cập nhật số lượng tồn kho tức thì. | <a href="docs/screenshots/order_step1_add_cart.png"><img src="docs/screenshots/order_step1_add_cart.png" width="280" alt="order_step1_add_cart"></a> |
+| **2. Xem Giỏ hàng (`/Cart`)** | Bảng danh sách món hàng, nút tăng giảm số lượng, cảnh báo vượt quá tồn kho, tạm tính tiền. | <a href="docs/screenshots/order_step2_cart_view.png"><img src="docs/screenshots/order_step2_cart_view.png" width="280" alt="order_step2_cart_view"></a> |
+| **3. Thanh toán: Thông tin nhận** | Tự động điền người nhận từ sổ địa chỉ, sửa tên, số điện thoại và địa chỉ giao hàng. | <a href="docs/screenshots/order_step3_checkout_info.png"><img src="docs/screenshots/order_step3_checkout_info.png" width="280" alt="order_step3_checkout_info"></a> |
+| **4. Thanh toán: Chọn Phương thức** | Lựa chọn phương thức thanh toán: COD, Chuyển khoản ngân hàng, Ví điện tử, Thẻ ATM/Visa. | <a href="docs/screenshots/order_step4_checkout_payment.png"><img src="docs/screenshots/order_step4_checkout_payment.png" width="280" alt="order_step4_checkout_payment"></a> |
+| **5. Áp dụng Mã giảm giá** | Danh sách voucher khả dụng theo hạng thành viên kèm số tiền giảm giá chi tiết, tính phí ship. | <a href="docs/screenshots/order_step5_apply_voucher.png"><img src="docs/screenshots/order_step5_apply_voucher.png" width="280" alt="order_step5_apply_voucher"></a> |
+| **6. Đặt hàng thành công (`/Done`)** | Màn hình xác nhận hoàn tất đơn hàng, hiển thị mã đơn hàng `DHxxxxx` và hướng dẫn theo dõi. | <a href="docs/screenshots/order_step6_order_done.png"><img src="docs/screenshots/order_step6_order_done.png" width="280" alt="order_step6_order_done"></a> |
 
-Mã nguồn chính: `Models/ShopData.cs` (đọc dữ liệu), `Models/ShopCommands.cs` (ghi dữ liệu), `Models/CrudDefs.cs` (định nghĩa biểu mẫu tự động), `Models/TabCookies.cs` (đa phiên theo tab).
+---
 
-## Quy tắc voucher
+### C. Màn hình Web Quản trị (`SportShop.Admin`)
 
-Áp dụng giống nhau ở web khách hàng và khi lập đơn tại quầy:
-
-- **Mã cho khách mới** (`WELCOME5`, `WELCOME10`, `SPORT20`, `NEWBIE15`): chỉ dùng ở **lần mua đầu tiên** của tài khoản (đơn đã hủy không tính) và chỉ một mã trong nhóm. Nhận biết qua tên chương trình có chữ "bạn mới", "khách mới", "người mới" hoặc "thành viên mới". Giới hạn: **1 lần mỗi khách**.
-- **Mã theo hạng thành viên** (Bạc: `BAC8`, `BAC15`, `SINHNHATBAC`; Vàng: `VANG5`, `VANG10`, `VANG15`): chỉ khách đúng hạng mới dùng được. Giới hạn: **2 lần mỗi khách** (Bạc) và **3 lần mỗi khách** (Vàng). Mốc hạng: 2 triệu → Bạc, 5 triệu → Vàng, 10 triệu → VIP (tính khi đơn đã giao và thanh toán).
-- Mã phải còn hạn và còn lượt dùng chung. Khách hủy đơn thì lượt dùng voucher được trả lại.
-- Lượt dùng tính theo chương trình (nhóm mã), vì CSDL chỉ lưu đơn đã dùng chương trình nào chứ không lưu từng mã.
-
-## Tổ chức mã nguồn
-
-Luồng chung của cả hai web: đường dẫn `/{Controller}/{Hàm}/{id}` → Controller (thư mục `Controllers`) → lớp dữ liệu đọc / ghi MySQL → View (`.cshtml` trong thư mục `Views`).
-
-| Web | Đọc dữ liệu | Ghi dữ liệu |
+| Màn hình | Chức năng nổi bật | Ảnh chụp |
 |---|---|---|
 | Quản trị | `Models/ShopData.cs` (nạp từng danh sách khi cần, mỗi request một bản) | `Models/ShopCommands.cs` qua `Controllers/CrudController.cs` (Form, Save, Delete, Act) |
 | Khách hàng | `Services/ShopStore.cs`, `Services/CustomerStore.cs` | Cùng hai lớp trên |
@@ -218,7 +191,7 @@ ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER ton
 
 ## Chưa làm
 
-- App điện thoại (`MobileApp`, .NET MAUI Android) đã có catalog, ảnh từ API, tìm kiếm, kéo làm mới và phân trang. Tiếp theo: chi tiết sản phẩm, tài khoản, giỏ và đặt hàng. [Chạy Android thật qua USB](MobileApp/README.md).
+- App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) chưa có project; REST API đã có tài khoản/hồ sơ, catalog, giỏ/checkout/đơn, phản hồi/khảo sát và trang thông tin.
 - Tự áp dụng khuyến mãi theo sản phẩm và theo mốc đơn hàng ở bước thanh toán (hiện chỉ áp dụng mã voucher).
 - Gửi chiến dịch thông báo thật qua email / SMS (hiện chỉ ghi nhận chiến dịch đã gửi).
 - Tách lượt dùng voucher theo từng mã trong cùng một chương trình (cần thêm cột lưu mã voucher vào CSDL).
@@ -228,7 +201,7 @@ ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER ton
 REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới dùng hash có salt;
 đăng nhập hợp lệ nâng cấp dữ liệu plaintext demo cũ. Mobile dùng opaque bearer access/refresh token, refresh rotation và thu hồi phiên;
 đặt đơn có `Idempotency-Key`. Đơn đã thanh toán cần cửa hàng xử lý hoàn tiền, khách không tự hủy để tránh lệch hóa đơn/điểm.
-Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI Android đã có màn hình catalog đầu tiên.
+Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI chưa được triển khai.
 
 - [Kiểm kê 64 chức năng Web User và API](API_INVENTORY.md).
 - [Contract, request/response và lỗi Mobile API](MOBILE_API_DOCUMENTATION.md).
@@ -238,11 +211,13 @@ Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI
 - [Danh mục file mới/sửa và mã phase-one có sẵn](Backend/docs/mobile-api-change-manifest.md).
 
 Verifier cuối trên instance MySQL sạch: **142/142 PASS, 0 FAIL, 0 SKIP**, build solution **0 lỗi/0 cảnh báo**.
-[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json). Bằng chứng trên dành cho API;
-[nghiệm thu màn hình MAUI Android trên điện thoại thật](MobileApp/ANDROID_DEVICE_TEST_REPORT.md).
+[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json); app/UI native chưa triển khai và chưa kiểm thử.
 
-- [Phân tích hiện trạng mã nguồn, khả năng tái sử dụng và các điểm cần xử lý](Backend/docs/project-analysis.md).
-- [Thiết kế API v1: endpoint, DTO, xác thực, giỏ hàng, checkout và kế hoạch triển khai](Backend/docs/mobile-api-design.md).
-- [Bản đồ CSDL và migration dự kiến](Backend/docs/database-readiness.md).
-- [Chạy REST API, cấu hình và ví dụ request](Backend/SportShop.Api/README.md).
-- [Tiến độ API và phần web được giữ nguyên](Backend/docs/api-implementation-status.md).
+---
+
+## ❓ Xử lý lỗi thường gặp
+
+1. **Lỗi `Lỗi kết nối CSDL`:** Kiểm tra dịch vụ MySQL đang chạy trong `services.msc`, kiểm tra đúng cổng (3306) và mật khẩu trong `appsettings.json`.
+2. **Lỗi `Table doesn't exist`:** Chạy file `Backend/Database/sports_shop.sql` và cả 3 file trong thư mục `Backend/Database/Migrations/`.
+3. **Lỗi file `.dll` / `.exe` bị khóa khi build:** Do tiến trình web cũ đang chạy ngầm. Mở PowerShell gõ: `Stop-Process -Name dotnet -Force` rồi build lại.
+4. **Bị chặn không vào được trang Quản trị:** Kiểm tra xem tài khoản đăng nhập có được liên kết với hồ sơ trong bảng `NHAN_VIEN` chưa.

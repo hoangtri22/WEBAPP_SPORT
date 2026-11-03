@@ -16,8 +16,8 @@ public class ShopData
         if (string.IsNullOrWhiteSpace(_cs))
             throw new InvalidOperationException("Chưa điền chuỗi kết nối MySQL: appsettings.json → ConnectionStrings:Default");
 
-        _categories = new(LoadCategories);
-        _products = new(() => cache.Put("products", LoadProducts()));
+        _categories = new(() => cache.Get<List<Category>>("categories") ?? cache.Put("categories", LoadCategories(), DataCache.LongAge));
+        _products = new(() => cache.Get<List<Product>>("products") ?? cache.Put("products", LoadProducts(), DataCache.LongAge));
         _variants = new(() => cache.Put("variants", LoadVariants()));
         _employees = new(() => cache.Put("employees", LoadEmployees()));
         _customers = new(() => cache.Put("customers", LoadCustomers()));
@@ -123,6 +123,29 @@ public class ShopData
             ORDER BY MIN(CONCAT(DATE_FORMAT(dh.ngay_dat, '%Y%m%d%H%i%s'), LPAD(dh.ma_don_hang, 10, '0'), LPAD(ct.ma_bien_the, 10, '0')))
             """, new { from, to = to.AddDays(1) })
             .Select(r => new ReportProduct(S(r, "ten_san_pham"), I(r, "so_luong"), M(r, "doanh_thu"), M(r, "gia_von"))).ToList();
+
+    // Thống kê tổng tiền hóa đơn: mỗi hóa đơn một dòng (số hóa đơn, ngày xuất, tổng thanh toán, nhân viên lập đơn, khách hàng); nạp một lần rồi cất vào DataCache 10 phút, các bảng thống kê cộng dồn trong bộ nhớ (đổi khoảng ngày / nhóm không truy vấn lại).
+    public List<InvoiceRow> InvoiceRows() =>
+        _cache.Get<List<InvoiceRow>>("invoiceRows") ?? _cache.Put("invoiceRows", Query("""
+            SELECT hd.so_hoa_don, hd.ngay_xuat, hd.tong_thanh_toan,
+                   CONCAT(nv.ho_lot, ' ', nv.ten) AS nhan_vien, CONCAT(kh.ho_lot, ' ', kh.ten) AS khach_hang
+            FROM HOA_DON hd
+            JOIN DON_HANG dh ON dh.ma_don_hang = hd.ma_don_hang
+            JOIN KHACH_HANG kh ON kh.ma_khach_hang = dh.ma_khach_hang
+            LEFT JOIN NHAN_VIEN nv ON nv.ma_nhan_vien = dh.ma_nhan_vien
+            ORDER BY hd.ngay_xuat, hd.ma_hoa_don
+            """).Select(r => new InvoiceRow(S(r, "so_hoa_don"), T(r, "ngay_xuat"), M(r, "tong_thanh_toan"), S(r, "nhan_vien"), S(r, "khach_hang"))).ToList(), DataCache.LongAge);
+
+    // Thống kê theo sản phẩm: mỗi dòng chi tiết đơn hàng của đơn đã có hóa đơn (ngày xuất hóa đơn, tên sản phẩm, thành tiền dòng).
+    public List<InvoiceLine> InvoiceLines() =>
+        _cache.Get<List<InvoiceLine>>("invoiceLines") ?? _cache.Put("invoiceLines", Query("""
+            SELECT hd.ngay_xuat, sp.ten_san_pham, ct.thanh_tien
+            FROM HOA_DON hd
+            JOIN CHI_TIET_DON_HANG ct ON ct.ma_don_hang = hd.ma_don_hang
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
+            JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+            ORDER BY hd.ngay_xuat
+            """).Select(r => new InvoiceLine(T(r, "ngay_xuat"), S(r, "ten_san_pham"), M(r, "thanh_tien"))).ToList(), DataCache.LongAge);
 
     // Ngày hóa đơn gần nhất và số hóa đơn trong [recentFrom, today] (MySQL) để chọn ngày kết thúc mặc định của báo cáo.
     public (DateTime? Last, int Recent) InvoiceDates(DateTime recentFrom, DateTime today)

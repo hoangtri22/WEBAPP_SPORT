@@ -1,5 +1,5 @@
 // Bộ công cụ tìm kiếm dùng chung cho trang quản trị: tìm không phân biệt hoa thường và dấu tiếng Việt, nhiều từ khóa (phải khớp đủ),
-// và bảng "Tìm kiếm nâng cao" tự dựng theo các cột của bảng (chữ, danh sách chọn, khoảng ngày, khoảng tiền / số).
+// và bảng "Tìm kiếm nâng cao" tự dựng theo các cột của bảng: điều kiện "cột – toán tử quan hệ – giá trị" nối bằng toán tử logic Và / Hoặc.
 // admin.js (bảng .dtable) và các trang Sản phẩm, Phản hồi cùng dùng SearchKit.matches() nên cách tìm giống nhau ở mọi nơi.
 var SearchKit = (function () {
     // Chữ thường, bỏ dấu tiếng Việt, gộp khoảng trắng: "Giày  Chạy" -> "giay chay".
@@ -47,7 +47,47 @@ var SearchKit = (function () {
         return { type: 'text' };
     }
 
-    // Dựng bảng tìm kiếm nâng cao cho một .dtable: nút .js-adv mở / đóng khung .adv-panel, mỗi cột một ô lọc.
+    // Toán tử quan hệ theo kiểu cột: chữ (chứa, không chứa, bằng, khác, bắt đầu bằng), số / tiền / ngày (=, ≠, >, ≥, <, ≤), danh sách chọn (=, ≠).
+    var COMPARE_OPS = [['eq', '= (bằng)'], ['neq', '≠ (khác)'], ['gt', '> (lớn hơn)'], ['gte', '≥ (từ)'], ['lt', '< (nhỏ hơn)'], ['lte', '≤ (đến)']];
+    var OPS = {
+        text: [['contains', 'chứa'], ['notcontains', 'không chứa'], ['eq', 'bằng'], ['neq', 'khác'], ['starts', 'bắt đầu bằng']],
+        number: COMPARE_OPS, money: COMPARE_OPS, date: COMPARE_OPS,
+        choice: [['eq', '= (bằng)'], ['neq', '≠ (khác)']]
+    };
+
+    // So sánh hai giá trị đã quy về số (số, tiền, mốc thời gian) theo toán tử quan hệ.
+    function compare(op, a, b) {
+        switch (op) {
+            case 'eq': return a === b;
+            case 'neq': return a !== b;
+            case 'gt': return a > b;
+            case 'gte': return a >= b;
+            case 'lt': return a < b;
+            default: return a <= b;
+        }
+    }
+
+    // Một điều kiện (kiểu cột, toán tử, giá trị) đúng với ô chữ `text` hay không.
+    function test(type, op, value, text) {
+        if (type === 'choice') return op === 'neq' ? text !== value : text === value;
+        if (type === 'date' || type === 'money' || type === 'number') {
+            var left = type === 'date' ? parseDate(text) : parseNumber(text);
+            var right = type === 'date' ? inputDate(value) : parseFloat(value);
+            if (left === null || right === null || isNaN(right)) return op === 'neq';
+            return compare(op, left, right);
+        }
+        var f = fold(text), v = fold(value);
+        switch (op) {
+            case 'notcontains': return !matches(text, value);
+            case 'eq': return f === v;
+            case 'neq': return f !== v;
+            case 'starts': return f.indexOf(v) === 0;
+            default: return matches(text, value);
+        }
+    }
+
+    // Dựng bảng tìm kiếm nâng cao cho một .dtable: nút .js-adv mở / đóng khung .adv-panel, mỗi dòng là một điều kiện "cột – toán tử – giá trị";
+    // các điều kiện nối với nhau bằng Và / Hoặc (Và tính trước Hoặc, như toán tử logic thông thường). Điều kiện chưa nhập giá trị thì bỏ qua.
     // onChange() được gọi mỗi khi bộ lọc đổi; trả về { matches(tr), count() } để bảng lọc từng dòng.
     function advancedPanel(card, rows, onChange) {
         var btn = card.querySelector('.js-adv'), panel = card.querySelector('.adv-panel');
@@ -59,73 +99,109 @@ var SearchKit = (function () {
             if (th.classList.contains('col-act')) return;
             var cells = rows.map(function (tr) { return tr.children[i] ? tr.children[i].textContent.trim() : ''; });
             var kind = columnType(cells);
-            fields.push({ index: i, label: th.textContent.trim(), type: kind.type, values: kind.values || [], a: null, b: null });
+            fields.push({ index: i, label: th.textContent.trim(), type: kind.type, values: kind.values || [] });
         });
         if (fields.length === 0) { btn.hidden = true; return null; }
 
-        var grid = document.createElement('div');
-        grid.className = 'adv-grid';
-        fields.forEach(function (f) {
-            var wrap = document.createElement('label');
-            wrap.className = 'adv-field';
-            var cap = document.createElement('span'); cap.textContent = f.label; wrap.appendChild(cap);
-            function box(placeholder, type) {
-                var el = document.createElement('input'); el.type = type || 'text'; el.placeholder = placeholder || ''; el.autocomplete = 'off';
-                el.addEventListener('input', changed); return el;
-            }
-            if (f.type === 'choice') {
-                var sel = document.createElement('select');
-                sel.innerHTML = '<option value="">Tất cả</option>' + f.values.map(function (v) { return '<option>' + v.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</option>'; }).join('');
-                sel.addEventListener('change', changed); f.a = sel; wrap.appendChild(sel);
-            } else if (f.type === 'date') {
-                var pair = document.createElement('div'); pair.className = 'adv-pair'; wrap.classList.add('adv-span2');
-                f.a = box('', 'date'); f.b = box('', 'date'); pair.appendChild(f.a); pair.appendChild(f.b); wrap.appendChild(pair);
-            } else if (f.type === 'money' || f.type === 'number') {
-                var p2 = document.createElement('div'); p2.className = 'adv-pair'; wrap.classList.add('adv-span2');
-                f.a = box('Từ', 'number'); f.b = box('Đến', 'number'); p2.appendChild(f.a); p2.appendChild(f.b); wrap.appendChild(p2);
-            } else {
-                f.a = box('Chứa...'); wrap.appendChild(f.a);
-            }
-            grid.appendChild(wrap);
-        });
+        var list = document.createElement('div');
+        list.className = 'adv-rows';
         var foot = document.createElement('div');
         foot.className = 'adv-foot';
-        foot.innerHTML = '<button type="button" class="btn-outline js-adv-reset">Xóa bộ lọc</button>';
-        panel.appendChild(grid); panel.appendChild(foot);
+        foot.innerHTML = '<button type="button" class="btn-outline js-adv-add">+ Thêm điều kiện</button><button type="button" class="btn-outline js-adv-reset">Xóa bộ lọc</button>';
+        panel.appendChild(list); panel.appendChild(foot);
 
-        function active(f) { return f.a && (f.a.value !== '' || (f.b && f.b.value !== '')); }
-        function count() { return fields.filter(active).length; }
+        var conds = [];
+
+        function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+        function options(pairs) { return pairs.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + '</option>'; }).join(''); }
+        function isActive(c) { return c.value.value !== ''; }
+        function count() { return conds.filter(isActive).length; }
         function changed() {
             var n = count(), badge = btn.querySelector('.adv-count');
             if (badge) { badge.textContent = n; badge.hidden = n === 0; }
             onChange();
         }
+
+        // Ô nhập giá trị và danh sách toán tử theo kiểu của cột đang chọn
+        function buildValue(c) {
+            var f = fields[c.field.selectedIndex], el;
+            if (f.type === 'choice') {
+                el = document.createElement('select');
+                el.innerHTML = '<option value="">Chọn giá trị</option>' + f.values.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join('');
+                el.addEventListener('change', changed);
+            } else {
+                el = document.createElement('input');
+                el.type = f.type === 'date' ? 'date' : (f.type === 'money' || f.type === 'number') ? 'number' : 'text';
+                el.placeholder = f.type === 'text' ? 'Giá trị...' : ''; el.autocomplete = 'off';
+                el.addEventListener('input', changed);
+            }
+            if (c.value) c.value.replaceWith(el);
+            c.value = el;
+            c.op.innerHTML = options(OPS[f.type]);
+        }
+
+        // Dòng đầu hiện chữ "Khi", các dòng sau hiện ô chọn Và / Hoặc
+        function layout() {
+            conds.forEach(function (c, i) { c.join.hidden = i === 0; c.lead.hidden = i !== 0; });
+        }
+
+        function addCondition() {
+            var row = document.createElement('div');
+            row.className = 'adv-row';
+            var c = { row: row, value: null };
+            c.join = document.createElement('select');
+            c.join.className = 'adv-join';
+            c.join.innerHTML = '<option value="and">Và</option><option value="or">Hoặc</option>';
+            c.join.addEventListener('change', changed);
+            c.lead = document.createElement('span');
+            c.lead.className = 'adv-lead';
+            c.lead.textContent = 'Khi';
+            c.field = document.createElement('select');
+            c.field.innerHTML = fields.map(function (f, i) { return '<option value="' + i + '">' + esc(f.label) + '</option>'; }).join('');
+            c.op = document.createElement('select');
+            c.del = document.createElement('button');
+            c.del.type = 'button'; c.del.className = 'adv-del'; c.del.setAttribute('aria-label', 'Xóa điều kiện'); c.del.textContent = '×';
+            buildValue(c);
+            c.field.addEventListener('change', function () { buildValue(c); row.insertBefore(c.value, c.del); changed(); });
+            c.op.addEventListener('change', changed);
+            c.del.addEventListener('click', function () {
+                if (conds.length === 1) { c.value.value = ''; } else { conds.splice(conds.indexOf(c), 1); row.remove(); layout(); }
+                changed();
+            });
+            row.appendChild(c.join); row.appendChild(c.lead); row.appendChild(c.field); row.appendChild(c.op); row.appendChild(c.value); row.appendChild(c.del);
+            conds.push(c); list.appendChild(row); layout();
+        }
+
+        foot.querySelector('.js-adv-add').addEventListener('click', addCondition);
+        foot.querySelector('.js-adv-reset').addEventListener('click', function () {
+            conds.slice(1).forEach(function (c) { c.row.remove(); });
+            conds.length = 1;
+            conds[0].value.value = '';
+            conds[0].join.value = 'and';
+            changed();
+        });
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             panel.hidden = !panel.hidden;
             btn.setAttribute('aria-expanded', String(!panel.hidden));
         });
-        foot.querySelector('.js-adv-reset').addEventListener('click', function () {
-            fields.forEach(function (f) { if (f.a) f.a.value = ''; if (f.b) f.b.value = ''; });
-            changed();
-        });
+        addCondition();
 
-        // Dòng khớp khi thỏa mọi ô lọc đang nhập
+        // Dòng thỏa biểu thức: các điều kiện đang nhập tách thành nhóm tại mỗi "Hoặc"; trong nhóm phải đúng hết (Và), đúng một nhóm là đủ (Hoặc)
         function rowMatches(tr) {
-            return fields.every(function (f) {
-                if (!active(f)) return true;
-                var text = tr.children[f.index] ? tr.children[f.index].textContent.trim() : '';
-                if (f.type === 'choice') return text === f.a.value;
-                if (f.type === 'date') {
-                    var d = parseDate(text); if (d === null) return false;
-                    var lo = inputDate(f.a.value), hi = inputDate(f.b.value);
-                    return (lo === null || d >= lo) && (hi === null || d <= hi);
-                }
-                if (f.type === 'money' || f.type === 'number') {
-                    var n = parseNumber(text); if (n === null) return false;
-                    return (f.a.value === '' || n >= parseFloat(f.a.value)) && (f.b.value === '' || n <= parseFloat(f.b.value));
-                }
-                return matches(text, f.a.value);
+            var groups = [], current = null;
+            conds.forEach(function (c) {
+                if (!isActive(c)) return;
+                if (current === null || c.join.value === 'or') { current = []; groups.push(current); }
+                current.push(c);
+            });
+            if (groups.length === 0) return true;
+            return groups.some(function (g) {
+                return g.every(function (c) {
+                    var f = fields[c.field.selectedIndex];
+                    var text = tr.children[f.index] ? tr.children[f.index].textContent.trim() : '';
+                    return test(f.type, c.op.value, c.value.value, text);
+                });
             });
         }
         return { matches: rowMatches, count: count };

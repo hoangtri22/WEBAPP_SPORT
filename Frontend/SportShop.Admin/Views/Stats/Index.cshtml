@@ -59,9 +59,9 @@
 {
     <div class="card stat-card">
         <div class="card-title">@t.Title</div>
-        @if (t.Key == "product")
+        @if (!string.IsNullOrEmpty(t.Note))
         {
-            <p class="stat-note">Tính theo thành tiền từng dòng sản phẩm, chưa trừ giảm giá toàn đơn và chưa cộng phí vận chuyển nên tổng có thể khác tổng tiền hóa đơn.</p>
+            <p class="stat-note">@t.Note</p>
         }
         <div class="table-scroll">
             <table class="tbl stat-tbl">
@@ -84,7 +84,7 @@
                         <tr><td colspan="@(t.Cols.Count + 1)" class="muted">Không có hóa đơn trong khoảng thời gian này.</td></tr>
                     }
                 </tbody>
-                @if (t.Rows.Count > 0)
+                @if (t.Rows.Count > 0 && t.Total.Length > 0)
                 {
                     <tfoot>
                         <tr>

@@ -147,6 +147,12 @@ public class ShopData
             ORDER BY hd.ngay_xuat
             """).Select(r => new InvoiceLine(T(r, "ngay_xuat"), S(r, "ten_san_pham"), M(r, "thanh_tien"))).ToList(), DataCache.LongAge);
 
+    // Thống kê tổng chi: mỗi phiếu nhập hàng một dòng (ngày nhập, tổng tiền), cất vào DataCache 10 phút như hóa đơn.
+    public List<ImportRow> ImportRows() =>
+        _cache.Get<List<ImportRow>>("importRows") ?? _cache.Put("importRows", Query("""
+            SELECT ngay_nhap, tong_tien FROM PHIEU_NHAP_HANG ORDER BY ngay_nhap, ma_phieu_nhap
+            """).Select(r => new ImportRow(T(r, "ngay_nhap"), M(r, "tong_tien"))).ToList(), DataCache.LongAge);
+
     // Ngày hóa đơn gần nhất và số hóa đơn trong [recentFrom, today] (MySQL) để chọn ngày kết thúc mặc định của báo cáo.
     public (DateTime? Last, int Recent) InvoiceDates(DateTime recentFrom, DateTime today)
     {

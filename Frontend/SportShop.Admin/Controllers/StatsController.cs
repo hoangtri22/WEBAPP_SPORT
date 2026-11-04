@@ -8,7 +8,8 @@ public record StatCol(string Name, bool Money = true);
 
 public record StatRow(string Label, decimal[] Values);
 
-public record StatTable(string Key, string Title, string First, List<StatCol> Cols, List<StatRow> Rows, decimal[] Total);
+// Total rỗng nghĩa là bảng không có dòng Tổng cộng ở cuối (bảng thu - chi - lợi nhuận đã có cột Tổng cộng bên phải).
+public record StatTable(string Key, string Title, string First, List<StatCol> Cols, List<StatRow> Rows, decimal[] Total, string? Note = null);
 
 public class StatsVm
 {
@@ -60,12 +61,16 @@ public class StatsController(ShopData db) : Controller
                 ws.Cell(r, 1).Value = row.Label;
                 for (int i = 0; i < nc; i++) ws.Cell(r, i + 2).Value = row.Values[i];
             }
-            r++;
-            ws.Cell(r, 1).Value = "Tổng cộng";
-            for (int i = 0; i < nc; i++) ws.Cell(r, i + 2).Value = t.Total[i];
-            ws.Range(r, 1, r, nc + 1).Style.Font.SetBold();
-            for (int i = 0; i < nc; i++)
-                ws.Range(hr + 1, i + 2, r, i + 2).Style.NumberFormat.Format = t.Cols[i].Money ? "#,##0" : "0";
+            if (t.Total.Length > 0)
+            {
+                r++;
+                ws.Cell(r, 1).Value = "Tổng cộng";
+                for (int i = 0; i < nc; i++) ws.Cell(r, i + 2).Value = t.Total[i];
+                ws.Range(r, 1, r, nc + 1).Style.Font.SetBold();
+            }
+            if (r > hr)
+                for (int i = 0; i < nc; i++)
+                    ws.Range(hr + 1, i + 2, r, i + 2).Style.NumberFormat.Format = t.Cols[i].Money ? "#,##0" : "0";
             ws.Columns().AdjustToContents();
         }
         if (vm.Tables.Count == 0) book.Worksheets.Add("Thống kê");
@@ -83,11 +88,23 @@ public class StatsController(ShopData db) : Controller
         kind = Kinds.Any(k => k.Key == kind) ? kind! : "all";
         group = group is "quarter" or "year" ? group : "month";
 
-        var inv = all.Where(i => i.Date >= start && i.Date < end.AddDays(1)).ToList();
-        var lines = db.InvoiceLines().Where(l => l.Date >= start && l.Date < end.AddDays(1)).ToList();
-        string Quarter(DateTime d) => $"Q{(d.Month - 1) / 3 + 1}/{d.Year}";
-        string QuarterKey(DateTime d) => $"{d.Year}-{(d.Month - 1) / 3 + 1}";
+        var stop = end.AddDays(1);
+        var inv = all.Where(i => i.Date >= start && i.Date < stop).ToList();
         string Employee(InvoiceRow i) => i.Employee.Trim().Length == 0 ? "Đơn đặt online (chưa có nhân viên)" : i.Employee;
+
+        // Các bảng theo quý / tháng hiển thị đủ các kỳ của năm chứa ngày kết thúc (kỳ không có dữ liệu ghi 0đ); các bảng theo năm hiển thị 3 năm gần nhất tính đến năm đó.
+        int year = end.Year;
+        var yearStart = new DateTime(year, 1, 1);
+        var inYearFrom = start > yearStart ? start : yearStart;
+        var threeYearsFrom = new DateTime(year - 2, 1, 1);
+        var invYear = all.Where(i => i.Date >= inYearFrom && i.Date < stop).ToList();
+        var invThreeYears = all.Where(i => i.Date >= threeYearsFrom && i.Date < stop).ToList();
+        var quarters = Enumerable.Range(1, 4).Select(q => (Sort: q.ToString(), Label: $"Quý {q}")).ToList();
+        var years = Enumerable.Range(year - 2, 3).Select(y => (Sort: y.ToString(), Label: y.ToString())).ToList();
+        string QuarterOf(DateTime d) => ((d.Month - 1) / 3 + 1).ToString();
+        string YearOf(DateTime d) => d.Year.ToString();
+        string yearNote = $"Các quý của năm {year} (năm của ngày kết thúc), chỉ tính hóa đơn từ ngày bắt đầu đã chọn; quý chưa có dữ liệu ghi 0đ.";
+        string threeYearNote = $"3 năm gần nhất tính đến năm {year} ({year - 2} – {year}), tính đến ngày kết thúc đã chọn; năm chưa có dữ liệu ghi 0đ.";
 
         var tables = new List<StatTable>();
         bool Want(string k) => kind == "all" || kind == k;
@@ -98,49 +115,61 @@ public class StatsController(ShopData db) : Controller
 
         if (Want("period"))
         {
-            (string Sort, string Label) Period(DateTime d) => group switch
+            // Mẫu của thầy: cột là các kỳ (Quý 1..Quý 4 hoặc Tháng 1..Tháng 12 của năm, hoặc 3 năm gần nhất) và cột Tổng cộng, dòng là Tổng thu (hóa đơn), Tổng chi (phiếu nhập hàng), Lợi nhuận (thu - chi)
+            var slots = group switch
             {
-                "year" => (d.Year.ToString(), d.Year.ToString()),
-                "quarter" => (QuarterKey(d), Quarter(d)),
-                _ => (d.ToString("yyyy-MM"), d.ToString("MM/yyyy")),
+                "year" => years,
+                "quarter" => quarters,
+                _ => Enumerable.Range(1, 12).Select(m => (Sort: m.ToString(), Label: $"Tháng {m}")).ToList(),
             };
-            var rows = inv.GroupBy(i => Period(i.Date)).OrderBy(g => g.Key.Sort)
-                .Select(g => new StatRow(g.Key.Label, [g.Count(), g.Sum(i => i.Total), g.Average(i => i.Total)])).ToList();
+            string SlotOf(DateTime d) => group switch { "year" => YearOf(d), "quarter" => QuarterOf(d), _ => d.Month.ToString() };
+            var from0 = group == "year" ? threeYearsFrom : inYearFrom;
+            decimal[] BySlot(IEnumerable<(DateTime Date, decimal Amount)> src)
+            {
+                var list = src.Where(x => x.Date >= from0 && x.Date < stop).ToList();
+                return slots.Select(s => list.Where(x => SlotOf(x.Date) == s.Sort).Sum(x => x.Amount)).ToArray();
+            }
+            var thu = BySlot(all.Select(i => (i.Date, i.Total)));
+            var chi = BySlot(db.ImportRows().Select(p => (p.Date, p.Total)));
+            var loiNhuan = thu.Zip(chi, (a, b) => a - b).ToArray();
+            StatRow Line(string label, decimal[] v) => new(label, [.. v, v.Sum()]);
             string unit = group switch { "year" => "năm", "quarter" => "quý", _ => "tháng" };
-            tables.Add(new StatTable("period", $"Hóa đơn theo {unit}", char.ToUpper(unit[0]) + unit[1..],
-                [new("Số hóa đơn", false), new("Tổng tiền"), new("Trung bình")], rows,
-                [inv.Count, inv.Sum(i => i.Total), inv.Count == 0 ? 0 : inv.Average(i => i.Total)]));
+            tables.Add(new StatTable("period", $"Thu, chi và lợi nhuận theo {unit}" + (group == "year" ? "" : $" (năm {year})"),
+                group == "year" ? "Chỉ tiêu" : year.ToString(),
+                [.. slots.Select(s => new StatCol(s.Label)), new StatCol("Tổng cộng")],
+                [Line("Tổng thu (hóa đơn)", thu), Line("Tổng chi (phiếu nhập hàng)", chi), Line("Lợi nhuận (thu − chi)", loiNhuan)], [],
+                group == "year" ? threeYearNote : group == "month" ? yearNote.Replace("Các quý", "Các tháng").Replace("quý chưa", "tháng chưa") : yearNote));
         }
 
         if (Want("employee"))
-            tables.Add(Pivot("employee", "Hóa đơn theo nhân viên và năm", "Nhân viên", inv, Employee, i => (i.Date.Year.ToString(), i.Date.Year.ToString()), i => i.Total));
+            tables.Add(Pivot("employee", "Hóa đơn theo nhân viên và năm", "Nhân viên", invThreeYears, Employee, i => YearOf(i.Date), years, i => i.Total, threeYearNote));
 
         if (Want("customer"))
             tables.Add(group == "year"
-                ? Pivot("customer", "Hóa đơn theo khách hàng và năm", "Khách hàng", inv, i => i.Customer, i => (i.Date.Year.ToString(), i.Date.Year.ToString()), i => i.Total)
-                : Pivot("customer", "Hóa đơn theo khách hàng và quý", "Khách hàng", inv, i => i.Customer, i => (QuarterKey(i.Date), Quarter(i.Date)), i => i.Total));
+                ? Pivot("customer", "Hóa đơn theo khách hàng và năm", "Khách hàng", invThreeYears, i => i.Customer, i => YearOf(i.Date), years, i => i.Total, threeYearNote)
+                : Pivot("customer", $"Hóa đơn theo khách hàng và quý (năm {year})", year.ToString() + " · Khách hàng", invYear, i => i.Customer, i => QuarterOf(i.Date), quarters, i => i.Total, yearNote));
 
         if (Want("product"))
-            tables.Add(Pivot("product", "Doanh thu theo sản phẩm và quý", "Sản phẩm", lines, l => l.Product, l => (QuarterKey(l.Date), Quarter(l.Date)), l => l.Amount));
+            tables.Add(Pivot("product", $"Doanh thu theo sản phẩm và quý (năm {year})", year.ToString() + " · Sản phẩm",
+                db.InvoiceLines().Where(l => l.Date >= inYearFrom && l.Date < stop), l => l.Product, l => QuarterOf(l.Date), quarters, l => l.Amount,
+                yearNote + " Tính theo thành tiền từng dòng sản phẩm, chưa trừ giảm giá toàn đơn và chưa cộng phí vận chuyển nên tổng có thể khác tổng tiền hóa đơn."));
 
         return new StatsVm { From = start, To = end, Group = group, Kind = kind, Invoices = inv.Count, Total = inv.Sum(i => i.Total), Tables = tables };
     }
 
-    // Bảng chéo: mỗi dòng một đối tượng (nhân viên, khách hàng, sản phẩm), mỗi cột một năm / quý (sắp theo thời gian), thêm cột Tổng khi có từ hai cột; dòng nhiều tiền nhất lên đầu.
-    static StatTable Pivot<T>(string key, string title, string first, IEnumerable<T> source, Func<T, string> row, Func<T, (string Sort, string Label)> col, Func<T, decimal> value)
+    // Bảng chéo theo mẫu: mỗi dòng một đối tượng (nhân viên, khách hàng, sản phẩm), cột là đủ các năm / quý đã định sẵn (kỳ không có dữ liệu ghi 0đ), thêm cột Tổng cộng bên phải và dòng Tổng cộng ở cuối; dòng nhiều tiền nhất lên đầu.
+    static StatTable Pivot<T>(string key, string title, string first, IEnumerable<T> source, Func<T, string> row, Func<T, string> col,
+        List<(string Sort, string Label)> cols, Func<T, decimal> value, string? note = null)
     {
-        var list = source.ToList();
-        var cols = list.Select(col).Distinct().OrderBy(c => c.Sort).ToList();
-        var rows = list.GroupBy(row)
-            .Select(g => new StatRow(g.Key, cols.Select(c => g.Where(x => col(x) == c).Sum(value)).ToArray()))
-            .OrderByDescending(r => r.Values.Sum()).ThenBy(r => r.Label).ToList();
-        var head = cols.Select(c => new StatCol(c.Label)).ToList();
-        if (cols.Count > 1)
-        {
-            head.Add(new StatCol("Tổng"));
-            rows = rows.Select(r => new StatRow(r.Label, [.. r.Values, r.Values.Sum()])).ToList();
-        }
+        var rows = source.GroupBy(row)
+            .Select(g =>
+            {
+                var v = cols.Select(c => g.Where(x => col(x) == c.Sort).Sum(value)).ToArray();
+                return new StatRow(g.Key, [.. v, v.Sum()]);
+            })
+            .OrderByDescending(r => r.Values[^1]).ThenBy(r => r.Label).ToList();
+        var head = cols.Select(c => new StatCol(c.Label)).Append(new StatCol("Tổng cộng")).ToList();
         var total = Enumerable.Range(0, head.Count).Select(i => rows.Sum(r => r.Values[i])).ToArray();
-        return new StatTable(key, title, first, head, rows, total);
+        return new StatTable(key, title, first, head, rows, total, note);
     }
 }

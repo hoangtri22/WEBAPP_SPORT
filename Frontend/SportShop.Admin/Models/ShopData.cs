@@ -487,6 +487,17 @@ public class ShopData
     }
 
 
+    // Thiết bị dùng Mobile App với tư cách khách từ MOBILE_GUEST_DEVICE (migration 004, API ghi qua GuestDeviceStore); chưa chạy migration thì trả danh sách rỗng để trang khách hàng vẫn mở được.
+    public List<GuestDevice> GuestDevices()
+    {
+        try
+        {
+            return Query("SELECT device_name, model, platform, os_version, first_seen, last_seen, visit_count FROM MOBILE_GUEST_DEVICE ORDER BY last_seen DESC")
+                .Select(r => new GuestDevice(S(r, "device_name"), S(r, "model"), $"{S(r, "platform")} {S(r, "os_version")}", T(r, "first_seen"), T(r, "last_seen"), I(r, "visit_count"))).ToList();
+        }
+        catch (MySqlException e) when (e.ErrorCode == MySqlErrorCode.NoSuchTable) { return []; }
+    }
+
     List<IDictionary<string, object?>> Query(string sql, object? args = null)
     {
         using var conn = new MySqlConnection(_cs);

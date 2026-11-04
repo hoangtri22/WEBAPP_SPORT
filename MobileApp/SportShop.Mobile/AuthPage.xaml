@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.AuthPage" x:DataType="vm:AuthViewModel"
+             BackgroundColor="{StaticResource Bg}" Title="SPORTSHOP">
+    <Grid>
+    <BoxView Color="{StaticResource TealDark}" HeightRequest="300" VerticalOptions="Start" />
+    <ScrollView>
+        <VerticalStackLayout>
+            <VerticalStackLayout Padding="24,44,24,34" Spacing="6">
+                <Border WidthRequest="56" HeightRequest="56" HorizontalOptions="Start" BackgroundColor="{StaticResource Orange}"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                    <Image Source="ic_shopping_bag_white.png" WidthRequest="28" HeightRequest="28" />
+                </Border>
+                <Label Text="SPORTSHOP" Margin="0,12,0,0" FontFamily="OpenSansSemibold" FontSize="28" CharacterSpacing="2" TextColor="White" />
+                <Label Text="Trang bị tốt hơn cho từng bước chạy." FontSize="14" TextColor="{StaticResource TealSoft}" />
+            </VerticalStackLayout>
+            <Border BackgroundColor="{StaticResource Bg}" StrokeThickness="0" StrokeShape="RoundRectangle 26,26,0,0" Padding="20,22,20,30">
+                <VerticalStackLayout Spacing="14">
+                    <Border BackgroundColor="{StaticResource Line}" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="4">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                            <Button Text="Đăng nhập" Command="{Binding ShowLoginCommand}" Style="{StaticResource TabButton}" AutomationId="LoginTab">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsLogin}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="White" />
+                                        <Setter Property="TextColor" Value="{StaticResource Teal}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Grid.Column="1" Text="Đăng ký" Command="{Binding ShowRegisterCommand}" Style="{StaticResource TabButton}" AutomationId="RegisterTab">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsRegister}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="White" />
+                                        <Setter Property="TextColor" Value="{StaticResource Teal}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource FieldBox}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Image Source="ic_user_muted.png" Style="{StaticResource FieldIcon}" />
+                            <Entry Grid.Column="1" Text="{Binding Username}" Placeholder="{Binding UsernameHint}" Style="{StaticResource FieldEntry}" Keyboard="Email" AutomationId="Username" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource FieldBox}" IsVisible="{Binding IsRegister}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Image Source="ic_mail_muted.png" Style="{StaticResource FieldIcon}" />
+                            <Entry Grid.Column="1" Text="{Binding Email}" Placeholder="Email" Style="{StaticResource FieldEntry}" Keyboard="Email" MaxLength="100" AutomationId="Email" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource FieldBox}" IsVisible="{Binding IsRegister}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Image Source="ic_phone_muted.png" Style="{StaticResource FieldIcon}" />
+                            <Entry Grid.Column="1" Text="{Binding Phone}" Placeholder="Số điện thoại" Style="{StaticResource FieldEntry}" Keyboard="Telephone" MaxLength="10" AutomationId="Phone" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource FieldBox}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Image Source="ic_lock_muted.png" Style="{StaticResource FieldIcon}" />
+                            <Entry Grid.Column="1" Text="{Binding Password}" Placeholder="Mật khẩu" Style="{StaticResource FieldEntry}" IsPassword="True" MaxLength="128"
+                                   ReturnType="Go" ReturnCommand="{Binding SubmitCommand}" AutomationId="Password" />
+                        </Grid>
+                    </Border>
+
+                    <Border IsVisible="{Binding HasError}" BackgroundColor="#FDECEC" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="14,10">
+                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="13" AutomationId="AuthError" />
+                    </Border>
+
+                    <Grid>
+                        <Button Text="{Binding SubmitText}" Command="{Binding SubmitCommand}" Style="{StaticResource PrimaryButton}" AutomationId="Submit" />
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="White"
+                                           HeightRequest="24" WidthRequest="24" HorizontalOptions="End" Margin="0,0,16,0" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12" Margin="0,4">
+                        <BoxView HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="hoặc" FontSize="12" TextColor="{StaticResource Muted}" />
+                        <BoxView Grid.Column="2" HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Center" />
+                    </Grid>
+
+                    <Button Text="Dùng với tư cách khách" Command="{Binding GuestCommand}" Style="{StaticResource OutlineButton}" AutomationId="Guest" />
+                    <Label Text="Không cần tài khoản. Tên thiết bị sẽ được gửi lên hệ thống của cửa hàng."
+                           FontSize="12" TextColor="{StaticResource Muted}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+    </Grid>
+</ContentPage>

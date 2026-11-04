@@ -23,8 +23,10 @@ Checkout giữ các phương thức thanh toán mô phỏng như web, chưa có 
 Đặt đơn gửi cùng Idempotency-Key/body khi retry; khách chỉ tự hủy đơn chờ chưa thanh toán.
 
 API chạy riêng cổng 5080. Backend cần áp dụng migration 001–003 và local connection string trước khi dùng;
-Media:PublicBaseUrl phải truy cập được từ thiết bị. Các màn hình đăng nhập, chi tiết sản phẩm,
-giỏ hàng, checkout và tài khoản chưa được triển khai trong app.
+Media:PublicBaseUrl phải truy cập được từ thiết bị. Màn hình ngoài cùng (`AuthPage`) đăng nhập, đăng ký qua API thật và cho dùng với tư cách khách
+(gửi tên thiết bị lên `POST /api/v1/guest-devices`, cần migration 004; Web Admin hiện ở trang Quản lý khách hàng).
+`HomePage` mới là giao diện theo trang chủ web khách hàng, dữ liệu mẫu trong `ViewModels/HomeSample.cs`, chưa nối API.
+Các màn hình chi tiết sản phẩm, giỏ hàng, checkout và tài khoản chưa được triển khai trong app.
 Không coi test API là bằng chứng app native đã chạy.
 
 ## Chạy Android thật từ VS Code qua USB

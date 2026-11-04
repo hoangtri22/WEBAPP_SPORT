@@ -5,12 +5,23 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#512BD4</Color>
+    <Color x:Key="Primary">#0F766E</Color>
     <Color x:Key="PrimaryDark">#ac99ea</Color>
     <Color x:Key="PrimaryDarkText">#242424</Color>
     <Color x:Key="Secondary">#DFD8F7</Color>
     <Color x:Key="SecondaryDarkText">#9880e5</Color>
     <Color x:Key="Tertiary">#2B0B98</Color>
+
+    <!-- Bảng màu Web Admin (Frontend/SportShop.Admin/wwwroot/css/admin.css) -->
+    <Color x:Key="Teal">#0F766E</Color>
+    <Color x:Key="TealDark">#0B5F58</Color>
+    <Color x:Key="TealSoft">#E4F3F0</Color>
+    <Color x:Key="Orange">#F97316</Color>
+    <Color x:Key="Ink">#17222C</Color>
+    <Color x:Key="Muted">#6B7A88</Color>
+    <Color x:Key="Line">#E7ECF0</Color>
+    <Color x:Key="Bg">#F5F7F9</Color>
+    <Color x:Key="Danger">#E04848</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>

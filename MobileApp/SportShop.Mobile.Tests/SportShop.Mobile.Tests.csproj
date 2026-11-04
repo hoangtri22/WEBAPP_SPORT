@@ -12,6 +12,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" PrivateAssets="all" />
     <ProjectReference Include="../../Backend/SportShop.Contracts/SportShop.Contracts.csproj" />
     <Compile Include="../SportShop.Mobile/Services/CatalogApi.cs" Link="Client/CatalogApi.cs" />
+    <Compile Include="../SportShop.Mobile/Services/AuthApi.cs" Link="Client/AuthApi.cs" />
     <Compile Include="../SportShop.Mobile/ViewModels/*.cs" Link="Client/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

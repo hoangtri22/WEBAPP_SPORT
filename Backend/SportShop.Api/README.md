@@ -32,6 +32,7 @@ App MAUI Android đã có catalog đầu tiên; [chạy trên điện thoại th
 | GET | `/api/v1/me/surveys`, `/api/v1/me/surveys/{id}` | Danh sách và chi tiết khảo sát được giao |
 | POST | `/api/v1/me/surveys/{id}/responses` | Nộp đáp án một lần, validate option/required/ownership |
 | GET | `/api/v1/pages`, `/api/v1/pages/{slug}` | Nội dung hỗ trợ/giới thiệu dùng chung `InfoPages` |
+| POST | `/api/v1/guest-devices` | Ghi nhận thiết bị vào app với tư cách khách (không cần token); Web Admin hiển thị. Cần migration 004 |
 | GET | `/openapi/v1.json` | OpenAPI sinh từ mã, chỉ mở ở Development |
 | GET | `/images/{filename}`, `/uploads/{filename}` | Ảnh có sẵn trong kho dùng chung của hai web |
 

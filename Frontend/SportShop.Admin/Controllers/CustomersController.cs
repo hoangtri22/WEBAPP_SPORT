@@ -22,6 +22,8 @@ public class CustomersController(ShopData db) : Controller
         var followUps = db.CareNotes.Where(n => n.FollowUp != null).OrderBy(n => n.FollowUp)
             .Select(n => new Row([Fmt.Date(n.FollowUp!.Value), db.Customer(n.CustomerId).FullName, Fmt.Channel(n.Channel), n.Content, db.Employee(n.EmployeeId).FirstName])).ToList();
 
+        var guests = db.GuestDevices().Select(g => new Row([g.Name, g.Model, g.Os, Fmt.DateTimeS(g.FirstSeen), Fmt.DateTimeS(g.LastSeen), g.Visits.ToString("N0")])).ToList();
+
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Quản lý khách hàng",
@@ -30,6 +32,7 @@ public class CustomersController(ShopData db) : Controller
             [
                 new() { Columns = ["Khách hàng", "Số điện thoại", "Hạng", "Điểm tích lũy", "Tổng chi tiêu", "Trạng thái"], Rows = list, AddLabel = "Thêm mới", ShowActions = true, Entity = "customer", LockAction = "lock_customer" },
                 new() { Heading = "Khách hàng đã xóa", Columns = ["Khách hàng", "Số điện thoại", "Hạng", "Tổng chi tiêu", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "customer", CanEdit = false, CanDelete = false, RestoreAction = "restore_customer" },
+                new() { Heading = "Khách dùng Mobile App (không tài khoản)", Columns = ["Tên thiết bị", "Dòng máy", "Hệ điều hành", "Lần đầu", "Gần nhất", "Số lần vào"], Rows = guests, Toolbar = false },
                 new() { Heading = "Nhóm khách hàng", Columns = ["Tên nhóm", "Tiêu chí", "Giá trị", "Số khách"], Rows = groups, AddLabel = "Thêm nhóm", ShowActions = true, Toolbar = false, Entity = "group" },
                 new() { Heading = "Lịch hẹn liên hệ lại", Columns = ["Ngày hẹn", "Khách hàng", "Hình thức", "Nội dung", "Nhân viên"], Rows = followUps, Toolbar = false },
             ]

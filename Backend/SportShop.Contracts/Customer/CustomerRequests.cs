@@ -12,6 +12,13 @@ public sealed record RegisterRequest(
     [Required, RegularExpression(@"^0\d{9}$")] string Phone,
     [Required, StringLength(128, MinimumLength = 6)] string Password);
 
+public sealed record GuestDeviceRequest(
+    [Required, RegularExpression(@"^[a-zA-Z0-9-]{8,64}$")] string DeviceKey,
+    [Required, StringLength(100)] string DeviceName,
+    [Required, StringLength(100)] string Model,
+    [Required, StringLength(30)] string Platform,
+    [Required, StringLength(30)] string OsVersion);
+
 public sealed record RefreshRequest([Required, StringLength(128)] string RefreshToken);
 
 public sealed record TokenResponse(string TokenType, string AccessToken, string RefreshToken,

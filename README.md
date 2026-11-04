@@ -17,7 +17,7 @@ WEBAPP_SPORT/
 ├── Backend/
 │   ├── Database/
 │   │   ├── sports_shop.sql            # Script MySQL: Schema 35 bảng gốc + dữ liệu demo
-│   │   └── Migrations/                # Các bản vá nâng cấp CSDL (Auth mobile, Giỏ DB, Phương thức TT)
+│   │   └── Migrations/                # Các bản vá nâng cấp CSDL (Auth mobile, Giỏ DB, Phương thức TT, Thiết bị khách)
 │   ├── SportShop.Api/                 # REST Web API v1 cho Mobile App (Port :5080)
 │   ├── SportShop.Application/         # Use cases và interfaces backend
 │   ├── SportShop.Contracts/           # Data Transfer Objects (DTO) cho API

@@ -51,6 +51,7 @@ public record Campaign(string Title, string Channel, string Group, string Promot
 public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status);
 
 public record CareNote(int CustomerId, int EmployeeId, string Channel, string Content, DateTime Date, DateTime? FollowUp);
+public record GuestDevice(string Name, string Model, string Os, DateTime FirstSeen, DateTime LastSeen, int Visits);
 
 public record FeedbackItem(
     int Id, int CustomerId, string Type, int? Stars, string Title, string Body, DateTime SentAt,

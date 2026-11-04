@@ -20,9 +20,11 @@ builder.Services.AddSportShopInfrastructure();
 builder.Services.AddScoped<CustomerStore>();
 builder.Services.AddScoped<ShopStore>();
 builder.Services.AddSingleton<CartStore>();
+builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MobileTokenStore>();
+builder.Services.AddScoped<GuestDeviceStore>();
 builder.Services.AddAuthentication("Bearer")
     .AddScheme<AuthenticationSchemeOptions, BearerAuthenticationHandler>("Bearer", _ => { });
 builder.Services.AddAuthorization();

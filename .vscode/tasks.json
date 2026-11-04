@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Mobile: Chạy trên Android thật (USB)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}/MobileApp/run-android.ps1"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Mobile: Kiểm thử client",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "${workspaceFolder}/MobileApp/SportShop.Mobile.Tests/SportShop.Mobile.Tests.csproj"],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

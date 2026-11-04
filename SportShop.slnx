@@ -8,9 +8,13 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Backend/SportShop.Api.Tests/SportShop.Api.Tests.csproj" />
+    <Project Path="MobileApp/SportShop.Mobile.Tests/SportShop.Mobile.Tests.csproj" />
   </Folder>
   <Folder Name="/Frontend/">
     <Project Path="Frontend/SportShop.Admin/SportShop.Admin.csproj" />
     <Project Path="Frontend/SportShop.CustomerWeb/SportShop.CustomerWeb.csproj" />
+  </Folder>
+  <Folder Name="/MobileApp/">
+    <Project Path="MobileApp/SportShop.Mobile/SportShop.Mobile.csproj" />
   </Folder>
 </Solution>

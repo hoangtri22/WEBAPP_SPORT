@@ -1,29 +1,16 @@
-# 🏆 SPORTSHOP – Hệ Thống Bán Hàng & Quản Lý Khách Hàng (CRM)
+# SPORTSHOP – Hệ thống bán hàng và quản lý khách hàng
 
-Hệ thống bán hàng thể thao đa nền tảng và quản trị quan hệ khách hàng (CRM) toàn diện. Được xây dựng theo kiến trúc **ASP.NET Core (.NET 10)**, sử dụng chung cơ sở dữ liệu **MySQL 8** qua **Dapper** với hiệu năng cao, tích hợp REST Web API cho ứng dụng di động, hệ thống đa phiên đăng nhập theo tab độc lập và các công cụ xuất nhập Excel, phân tích doanh thu chuyên sâu.
+Hệ thống cho một cửa hàng đồ thể thao, gồm:
 
----
+- **Web quản trị** (`Frontend/SportShop.Admin`) cho Quản lý và Nhân viên: khách hàng, nhân viên, sản phẩm, nhập hàng, đơn hàng,
+  hóa đơn, khuyến mãi, phản hồi, khảo sát, báo cáo thống kê.
+- **Web khách hàng** (`Frontend/SportShop.CustomerWeb`) để khách xem sản phẩm, mua hàng, theo dõi đơn, gửi phản hồi và làm khảo sát.
+- **App di động** (`MobileApp`, .NET MAUI) cho khách hàng — chức năng tương tự web khách hàng, sẽ làm sau.
+- **Cơ sở dữ liệu MySQL** dùng chung cho cả hai web (`Backend/Database/sports_shop.sql`).
 
-## 📑 Mục lục
-1. [Cấu trúc thư mục dự án](#-cấu-trúc-thư-mục-dự-án)
-2. [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
-3. [Hướng dẫn cài đặt & Cơ sở dữ liệu](#-hướng-dẫn-cài-đặt--cơ-sở-dữ-liệu)
-4. [Hướng dẫn chạy dự án](#-hướng-dẫn-chạy-dự-án)
-   - [Cách 1: Chạy bằng Visual Studio (Bản tím)](#-cách-1-chạy-bằng-visual-studio-bản-tím-khuyến-nghị)
-   - [Cách 2: Chạy bằng Visual Studio Code (Bản xanh)](#-cách-2-chạy-bằng-visual-studio-code-bản-xanh)
-   - [Mẹo: Mở mạng cho điện thoại bằng Dev Tunnels](#-mẹo-kết-nối-điện-thoại-bằng-dev-tunnels-trong-vs-code)
-5. [Tài khoản demo](#-tài-khoản-demo)
-6. [Giao diện các màn hình & Thư viện ảnh chụp](#-giao-diện-các-màn-hình--thư-viện-ảnh-chụp)
-   - [A. Màn hình Web Khách hàng (Customer Web)](#a-màn-hình-web-khách-hàng-sportshopcustomerweb)
-   - [B. Quy trình Giỏ hàng & Lúc mua hàng (Trọng tâm)](#b-quy-trình-giỏ-hàng--lúc-mua-hàng-trọng-tâm)
-   - [C. Màn hình Web Quản trị (Admin Dashboard)](#c-màn-hình-web-quản-trị-sportshopadmin)
-7. [Quy tắc nghiệp vụ cốt lõi](#-quy-tắc-nghiệp-vụ-cốt-lõi)
-8. [Tổ chức mã nguồn & Kiến trúc](#-tổ-chức-mã-nguồn--kiến-trúc)
-9. [Xử lý lỗi thường gặp](#-xử-lý-lỗi-thường-gặp)
+Công nghệ: ASP.NET Core MVC (.NET 10), Dapper + MySqlConnector, MySQL 8.
 
----
-
-## 📁 Cấu trúc thư mục dự án
+## Cấu trúc thư mục
 
 ```
 WEBAPP_SPORT/
@@ -39,51 +26,21 @@ WEBAPP_SPORT/
 │   ├── SportShop.Api.Tests/           # Bộ kiểm thử tự động (Unit & Integration Tests)
 │   └── Images/                        # Kho ảnh sản phẩm gốc (phục vụ qua /images)
 ├── Frontend/
-│   ├── SportShop.Admin/               # Web quản trị cho Quản lý & Nhân viên (Port :5188)
-│   ├── SportShop.CustomerWeb/         # Web bán hàng & chăm sóc khách hàng (Port :5003)
-│   └── Uploads/                       # Ảnh sản phẩm tải lên từ admin (Git bỏ qua)
-├── MobileApp/                         # App di động cho khách hàng (.NET MAUI - Đang phát triển)
-├── Admin Dashboard for SPORTSHOP/     # Bản thiết kế tham khảo giao diện (React / Figma)
-├── docs/screenshots/                  # Nơi lưu trữ ảnh chụp màn hình giao diện hệ thống
-└── SportShop.slnx                     # Solution quản lý toàn bộ hệ thống
+│   ├── SportShop.Admin/               # Web quản trị
+│   ├── SportShop.CustomerWeb/         # Web khách hàng
+│   └── Uploads/                       # Ảnh tải lên từ web quản trị, hai web phục vụ tại /uploads (git bỏ qua)
+├── MobileApp/                         # App điện thoại cho khách hàng (.NET MAUI), chưa làm
+├── Admin Dashboard for SPORTSHOP/     # Mã nguồn thiết kế Figma (React), chỉ để tham khảo giao diện
+└── SportShop.slnx                     # Solution mở bằng Visual Studio
 ```
 
----
+## Cách chạy
 
-## 💻 Công nghệ sử dụng
+Yêu cầu: Visual Studio có .NET 10 SDK và MySQL 8.
 
-- **Nền tảng:** .NET 10 (C# 13), ASP.NET Core MVC & Web API.
-- **Data Access:** Dapper + MySqlConnector (truy vấn trực tiếp, tối ưu hóa tốc độ).
-- **Cơ sở dữ liệu:** MySQL 8 (35 bảng chuẩn hóa + các bảng migration mới cho mobile session và giỏ hàng DB).
-- **Bộ nhớ đệm:** In-Memory Caching (`CatalogCache` cho web khách, `DataCache` cho web quản trị).
-- **Xử lý Excel:** ClosedXML (Nhập/Xuất danh sách sản phẩm biến thể, xuất báo cáo thống kê đa sheet).
-- **Frontend Web:** Razor View (.cshtml), Vanilla JavaScript ES6, CSS Grid/Flexbox responsive.
-- **Đa phiên:** `TabCookieMiddleware` (độc lập phiên làm việc giữa các tab trình duyệt).
-
----
-
-## 🛠️ Hướng dẫn cài đặt & Cơ sở dữ liệu
-
-### 1. Chuẩn bị môi trường
-- Cài đặt **.NET 10 SDK** (hoặc mới hơn).
-- Cài đặt **MySQL Server 8.0** kèm **MySQL Workbench** (hoặc phpMyAdmin / Navicat).
-
-### 2. Thiết lập cơ sở dữ liệu MySQL
-1. Mở **MySQL Workbench**, kết nối tới MySQL Server của máy.
-2. Chọn **File ➔ Open SQL Script** ➔ chọn `Backend/Database/sports_shop.sql`, bấm **Execute ⚡** (Ctrl + Shift + Enter) để tạo database `sports_shop` (35 bảng).
-3. **Chạy các file migration (Rất quan trọng):** Mở và chạy lần lượt 3 file trong thư mục `Backend/Database/Migrations/`:
-   - `001_mobile_auth.sql` (Tạo bảng lưu phiên đăng nhập Mobile).
-   - `002_commerce.sql` (Tạo bảng giỏ hàng DB và chống trùng đơn hàng).
-   - `003_payment_methods.sql` (Khởi tạo 4 phương thức thanh toán mô phỏng).
-
-> **Lưu ý khi muốn tạo lại CSDL từ đầu:** Nếu CSDL đã tồn tại, hãy thêm 2 dòng này lên đầu file `sports_shop.sql` trước khi chạy:
-> ```sql
-> SET SQL_SAFE_UPDATES = 0;
-> DROP DATABASE IF EXISTS sports_shop;
-> ```
-
-### 3. Cấu hình chuỗi kết nối (Connection String)
-Mở file `appsettings.json` ở cả 2 project (`SportShop.Admin` và `SportShop.CustomerWeb`) và điền mật khẩu MySQL của máy bạn:
+1. **Tạo CSDL:** mở MySQL Workbench, kết nối tới server, chọn File → Open SQL Script → `Backend/Database/sports_shop.sql`, bấm ⚡
+   (Ctrl + Shift + Enter, chạy cả script). Kết quả đúng là schema `sports_shop` có **35 bảng**.
+2. **Cấu hình kết nối:** tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` của **cả hai** web:
 
 ```json
 "ConnectionStrings": {
@@ -205,52 +162,56 @@ Quy trình mua hàng từ khi chọn sản phẩm tới khi hoàn tất thanh to
 
 | Màn hình | Chức năng nổi bật | Ảnh chụp |
 |---|---|---|
-| **Dashboard Tổng quan (`/Home`)** | Thống kê doanh thu hôm nay/hôm qua, số đơn hàng, lịch hẹn chăm sóc khách hàng hôm nay. | <a href="docs/screenshots/admin_dashboard.png"><img src="docs/screenshots/admin_dashboard.png" width="280" alt="admin_dashboard"></a> |
-| **Quản lý sản phẩm (`/Products`)** | Chế độ xem Lưới & Danh sách, bảng thêm/sửa biến thể tự động, lọc danh mục. | <a href="docs/screenshots/admin_products.png"><img src="docs/screenshots/admin_products.png" width="280" alt="admin_products"></a> |
-| **Nhập & Xuất Excel sản phẩm** | Nút **Xuất Excel** và **Nhập Excel** hàng loạt biến thể (size, màu, giá, tồn) bằng ClosedXML. | <a href="docs/screenshots/admin_excel_product.png"><img src="docs/screenshots/admin_excel_product.png" width="280" alt="admin_excel_product"></a> |
-| **Bộ tìm kiếm trực quan (Query Builder)** | Bộ lọc nâng cao: `Cột - Toán tử (=, >, chứa...) - Giá trị` nối bằng logic `VÀ / HOẶC`. | <a href="docs/screenshots/admin_search_builder.png"><img src="docs/screenshots/admin_search_builder.png" width="280" alt="admin_search_builder"></a> |
-| **Quản lý đơn hàng & Bán tại quầy** | Duyệt đơn online, lập đơn bán hàng tại quầy (trừ tồn kho tức thì), xem nhanh ở panel phải. | <a href="docs/screenshots/admin_orders.png"><img src="docs/screenshots/admin_orders.png" width="280" alt="admin_orders"></a> |
-| **Hóa đơn bán hàng** | Danh sách hóa đơn tài chính tự động sinh khi đơn giao thành công, hỗ trợ in hóa đơn. | <a href="docs/screenshots/admin_invoices.png"><img src="docs/screenshots/admin_invoices.png" width="280" alt="admin_invoices"></a> |
-| **Nhập hàng nhà cung cấp (`/Imports`)** | Lập phiếu nhập kho, tự động cập nhật giá vốn và cộng dồn số lượng tồn kho biến thể. | <a href="docs/screenshots/admin_imports.png"><img src="docs/screenshots/admin_imports.png" width="280" alt="admin_imports"></a> |
-| **Quản lý khách hàng CRM (`/Customers`)** | Hồ sơ khách hàng, phân hạng Bạc/Vàng/VIP, ghi chú chăm sóc và hẹn ngày liên hệ lại. | <a href="docs/screenshots/admin_customers.png"><img src="docs/screenshots/admin_customers.png" width="280" alt="admin_customers"></a> |
-| **Phân nhóm khách hàng** | Tạo nhóm khách hàng tự động theo độ tuổi, giới tính, sở thích thể thao hoặc mức chi tiêu. | <a href="docs/screenshots/admin_groups.png"><img src="docs/screenshots/admin_groups.png" width="280" alt="admin_groups"></a> |
-| **Khuyến mãi & Voucher (`/Promotions`)** | Thiết lập chương trình giảm giá, mã voucher giới hạn số lần dùng theo hạng thành viên. | <a href="docs/screenshots/admin_promotions.png"><img src="docs/screenshots/admin_promotions.png" width="280" alt="admin_promotions"></a> |
-| **Hộp thư phản hồi (`/Feedback`)** | Tiếp nhận đánh giá của khách (in đậm thư chưa đọc), viết câu trả lời gửi lại khách. | <a href="docs/screenshots/admin_feedback.png"><img src="docs/screenshots/admin_feedback.png" width="280" alt="admin_feedback"></a> |
-| **Khảo sát khách hàng** | Soạn thảo câu hỏi khảo sát, chỉ định nhóm khách tham gia và xem biểu đồ kết quả. | <a href="docs/screenshots/admin_surveys.png"><img src="docs/screenshots/admin_surveys.png" width="280" alt="admin_surveys"></a> |
-| **Báo cáo kinh doanh (`/Reports`)** | Lọc theo khoảng ngày: doanh thu, chi phí, lợi nhuận gộp, top sản phẩm bán chạy. | <a href="docs/screenshots/admin_reports.png"><img src="docs/screenshots/admin_reports.png" width="280" alt="admin_reports"></a> |
-| **Thống kê doanh thu chuyên sâu (`/Stats`)** | Phân tích doanh thu đa chiều (ngày, tháng, nhân viên, khách, sản phẩm), **Xuất Excel đa sheet**. | <a href="docs/screenshots/admin_stats.png"><img src="docs/screenshots/admin_stats.png" width="280" alt="admin_stats"></a> |
-| **Quản lý nhân viên & Phân quyền** | Danh sách nhân viên, tài khoản hệ thống. Chặn nhân viên thường truy cập trang này. | <a href="docs/screenshots/admin_employees.png"><img src="docs/screenshots/admin_employees.png" width="280" alt="admin_employees"></a> |
+| Quản trị | `Models/ShopData.cs` (nạp từng danh sách khi cần, mỗi request một bản) | `Models/ShopCommands.cs` qua `Controllers/CrudController.cs` (Form, Save, Delete, Act) |
+| Khách hàng | `Services/ShopStore.cs`, `Services/CustomerStore.cs` | Cùng hai lớp trên |
 
----
+- Biểu mẫu thêm / sửa của web quản trị được dựng tự động từ `Models/CrudDefs.cs`; JavaScript giao diện ở `wwwroot/js/admin.js` và `wwwroot/js/search-kit.js`.
+- Đa phiên theo tab: `Models/TabCookies.cs` (Admin) và `Services/TabCookies.cs` (CustomerWeb) cùng với `wwwroot/js/tab-session.js` ở mỗi web.
+- Mỗi hàm chính có một dòng ghi chú ngay phía trên: hàm làm gì, lấy / ghi dữ liệu ở đâu (bảng MySQL, file, session) và gọi hàm nào, file nào. Không ghi chú từng dòng lệnh.
 
-## 🎯 Quy tắc nghiệp vụ cốt lõi
+## Cơ sở dữ liệu
 
-### 1. Quy tắc áp dụng Voucher
-- **Mã khách mới** (`WELCOME5`, `NEWBIE15`...): Tên chương trình chứa từ khóa *"bạn mới"*, *"khách mới"*, *"người mới"*. Chỉ dùng duy nhất **1 lần cho đơn hàng đầu tiên**.
-- **Mã theo hạng thành viên**:
-  - Hạng Bạc (`BAC8`, `BAC15`): Dùng tối đa **2 lần / khách**.
-  - Hạng Vàng (`VANG5`, `VANG10`): Dùng tối đa **3 lần / khách**.
-  - Mốc xét hạng: Chi tiêu ≥ **2 triệu** ➔ Bạc; ≥ **5 triệu** ➔ Vàng; ≥ **10 triệu** ➔ VIP.
-- **Hoàn trả voucher:** Khách hoặc nhân viên hủy đơn thì lượt dùng voucher tự động được trả lại.
+MySQL 8, 35 bảng, kèm dữ liệu demo. Bảng `KHACH_HANG` có cột `da_xoa` để xóa mềm khách hàng.
+CSDL tạo trước khi có cột này thì thêm bằng lệnh (không mất dữ liệu):
 
-### 2. Luồng trạng thái đơn hàng
-- Chu trình chuẩn: `Chờ xác nhận` ➔ `Đang chuẩn bị hàng` ➔ `Đang giao hàng` ➔ `Đã giao`.
-- Chỉ chuyển sang `Đã giao` hoặc `Đã hủy` (ở bước muộn) khi đơn đã ở trạng thái thanh toán hợp lệ.
-- Khi chuyển `Đã giao`: Hệ thống tự động tạo hóa đơn, cộng dồn doanh số, thăng hạng thành viên và tích điểm (10.000₫ = 1 điểm).
-- Hủy đơn: Bắt buộc điền lý do hủy, hoàn lại số lượng tồn kho biến thể vào CSDL.
+```sql
+ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER tong_chi_tieu;
+```
 
-### 3. Đa phiên đăng nhập độc lập (Virtual Tab Session)
-- Ứng dụng tích hợp `TabCookieMiddleware` và `tab-session.js`. Mỗi tab trình duyệt lưu 1 mã session 32 hex trong `sessionStorage`.
-- Cho phép mở nhiều tab để đăng nhập **nhiều tài khoản khác nhau** (ví dụ: tab 1 là Admin, tab 2 là Nhân viên, tab 3 là Khách hàng) trên cùng 1 trình duyệt mà **hoàn toàn không bị đè phiên của nhau**.
+## Gặp lỗi
 
----
+- **Web quản trị báo "Lỗi kết nối CSDL":** kiểm tra dịch vụ MySQL đang chạy (`services.msc`), đúng cổng và mật khẩu trong `appsettings.json`.
+  Máy có nhiều server MySQL (ví dụ cổng 3306 và 3307) thì cổng trong file phải đúng server đã chạy script.
+  Web khách hàng không kết nối được thì các chức năng cần dữ liệu hiện thông báo cần kết nối cơ sở dữ liệu.
+- **`Table '...' doesn't exist` hoặc `Unknown column 'da_xoa'`:** kiểm tra schema cũ và các migration 001–003; thêm `da_xoa` bằng lệnh `ALTER TABLE` ở trên nếu thiếu. Không chạy lại script tạo DB để nâng cấp dữ liệu đang có.
+- **Mã nhân viên ở góc phải (ví dụ NV011) không đúng sau khi tạo lại CSDL:** mã này lưu trong cookie đăng nhập cũ; đăng xuất rồi đăng nhập lại.
+  Nếu không, các thao tác ghi người thực hiện (lập đơn, phiếu nhập, trả lời phản hồi) sẽ báo lỗi.
+- **Không đăng nhập được web quản trị, báo "Tài khoản khách hàng không được đăng nhập trang quản trị":** tài khoản chưa gắn với hồ sơ nhân viên trong bảng `NHAN_VIEN`.
+- **Build báo không chép được file `.exe` / `.dll`:** web đang chạy giữ file; dừng web rồi build lại.
 
-## 🏗️ Tổ chức mã nguồn & Kiến trúc
+## Chưa làm
 
-- **Luồng dữ liệu tinh gọn:** `Controller ➔ Service/Model ➔ MySQL Dapper` (không lạm dụng Repository pattern cồng kềnh, phân tách rõ luồng đọc `ShopData`/`ShopStore` và luồng ghi `ShopCommands`).
-- **Form tự động (`CrudDefs.cs`):** Định nghĩa cấu trúc trường trong C#, JavaScript tự render form ở panel bên phải, tiết kiệm thời gian tạo View HTML thủ công.
-- **Xóa mềm (Soft Delete):** Mọi bảng dữ liệu quan trọng đều có cột `da_xoa`, dữ liệu lịch sử đơn hàng và phiếu nhập luôn được bảo toàn tuyệt đối.
-- **Chế độ Offline:** Web khách hàng tích hợp `DbStatus` và `StoreData.cs` mẫu, nếu chưa kết nối CSDL web vẫn render giao diện mẫu mà không bị crash hay báo lỗi 500.
+- App điện thoại cho khách hàng (`MobileApp`, .NET MAUI) chưa có project; REST API đã có tài khoản/hồ sơ, catalog, giỏ/checkout/đơn, phản hồi/khảo sát và trang thông tin.
+- Tự áp dụng khuyến mãi theo sản phẩm và theo mốc đơn hàng ở bước thanh toán (hiện chỉ áp dụng mã voucher).
+- Gửi chiến dịch thông báo thật qua email / SMS (hiện chỉ ghi nhận chiến dịch đã gửi).
+- Tách lượt dùng voucher theo từng mã trong cùng một chương trình (cần thêm cột lưu mã voucher vào CSDL).
+
+## Phân tích và thiết kế API cho MobileApp
+
+REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới dùng hash có salt;
+đăng nhập hợp lệ nâng cấp dữ liệu plaintext demo cũ. Mobile dùng opaque bearer access/refresh token, refresh rotation và thu hồi phiên;
+đặt đơn có `Idempotency-Key`. Đơn đã thanh toán cần cửa hàng xử lý hoàn tiền, khách không tự hủy để tránh lệch hóa đơn/điểm.
+Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI chưa được triển khai.
+
+- [Kiểm kê 64 chức năng Web User và API](API_INVENTORY.md).
+- [Contract, request/response và lỗi Mobile API](MOBILE_API_DOCUMENTATION.md).
+- [Hướng dẫn chạy backend, migration và tích hợp mobile](MOBILE_INTEGRATION_GUIDE.md).
+- [Báo cáo kiểm thử và giới hạn xác minh](MOBILE_API_TEST_REPORT.md).
+- [Đối chiếu từng màn hình Web → Mobile](Backend/docs/mobile-feature-parity.md).
+- [Danh mục file mới/sửa và mã phase-one có sẵn](Backend/docs/mobile-api-change-manifest.md).
+
+Verifier cuối trên instance MySQL sạch: **142/142 PASS, 0 FAIL, 0 SKIP**, build solution **0 lỗi/0 cảnh báo**.
+[TRX và hash đối chiếu](Backend/docs/test-evidence/verification-results.json); app/UI native chưa triển khai và chưa kiểm thử.
 
 ---
 

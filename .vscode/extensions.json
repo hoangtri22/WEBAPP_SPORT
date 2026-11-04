@@ -1,0 +1,6 @@
+{
+  "recommendations": [
+    "ms-dotnettools.dotnet-maui",
+    "ms-dotnettools.csdevkit"
+  ]
+}

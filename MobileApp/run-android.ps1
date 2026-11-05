@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$DeviceSerial,
     [string]$AndroidSdkDirectory,
     [string]$JavaSdkDirectory,
@@ -21,7 +21,7 @@ $adb = Join-Path $AndroidSdkDirectory 'platform-tools/adb.exe'
 
 if (-not $JavaSdkDirectory) {
     $javaCandidates = @($env:JAVA_HOME)
-    foreach ($javaRoot in @((Join-Path $repositoryRoot '.test-artifacts/tools/jdk21'), 'C:/Program Files/Microsoft')) {
+    foreach ($javaRoot in @((Join-Path $repositoryRoot '.test-artifacts/tools/jdk21'), 'C:/Program Files/Microsoft', 'C:/Program Files/Android/openjdk')) {
         if (Test-Path -LiteralPath $javaRoot) {
             $javaCandidates += @(Get-ChildItem -LiteralPath $javaRoot -Directory -Filter '*21*' | ForEach-Object FullName)
         }
@@ -37,15 +37,19 @@ if (-not $JavaSdkDirectory) {
 if (-not $JavaSdkDirectory) { throw 'Cần JDK 21 cho Android workload này. Truyền -JavaSdkDirectory.' }
 
 $deviceLines = @(& $adb devices)
-$physicalDevices = @($deviceLines | Where-Object { $_ -match '^\S+\s+device\s*$' -and $_ -notmatch '^emulator-' } |
+$allDevices = @($deviceLines | Where-Object { $_ -match '^\S+\s+device\s*$' } |
     ForEach-Object { ($_ -split '\s+')[0] })
+$physicalDevices = @($allDevices | Where-Object { $_ -notmatch '^emulator-' })
 if (-not $DeviceSerial) {
-    if ($physicalDevices.Count -ne 1) {
-        throw 'Cần đúng một điện thoại đã cho phép gỡ lỗi USB, hoặc truyền -DeviceSerial. Kiểm tra bằng adb devices.'
+    if ($physicalDevices.Count -eq 1) {
+        $DeviceSerial = $physicalDevices[0]
+    } elseif ($allDevices.Count -eq 1) {
+        $DeviceSerial = $allDevices[0]
+    } else {
+        throw 'Cần đúng một thiết bị (điện thoại hoặc máy ảo) đang chạy, hoặc truyền -DeviceSerial. Kiểm tra bằng adb devices.'
     }
-    $DeviceSerial = $physicalDevices[0]
 }
-if ($DeviceSerial -notin $physicalDevices) { throw 'Điện thoại chưa sẵn sàng. Mở khóa và cho phép gỡ lỗi USB.' }
+if ($DeviceSerial -notin $allDevices) { throw 'Thiết bị chưa sẵn sàng. Mở khóa và cho phép gỡ lỗi.' }
 $abi = (& $adb -s $DeviceSerial shell getprop ro.product.cpu.abi).Trim()
 $runtimeId = switch ($abi) {
     'arm64-v8a' { 'android-arm64' }

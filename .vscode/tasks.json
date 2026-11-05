@@ -2,11 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Mobile: Chạy trên Android thật (USB)",
+      "label": "Mobile: Chạy trên Android (USB / Emulator)",
       "type": "process",
       "command": "powershell.exe",
       "args": ["-NoProfile", "-File", "${workspaceFolder}/MobileApp/run-android.ps1"],
       "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Backend: Chạy REST API (port 5080)",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/Backend/SportShop.Api/SportShop.Api.csproj", "--launch-profile", "http"],
       "problemMatcher": "$msCompile"
     },
     {

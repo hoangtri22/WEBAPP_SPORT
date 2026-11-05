@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.CartPage"
+             x:DataType="vm:CartViewModel"
+             BackgroundColor="#F5F7FA"
+             Title="Giỏ hàng">
+
+    <RefreshView Refreshing="OnRefreshing"
+                 IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+        <ScrollView>
+            <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
+
+                <!-- Tiêu đề giống hệt Views/Cart/Index.cshtml -->
+                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="GIỎ HÀNG" FontFamily="OpenSansSemibold" FontSize="11" CharacterSpacing="1.2" TextColor="#0F766E" />
+                        <Label Text="Giỏ hàng của bạn" FontFamily="OpenSansSemibold" FontSize="22" TextColor="#102C46" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1" Text="Đơn hàng của tôi" Clicked="OnOpenOrdersClicked"
+                            BackgroundColor="#E6F4F1" TextColor="#0F766E" FontFamily="OpenSansSemibold"
+                            FontSize="12" CornerRadius="12" HeightRequest="38" Padding="14,0" VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Thông báo lỗi / trạng thái (nếu có) -->
+                <Border IsVisible="{Binding HasError}" BackgroundColor="#FEF2F2" Stroke="#FECACA" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12" Padding="14,10">
+                    <Label Text="{Binding ErrorMessage}" TextColor="#B91C1C" FontSize="13" />
+                </Border>
+
+                <Border IsVisible="{Binding HasStatus}" BackgroundColor="#ECFDF5" Stroke="#A7F3D0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12" Padding="14,10">
+                    <Label Text="{Binding StatusMessage}" TextColor="#047857" FontSize="13" />
+                </Border>
+
+                <!-- Khi chưa đăng nhập (giống CartController.LoginRequired("xem giỏ hàng") trên Web) -->
+                <Border x:Name="GuestLoginCard" IsVisible="False" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="24,32">
+                    <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                        <Image Source="ic_shopping_bag_ink.png" WidthRequest="44" HeightRequest="44" HorizontalOptions="Center" />
+                        <Label Text="Vui lòng đăng nhập để xem giỏ hàng" FontFamily="OpenSansSemibold" FontSize="18"
+                               TextColor="#102C46" HorizontalTextAlignment="Center" />
+                        <Label Text="Vui lòng đăng nhập để xem giỏ hàng. Nếu chưa có tài khoản, hãy đăng ký."
+                               FontSize="13" TextColor="#64748B" HorizontalTextAlignment="Center" />
+                        <Button Text="Đăng nhập / Đăng ký" Clicked="OnLoginClicked"
+                                BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
+                                FontSize="14" CornerRadius="12" HeightRequest="44" Padding="24,0" HorizontalOptions="Center" Margin="0,4,0,0" />
+                        <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
+                                BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                FontSize="13" CornerRadius="12" HeightRequest="40" Padding="20,0" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Khi đã đăng nhập nhưng Giỏ hàng đang trống (giống hệt Views/Cart/Index.cshtml dòng 9-17) -->
+                <Border x:Name="EmptyCartCard" IsVisible="{Binding IsEmpty}" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="24,36">
+                    <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                        <Image Source="ic_shopping_bag_ink.png" WidthRequest="44" HeightRequest="44" HorizontalOptions="Center" />
+                        <Label Text="Giỏ hàng đang trống" FontFamily="OpenSansSemibold" FontSize="18"
+                               TextColor="#102C46" HorizontalTextAlignment="Center" />
+                        <Label Text="Hãy chọn vài món đồ bạn thích nhé." FontSize="13"
+                               TextColor="#64748B" HorizontalTextAlignment="Center" />
+                        <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
+                                BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
+                                FontSize="14" CornerRadius="12" HeightRequest="44" Padding="24,0"
+                                HorizontalOptions="Center" Margin="0,6,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Khi Giỏ hàng có sản phẩm (giống hệt Views/Cart/Index.cshtml dòng 20-54) -->
+                <VerticalStackLayout x:Name="CartContentSection" IsVisible="{Binding HasItems}" Spacing="16">
+
+                    <!-- Danh sách các dòng sản phẩm trong giỏ (cart-list) -->
+                    <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 18" Padding="14">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="14">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CartLineItem">
+                                    <VerticalStackLayout Spacing="10">
+                                        <Grid ColumnDefinitions="72,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                                            <!-- Ảnh sản phẩm -->
+                                            <Border Grid.RowSpan="2" BackgroundColor="#F8FAFC" Stroke="#E2E8F0" StrokeThickness="1"
+                                                    StrokeShape="RoundRectangle 12" WidthRequest="72" HeightRequest="72" VerticalOptions="Start">
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
+                                            </Border>
+
+                                            <!-- Tên sản phẩm, phân loại, đơn giá, cảnh báo tồn kho -->
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="14"
+                                                       TextColor="#102C46" MaxLines="2" LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding VariantLabel}" IsVisible="{Binding HasVariantLabel}"
+                                                       FontSize="12" TextColor="#64748B" />
+                                                <Label Text="{Binding UnitPriceText}" FontSize="13" TextColor="#0F766E" FontFamily="OpenSansSemibold" />
+                                                <Label Text="{Binding StockWarningText}" IsVisible="{Binding HasWarning}"
+                                                       FontSize="11" TextColor="#DC2626" FontFamily="OpenSansSemibold" />
+                                            </VerticalStackLayout>
+
+                                            <!-- Nút bỏ khỏi giỏ (icon-square x) -->
+                                            <Button Grid.Column="2" Text="✕" CommandParameter="{Binding .}" Clicked="OnRemoveItemClicked"
+                                                    BackgroundColor="#F1F5F9" TextColor="#475569" FontSize="12"
+                                                    WidthRequest="34" HeightRequest="34" CornerRadius="10" Padding="0"
+                                                    VerticalOptions="Start" />
+
+                                            <!-- Bộ chỉnh số lượng và Thành tiền của dòng -->
+                                            <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" VerticalOptions="Center">
+                                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                    <Button Text="−" CommandParameter="{Binding .}" Clicked="OnDecreaseQtyClicked"
+                                                            BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                                            WidthRequest="32" HeightRequest="32" CornerRadius="8" Padding="0" />
+                                                    <Border Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 8"
+                                                            Padding="12,4" VerticalOptions="Center">
+                                                        <Label Text="{Binding Quantity}" FontFamily="OpenSansSemibold" FontSize="13"
+                                                               TextColor="#102C46" VerticalOptions="Center" HorizontalTextAlignment="Center" />
+                                                    </Border>
+                                                    <Button Text="+" CommandParameter="{Binding .}" Clicked="OnIncreaseQtyClicked"
+                                                            BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                                            WidthRequest="32" HeightRequest="32" CornerRadius="8" Padding="0" />
+                                                </HorizontalStackLayout>
+
+                                                <Label Grid.Column="1" Text="{Binding AmountText}" FontFamily="OpenSansSemibold"
+                                                       FontSize="15" TextColor="#102C46" HorizontalTextAlignment="End" VerticalOptions="Center" />
+                                            </Grid>
+                                        </Grid>
+                                        <BoxView HeightRequest="1" Color="#F1F5F9" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Khối Tóm tắt đơn hàng (cart-summary giống hệt Views/Cart/Index.cshtml dòng 44-53) -->
+                    <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 18" Padding="18">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Tóm tắt đơn hàng" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#102C46" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Tạm tính" FontSize="13" TextColor="#64748B" />
+                                <Label Grid.Column="1" Text="{Binding SubtotalText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Phí giao hàng" FontSize="13" TextColor="#64748B" />
+                                <Label Grid.Column="1" Text="{Binding EstimatedShippingText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#E2E8F0" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Tổng cộng" FontFamily="OpenSansSemibold" FontSize="15" TextColor="#102C46" />
+                                <Label Grid.Column="1" Text="{Binding EstimatedTotalText}" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#0F766E" />
+                            </Grid>
+
+                            <Label Text="Mã giảm giá được nhập ở bước thanh toán." FontSize="12" TextColor="#64748B" />
+
+                            <Label IsVisible="{Binding HasStockWarning}"
+                                   Text="Vui lòng giảm số lượng các sản phẩm vượt tồn kho."
+                                   FontSize="12" TextColor="#DC2626" FontFamily="OpenSansSemibold" />
+
+                            <Button Text="Tiến hành thanh toán" Clicked="OnProceedCheckoutClicked"
+                                    IsVisible="{Binding CanProceedToCheckout}"
+                                    BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
+                                    FontSize="14" CornerRadius="12" HeightRequest="46" Margin="0,4,0,0" />
+
+                            <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
+                                    BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                    FontSize="14" CornerRadius="12" HeightRequest="44" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

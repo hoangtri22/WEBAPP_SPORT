@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.CheckoutPage"
+             x:DataType="vm:CartViewModel"
+             BackgroundColor="#F5F7FA"
+             Title="Thanh toán">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
+
+            <!-- Form Thanh toán & Đặt hàng (giống hệt Views/Cart/Checkout.cshtml) -->
+            <VerticalStackLayout IsVisible="{Binding ShowCheckoutForm}" Spacing="16">
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="THANH TOÁN" FontFamily="OpenSansSemibold" FontSize="11" CharacterSpacing="1.2" TextColor="#0F766E" />
+                    <Label Text="Đặt hàng" FontFamily="OpenSansSemibold" FontSize="22" TextColor="#102C46" />
+                </VerticalStackLayout>
+
+                <Border IsVisible="{Binding HasError}" BackgroundColor="#FEF2F2" Stroke="#FECACA" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12" Padding="14,10">
+                    <Label Text="{Binding ErrorMessage}" TextColor="#B91C1C" FontSize="13" />
+                </Border>
+
+                <!-- 1. Thông tin nhận hàng -->
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="16">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Thông tin nhận hàng" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#102C46" />
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Họ và tên" FontFamily="OpenSansSemibold" FontSize="12" TextColor="#475569" />
+                            <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,2">
+                                <Entry Text="{Binding ReceiverName}" Placeholder="Họ và tên người nhận" FontSize="14" TextColor="#102C46" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Số điện thoại" FontFamily="OpenSansSemibold" FontSize="12" TextColor="#475569" />
+                            <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,2">
+                                <Entry Text="{Binding ReceiverPhone}" Keyboard="Telephone" Placeholder="10 chữ số" FontSize="14" TextColor="#102C46" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Địa chỉ giao hàng" FontFamily="OpenSansSemibold" FontSize="12" TextColor="#475569" />
+                            <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,2">
+                                <Entry Text="{Binding ReceiverAddress}" Placeholder="Số nhà, đường, phường, quận, thành phố" FontSize="14" TextColor="#102C46" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2. Phương thức thanh toán -->
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="16">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Phương thức thanh toán" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#102C46" />
+                        <Label Text="Thanh toán được giả lập: chọn phương thức bất kỳ, không cần nhập thông tin thẻ. Đơn được ghi nhận đã thanh toán khi cửa hàng giao hàng thành công."
+                               FontSize="12" TextColor="#64748B" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding PaymentMethodOptions}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PaymentMethodOption">
+                                    <Border BackgroundColor="{Binding BgColorHex}" Stroke="{Binding BorderColorHex}" StrokeThickness="1.5"
+                                            StrokeShape="RoundRectangle 12" Padding="12,10">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer CommandParameter="{Binding .}" Tapped="OnSelectPaymentMethodTapped" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Label Text="{Binding RadioText}" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#0F766E" VerticalOptions="Center" />
+                                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="14" TextColor="#102C46" VerticalOptions="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 3. Mã giảm giá -->
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="16">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Mã giảm giá" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#102C46" />
+
+                        <Label IsVisible="{Binding HasNoVouchers}"
+                               Text="Hiện chưa có mã nào áp dụng được cho tài khoản của bạn."
+                               FontSize="13" TextColor="#64748B" />
+
+                        <VerticalStackLayout IsVisible="{Binding HasVouchers}" Spacing="8">
+                            <Label Text="Chọn một mã phù hợp với tài khoản của bạn, số tiền giảm được tính theo đơn hiện tại."
+                                   FontSize="12" TextColor="#64748B" />
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding VoucherOptions}" Spacing="8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:VoucherOptionItem">
+                                        <Border BackgroundColor="{Binding BgColorHex}" Stroke="{Binding BorderColorHex}" StrokeThickness="1.5"
+                                                StrokeShape="RoundRectangle 12" Padding="12,10">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer CommandParameter="{Binding .}" Tapped="OnSelectVoucherTapped" />
+                                            </Border.GestureRecognizers>
+                                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                                <Label Text="{Binding RadioText}" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#0F766E" VerticalOptions="Center" />
+
+                                                <Border Grid.Column="1" IsVisible="{Binding HasCode}" BackgroundColor="#E6F4F1" StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 6" Padding="8,4" VerticalOptions="Center">
+                                                    <Label Text="{Binding Code}" FontFamily="OpenSansSemibold" FontSize="11" TextColor="#0F766E" />
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="2" Spacing="2" VerticalOptions="Center">
+                                                    <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                                                    <Label Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" FontSize="11" TextColor="#64748B" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="3" IsVisible="{Binding HasDiscount}" Text="{Binding DiscountText}"
+                                                       FontFamily="OpenSansSemibold" FontSize="13" TextColor="#059669" VerticalOptions="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+
+                        <Label IsVisible="{Binding HasVoucherError}" Text="{Binding VoucherError}"
+                               FontSize="12" TextColor="#DC2626" FontFamily="OpenSansSemibold" />
+
+                        <Label IsVisible="{Binding HasAppliedVoucher}" Text="{Binding AppliedVoucherText}"
+                               FontSize="12" TextColor="#059669" FontFamily="OpenSansSemibold" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 4. Tóm tắt Đơn hàng (cart-summary giống hệt Views/Cart/Checkout.cshtml dòng 63-75) -->
+                <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18" Padding="18">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{Binding OrderSummaryHeaderText}" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#102C46" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="6">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CartLineItem">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <Label Text="{Binding SummaryLineText}" FontSize="13" TextColor="#475569" />
+                                        <Label Grid.Column="1" Text="{Binding AmountText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="#F1F5F9" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Tạm tính" FontSize="13" TextColor="#64748B" />
+                            <Label Grid.Column="1" Text="{Binding SubtotalText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Giảm giá" FontSize="13" TextColor="#64748B" />
+                            <Label Grid.Column="1" Text="{Binding DiscountText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#059669" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Phí giao hàng" FontSize="13" TextColor="#64748B" />
+                            <Label Grid.Column="1" Text="{Binding ShippingFeeText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="#E2E8F0" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Tổng thanh toán" FontFamily="OpenSansSemibold" FontSize="15" TextColor="#102C46" />
+                            <Label Grid.Column="1" Text="{Binding TotalText}" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#0F766E" />
+                        </Grid>
+
+                        <Button Text="Đặt hàng" Clicked="OnPlaceOrderClicked"
+                                IsEnabled="{Binding CanPlaceOrder}"
+                                BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
+                                FontSize="15" CornerRadius="12" HeightRequest="46" Margin="0,6,0,0" />
+
+                        <Button Text="Quay lại giỏ hàng" Clicked="OnBackToCartClicked"
+                                BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                FontSize="14" CornerRadius="12" HeightRequest="44" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Màn hình Đặt hàng thành công (giống hệt Views/Cart/Done.cshtml) -->
+            <Border IsVisible="{Binding HasPlacedOrder}" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 18" Padding="22,28">
+                <VerticalStackLayout Spacing="14" HorizontalOptions="Center">
+                    <Border BackgroundColor="#DCFCE7" StrokeThickness="0" StrokeShape="RoundRectangle 28"
+                            WidthRequest="56" HeightRequest="56" HorizontalOptions="Center">
+                        <Label Text="✓" FontFamily="OpenSansSemibold" FontSize="28" TextColor="#166534"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <Label Text="Đặt hàng thành công!" FontFamily="OpenSansSemibold" FontSize="22"
+                           TextColor="#102C46" HorizontalTextAlignment="Center" />
+
+                    <Label Text="{Binding PlacedOrderMessage}" FontSize="13" TextColor="#475569"
+                           HorizontalTextAlignment="Center" />
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14" Padding="14" WidthRequest="310">
+                        <VerticalStackLayout Spacing="8">
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding PlacedOrderLines}" Spacing="6">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PlacedOrderLineItem">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <Label Text="{Binding SummaryText}" FontSize="13" TextColor="#475569" />
+                                            <Label Grid.Column="1" Text="{Binding AmountText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <BoxView HeightRequest="1" Color="#E2E8F0" />
+
+                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="Tổng thanh toán" FontFamily="OpenSansSemibold" FontSize="14" TextColor="#102C46" />
+                                    <Label Text="{Binding PlacedOrderPaymentMethod}" FontSize="11" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="{Binding PlacedOrderTotalText}" FontFamily="OpenSansSemibold"
+                                       FontSize="16" TextColor="#0F766E" VerticalOptions="Center" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="Xem đơn hàng của tôi" Clicked="OnViewMyOrdersClicked"
+                            BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
+                            FontSize="14" CornerRadius="12" HeightRequest="46" Padding="24,0" Margin="0,4,0,0" />
+
+                    <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingFromDoneClicked"
+                            BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                            FontSize="14" CornerRadius="12" HeightRequest="44" Padding="24,0" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

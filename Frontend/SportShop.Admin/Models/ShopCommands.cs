@@ -1200,6 +1200,17 @@ public class ShopCommands
         return $"Đã nhập từ Excel: thêm {addedProducts} sản phẩm, thêm {addedVariants} biến thể, cập nhật {updatedVariants} biến thể.";
     });
 
+    // Báo cho web khách hàng nạp lại danh mục sản phẩm ngay (thay vì chờ tối đa 10 phút của CatalogCache): ghi lại file dấu trong thư mục Uploads mà hai web dùng chung. Gọi từ Run() sau khi ghi thành công.
+    void TouchCatalogStamp()
+    {
+        try
+        {
+            Directory.CreateDirectory(_uploadsDir);
+            File.WriteAllText(Path.Combine(_uploadsDir, SportShop.CustomerWeb.Services.CatalogCache.StampFile), DateTime.UtcNow.ToString("O"));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
+
     // Chạy thao tác ghi trong một transaction MySQL; lỗi nghiệp vụ (UserError) hoặc lỗi MySQL được đổi thành Result(false, thông báo).
     Result Run(Func<MySqlConnection, MySqlTransaction, string> work)
     {
@@ -1208,7 +1219,7 @@ public class ShopCommands
             using var conn = new MySqlConnection(_cs);
             conn.Open();
             using var tx = conn.BeginTransaction();
-            try { var msg = work(conn, tx); tx.Commit(); _cache.Clear(); return new Result(true, msg); }
+            try { var msg = work(conn, tx); tx.Commit(); _cache.Clear(); TouchCatalogStamp(); return new Result(true, msg); }
             catch { tx.Rollback(); throw; }
         }
         catch (UserError e) { return new Result(false, e.Message); }

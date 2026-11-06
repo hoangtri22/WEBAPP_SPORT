@@ -11,24 +11,31 @@ public record CatalogProduct(int Id, int CategoryId, string Name, string Categor
 
 public record CatalogSnapshot(List<(int Id, string Name)> Categories, List<CatalogProduct> Products);
 
-// Bộ nhớ đệm danh mục singleton: nạp LOAI_SP, SAN_PHAM, BIEN_THE_SP một lần, giữ 10 phút cho ShopStore.Search / Categories / FilterOptions; đặt / hủy đơn gọi Clear(), sửa ở trang quản trị hiện sau tối đa 10 phút.
-public class CatalogCache(IConfiguration config)
+// Bộ nhớ đệm danh mục singleton: nạp LOAI_SP, SAN_PHAM, BIEN_THE_SP một lần, giữ 10 phút cho ShopStore.Search / Categories / FilterOptions; đặt / hủy đơn gọi Clear(); trang quản trị ghi file dấu StampFile trong thư mục Uploads dùng chung sau mỗi thay đổi nên danh mục được nạp lại ngay ở lần xem sau (không cần chờ 10 phút).
+public class CatalogCache(IConfiguration config, IWebHostEnvironment? env = null)
 {
+    // Tên file dấu trong thư mục Uploads; trang quản trị ghi lại file này (ShopCommands.TouchCatalogStamp) mỗi khi dữ liệu thay đổi.
+    public const string StampFile = ".catalog-stamp";
+
     static readonly TimeSpan MaxAge = TimeSpan.FromMinutes(10);
     readonly string _cs = config.GetConnectionString("Default") ?? "";
+    readonly string? _stampPath = env == null ? null : Path.Combine(Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Uploads"] ?? "../Uploads")), StampFile);
     readonly object _lock = new();
     CatalogSnapshot? _snapshot;
     long _loadedAt;
+    DateTime _loadedStamp;
 
-    // Trả bản danh mục trong bộ nhớ, quá 10 phút thì nạp lại qua Load().
+    // Trả bản danh mục trong bộ nhớ; nạp lại qua Load() khi quá 10 phút hoặc khi trang quản trị vừa ghi lại file dấu (chỉ đọc giờ sửa file, không truy vấn MySQL).
     public CatalogSnapshot Get()
     {
         lock (_lock)
         {
-            if (_snapshot == null || Environment.TickCount64 - _loadedAt >= (long)MaxAge.TotalMilliseconds)
+            var stamp = _stampPath == null ? default : File.GetLastWriteTimeUtc(_stampPath);
+            if (_snapshot == null || stamp != _loadedStamp || Environment.TickCount64 - _loadedAt >= (long)MaxAge.TotalMilliseconds)
             {
                 _snapshot = Load();
                 _loadedAt = Environment.TickCount64;
+                _loadedStamp = stamp;
             }
             return _snapshot;
         }

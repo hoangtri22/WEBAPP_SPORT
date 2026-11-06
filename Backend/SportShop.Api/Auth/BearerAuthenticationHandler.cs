@@ -7,19 +7,46 @@ using SportShop.Api.Errors;
 namespace SportShop.Api.Auth;
 
 public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
-    ILoggerFactory logger, UrlEncoder encoder, MobileTokenStore tokens) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    ILoggerFactory logger, UrlEncoder encoder, MobileTokenStore tokens, GuestDeviceStore guests) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    public const string GuestDeviceHeader = "X-Guest-Device-Key";
+
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var header = Request.Headers.Authorization.ToString();
-        if (string.IsNullOrEmpty(header)) return AuthenticateResult.NoResult();
-        if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return AuthenticateResult.Fail("Bearer token required.");
-        var identity = await tokens.ValidateAsync(header[7..].Trim(), Context.RequestAborted);
-        if (identity is null) return AuthenticateResult.Fail("Token invalid, revoked or expired.");
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, identity.CustomerId.ToString()),
-            new Claim(ClaimTypes.Role, "Customer"), new Claim("session_id", identity.SessionId.ToString()) };
-        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));
+        if (!string.IsNullOrEmpty(header))
+        {
+            if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return AuthenticateResult.Fail("Bearer token required.");
+            var identity = await tokens.ValidateAsync(header[7..].Trim(), Context.RequestAborted);
+            if (identity is null) return AuthenticateResult.Fail("Token invalid, revoked or expired.");
+            var claims = new[] { new Claim(ClaimTypes.NameIdentifier, identity.CustomerId.ToString()),
+                new Claim(ClaimTypes.Role, "Customer"), new Claim("session_id", identity.SessionId.ToString()) };
+            return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));
+        }
+
+        var guestKey = Request.Headers[GuestDeviceHeader].ToString().Trim();
+        if (!string.IsNullOrEmpty(guestKey) && IsGuestCommercePath(Request.Path))
+        {
+            var guestCustomerId = await guests.ResolveOrCreateGuestCustomerAsync(guestKey, Context.RequestAborted);
+            if (guestCustomerId is null)
+                return AuthenticateResult.Fail("Invalid guest device key.");
+            var guestClaims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, guestCustomerId.Value.ToString()),
+                new Claim(ClaimTypes.Role, "Customer"),
+                new Claim("is_guest", "true"),
+                new Claim("device_key", guestKey)
+            };
+            return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(guestClaims, Scheme.Name)), Scheme.Name));
+        }
+
+        return AuthenticateResult.NoResult();
     }
+
+    private static bool IsGuestCommercePath(PathString path) =>
+        path.StartsWithSegments("/api/v1/cart", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWithSegments("/api/v1/checkout", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWithSegments("/api/v1/orders", StringComparison.OrdinalIgnoreCase);
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {

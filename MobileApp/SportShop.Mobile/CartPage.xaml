@@ -7,10 +7,13 @@
              BackgroundColor="#F5F7FA"
              Title="Giỏ hàng">
 
-    <RefreshView Refreshing="OnRefreshing"
-                 IsRefreshing="{Binding IsBusy, Mode=OneWay}">
-        <ScrollView>
-            <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
+    <Grid RowDefinitions="*,Auto">
+        <!-- Vùng nội dung cuộn của Giỏ hàng -->
+        <RefreshView Grid.Row="0"
+                     Refreshing="OnRefreshing"
+                     IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+            <ScrollView>
+                <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
 
                 <!-- Tiêu đề giống hệt Views/Cart/Index.cshtml -->
                 <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
@@ -34,25 +37,22 @@
                     <Label Text="{Binding StatusMessage}" TextColor="#047857" FontSize="13" />
                 </Border>
 
-                <!-- Khi chưa đăng nhập (giống CartController.LoginRequired("xem giỏ hàng") trên Web) -->
-                <Border x:Name="GuestLoginCard" IsVisible="False" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
-                        StrokeShape="RoundRectangle 18" Padding="24,32">
-                    <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
-                        <Image Source="ic_shopping_bag_ink.png" WidthRequest="44" HeightRequest="44" HorizontalOptions="Center" />
-                        <Label Text="Vui lòng đăng nhập để xem giỏ hàng" FontFamily="OpenSansSemibold" FontSize="18"
-                               TextColor="#102C46" HorizontalTextAlignment="Center" />
-                        <Label Text="Vui lòng đăng nhập để xem giỏ hàng. Nếu chưa có tài khoản, hãy đăng ký."
-                               FontSize="13" TextColor="#64748B" HorizontalTextAlignment="Center" />
-                        <Button Text="Đăng nhập / Đăng ký" Clicked="OnLoginClicked"
+                <!-- Thông báo chế độ Khách hàng vãng lai (vẫn cho phép mua hàng & đặt đơn bình thường) -->
+                <Border x:Name="GuestLoginCard" IsVisible="False" BackgroundColor="#F0FDFA" Stroke="#99F6E4" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 14" Padding="14,12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Chế độ Khách hàng vãng lai" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#0F766E" />
+                            <Label Text="Bạn có thể thêm giỏ hàng, nhập thông tin nhận hàng và đặt đơn trực tiếp trên thiết bị này."
+                                   FontSize="12" TextColor="#475569" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Đăng nhập" Clicked="OnLoginClicked"
                                 BackgroundColor="#0F766E" TextColor="White" FontFamily="OpenSansSemibold"
-                                FontSize="14" CornerRadius="12" HeightRequest="44" Padding="24,0" HorizontalOptions="Center" Margin="0,4,0,0" />
-                        <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
-                                BackgroundColor="#F1F5F9" TextColor="#102C46" FontFamily="OpenSansSemibold"
-                                FontSize="13" CornerRadius="12" HeightRequest="40" Padding="20,0" HorizontalOptions="Center" />
-                    </VerticalStackLayout>
+                                FontSize="12" CornerRadius="10" HeightRequest="34" Padding="12,0" VerticalOptions="Center" />
+                    </Grid>
                 </Border>
 
-                <!-- Khi đã đăng nhập nhưng Giỏ hàng đang trống (giống hệt Views/Cart/Index.cshtml dòng 9-17) -->
+                <!-- Khi Giỏ hàng đang trống (giống hệt Views/Cart/Index.cshtml dòng 9-17) -->
                 <Border x:Name="EmptyCartCard" IsVisible="{Binding IsEmpty}" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                         StrokeShape="RoundRectangle 18" Padding="24,36">
                     <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
@@ -173,4 +173,42 @@
             </VerticalStackLayout>
         </ScrollView>
     </RefreshView>
+
+    <!-- Thanh taskbar điều hướng cố định ở đáy màn hình giống HomePage -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" BackgroundColor="White">
+        <BoxView Grid.ColumnSpan="4" HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Start" />
+        
+        <VerticalStackLayout Padding="0,9,0,7" Spacing="3">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnHomeNavClicked" />
+            </VerticalStackLayout.GestureRecognizers>
+            <Image Source="ic_house_muted.png" WidthRequest="22" HeightRequest="22" />
+            <Label Text="Trang chủ" Style="{StaticResource NavLabel}" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Column="1" Padding="0,9,0,7" Spacing="3">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCatalogNavClicked" />
+            </VerticalStackLayout.GestureRecognizers>
+            <Image Source="ic_layout_grid_muted.png" WidthRequest="22" HeightRequest="22" />
+            <Label Text="Sản phẩm" Style="{StaticResource NavLabel}" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Column="2" Padding="0,9,0,7" Spacing="3">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCartNavClicked" />
+            </VerticalStackLayout.GestureRecognizers>
+            <Image Source="ic_shopping_bag_teal.png" WidthRequest="22" HeightRequest="22" />
+            <Label Text="Giỏ hàng" Style="{StaticResource NavLabel}" TextColor="{StaticResource Teal}" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Column="3" Padding="0,9,0,7" Spacing="3">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnAccountNavClicked" />
+            </VerticalStackLayout.GestureRecognizers>
+            <Image Source="ic_user_muted.png" WidthRequest="22" HeightRequest="22" />
+            <Label Text="Tài khoản" Style="{StaticResource NavLabel}" />
+        </VerticalStackLayout>
+    </Grid>
+</Grid>
 </ContentPage>

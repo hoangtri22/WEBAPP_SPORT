@@ -29,8 +29,10 @@ public sealed class CommerceApi(
     HttpClient http,
     ISessionStore sessions,
     IAuthApi authApi,
-    AppMemoryCache? cache = null) : ICommerceApi
+    AppMemoryCache? cache = null,
+    IDeviceIdentity? deviceIdentity = null) : ICommerceApi
 {
+    public const string GuestDeviceHeader = "X-Guest-Device-Key";
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default) =>
@@ -123,17 +125,17 @@ public sealed class CommerceApi(
 
     private async Task<T> SendAuthenticatedAsync<T>(Func<HttpRequestMessage> requestFactory, CancellationToken cancellationToken)
     {
-        var token = await GetValidAccessTokenAsync(cancellationToken);
+        var token = await TryGetValidAccessTokenAsync(cancellationToken);
         try
         {
             using var req = requestFactory();
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            AttachAuthOrGuestHeader(req, token);
             using var resp = await http.SendAsync(req, cancellationToken);
-            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            if (resp.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(token))
             {
-                token = await ForceRefreshTokenAsync(cancellationToken);
+                token = await TryForceRefreshTokenAsync(cancellationToken);
                 using var retryReq = requestFactory();
-                retryReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                AttachAuthOrGuestHeader(retryReq, token);
                 using var retryResp = await http.SendAsync(retryReq, cancellationToken);
                 return await ReadResponseAsync<T>(retryResp, cancellationToken);
             }
@@ -151,17 +153,17 @@ public sealed class CommerceApi(
 
     private async Task SendAuthenticatedNoContentAsync(Func<HttpRequestMessage> requestFactory, CancellationToken cancellationToken)
     {
-        var token = await GetValidAccessTokenAsync(cancellationToken);
+        var token = await TryGetValidAccessTokenAsync(cancellationToken);
         try
         {
             using var req = requestFactory();
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            AttachAuthOrGuestHeader(req, token);
             using var resp = await http.SendAsync(req, cancellationToken);
-            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            if (resp.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(token))
             {
-                token = await ForceRefreshTokenAsync(cancellationToken);
+                token = await TryForceRefreshTokenAsync(cancellationToken);
                 using var retryReq = requestFactory();
-                retryReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                AttachAuthOrGuestHeader(retryReq, token);
                 using var retryResp = await http.SendAsync(retryReq, cancellationToken);
                 if (!retryResp.IsSuccessStatusCode)
                     throw await CreateExceptionAsync(retryResp, cancellationToken);
@@ -180,15 +182,40 @@ public sealed class CommerceApi(
         }
     }
 
-    private async Task<string> GetValidAccessTokenAsync(CancellationToken cancellationToken)
+    private void AttachAuthOrGuestHeader(HttpRequestMessage req, string? token)
+    {
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        else
+        {
+            req.Headers.TryAddWithoutValidation(GuestDeviceHeader, GetGuestDeviceKey());
+        }
+    }
+
+    private static readonly string FallbackGuestKey = Guid.NewGuid().ToString("N");
+
+    private string GetGuestDeviceKey()
+    {
+        if (deviceIdentity is not null)
+        {
+            var key = deviceIdentity.Current().DeviceKey;
+            if (!string.IsNullOrWhiteSpace(key))
+                return key;
+        }
+        return FallbackGuestKey;
+    }
+
+    private async Task<string?> TryGetValidAccessTokenAsync(CancellationToken cancellationToken)
     {
         var token = await sessions.GetAccessTokenAsync();
         if (!string.IsNullOrWhiteSpace(token))
             return token;
-        return await ForceRefreshTokenAsync(cancellationToken);
+        return await TryForceRefreshTokenAsync(cancellationToken);
     }
 
-    private async Task<string> ForceRefreshTokenAsync(CancellationToken cancellationToken)
+    private async Task<string?> TryForceRefreshTokenAsync(CancellationToken cancellationToken)
     {
         await _refreshLock.WaitAsync(cancellationToken);
         try
@@ -197,7 +224,7 @@ public sealed class CommerceApi(
             if (string.IsNullOrWhiteSpace(refresh))
             {
                 sessions.Clear();
-                throw new CommerceException("Vui lòng đăng nhập để sử dụng giỏ hàng và đặt hàng.");
+                return null;
             }
             try
             {
@@ -205,10 +232,10 @@ public sealed class CommerceApi(
                 await sessions.SaveAsync(refreshed);
                 return refreshed.AccessToken;
             }
-            catch (AuthException ex)
+            catch (AuthException)
             {
                 sessions.Clear();
-                throw new CommerceException(ex.Message, ex);
+                return null;
             }
         }
         finally

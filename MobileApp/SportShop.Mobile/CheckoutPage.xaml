@@ -86,7 +86,7 @@
                         <Label Text="Mã giảm giá" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#102C46" />
 
                         <Label IsVisible="{Binding HasNoVouchers}"
-                               Text="Hiện chưa có mã nào áp dụng được cho tài khoản của bạn."
+                               Text="{Binding NoVouchersMessage}"
                                FontSize="13" TextColor="#64748B" />
 
                         <VerticalStackLayout IsVisible="{Binding HasVouchers}" Spacing="8">

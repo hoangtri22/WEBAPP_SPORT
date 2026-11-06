@@ -15,7 +15,7 @@ Tài liệu này tổng hợp **chính xác từng file, class, hàm và số d�
 | **4. Đơn hàng của tôi (`Orders`)** | `Views/Customer/Orders.cshtml` & `Controllers/CustomerController.cs` | `OrdersPage.xaml`, `OrdersPage.xaml.cs` & `OrdersViewModel` (`ViewModels/OrdersAndStatsViewModel.cs`) | `GET /api/v1/orders`, `POST /api/v1/orders/{orderId}/cancel` (`Controllers/OrdersController.cs`) |
 
 ### Chi tiết các trạng thái đã đồng bộ y hệt Web:
-1. **Khi chưa đăng nhập (chế độ Khách):** Hiển thị thông báo *"Vui lòng đăng nhập để xem giỏ hàng. Nếu chưa có tài khoản, hãy đăng ký."* kèm nút **Đăng nhập / Đăng ký** (chuyển về `AuthPage`), giống hệt `CartController.LoginRequired("xem giỏ hàng")` trên Web.
+1. **Khi chưa đăng nhập (chế độ Khách hàng vãng lai — Guest):** Định danh theo `X-Guest-Device-Key` (`DeviceIdentity` + `GuestDeviceStore`), cho phép khách vãng lai thêm/sửa/xóa sản phẩm trong giỏ, tự nhập tay từng trường `Họ và tên`, `Số điện thoại`, `Địa chỉ giao hàng` ở bước Thanh toán (không điền tự động và không dùng voucher thành viên), đặt đơn và theo dõi/hủy đơn ngay trên trang `Đơn hàng của tôi` (`OrdersPage`).
 2. **Khi Giỏ hàng đang trống (`Items.Count == 0`):** Chỉ hiển thị thẻ *"Giỏ hàng đang trống — Hãy chọn vài món đồ bạn thích nhé."* và nút **Tiếp tục mua sắm** (ẩn hoàn toàn khung Tóm tắt đơn hàng ở dưới, giống hệt `Views/Cart/Index.cshtml` dòng 9–17).
 3. **Khi Giỏ hàng có sản phẩm (`Items.Count > 0`):**
    - Hiển thị danh sách sản phẩm trong giỏ (ảnh, tên, phân loại `Size / Màu`, đơn giá, cảnh báo *"Chỉ còn X sản phẩm trong kho"* nếu vượt tồn, nút `−` / `+` chỉnh số lượng, thành tiền, nút `✕` bỏ khỏi giỏ).

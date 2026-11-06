@@ -91,12 +91,17 @@ public sealed class PlacedOrderLineItem(OrderItemDto dto)
     public string AmountText => dto.Amount.ToString("N0", Vi) + " ₫";
 }
 
-// ViewModel cho Giỏ hàng & Thanh toán (Checkout) — đồng bộ 100% chức năng và hiển thị với SportShop.CustomerWeb (Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml).
-public sealed class CartViewModel(ICommerceApi api) : INotifyPropertyChanged
+// ViewModel cho Giỏ hàng & Thanh toán (Checkout) — đồng bộ 100% chức năng và hiển thị với SportShop.CustomerWeb (Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml), hỗ trợ cả Khách hàng có tài khoản và Khách hàng vãng lai (Guest).
+public sealed class CartViewModel(ICommerceApi api, ISessionStore? session = null) : INotifyPropertyChanged
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
     public const decimal FreeShipFrom = 500_000m;
     public const decimal StandardShipFee = 30_000m;
+
+    public bool IsGuest => session is not null && !session.IsSignedIn;
+    public string NoVouchersMessage => IsGuest
+        ? "Khách hàng vãng lai không áp dụng mã giảm giá thành viên. Hãy đăng nhập tài khoản để nhận ưu đãi."
+        : "Hiện chưa có mã nào áp dụng được cho tài khoản của bạn.";
 
     private bool _isBusy;
     private string? _errorMessage;
@@ -513,9 +518,19 @@ public sealed class CartViewModel(ICommerceApi api) : INotifyPropertyChanged
         ApplyCartDto(checkout.Cart);
         if (overwriteReceiver)
         {
-            _receiverName = checkout.Receiver.Name;
-            _receiverPhone = checkout.Receiver.Phone;
-            _receiverAddress = checkout.Receiver.Address;
+            if (IsGuest)
+            {
+                // Khách hàng vãng lai luôn tự nhập tay từng trường Họ tên, SĐT, Địa chỉ khi vào bước Thanh toán.
+                _receiverName = "";
+                _receiverPhone = "";
+                _receiverAddress = "";
+            }
+            else
+            {
+                _receiverName = checkout.Receiver.Name;
+                _receiverPhone = checkout.Receiver.Phone;
+                _receiverAddress = checkout.Receiver.Address;
+            }
         }
 
         var prevPaymentId = _selectedPaymentMethod?.Id;
@@ -579,7 +594,8 @@ public sealed class CartViewModel(ICommerceApi api) : INotifyPropertyChanged
             nameof(HasError), nameof(ErrorMessage), nameof(HasStatus), nameof(StatusMessage),
             nameof(ReceiverName), nameof(ReceiverPhone), nameof(ReceiverAddress),
             nameof(SelectedPaymentMethod), nameof(SelectedVoucher), nameof(VoucherCodeInput),
-            nameof(HasVouchers), nameof(HasNoVouchers), nameof(HasVoucherError), nameof(VoucherError),
+            nameof(HasVouchers), nameof(HasNoVouchers), nameof(NoVouchersMessage), nameof(IsGuest),
+            nameof(HasVoucherError), nameof(VoucherError),
             nameof(HasAppliedVoucher), nameof(AppliedVoucherText),
             nameof(Discount), nameof(DiscountText), nameof(ShippingFee), nameof(ShippingFeeText),
             nameof(Total), nameof(TotalText), nameof(CanPlaceOrder),

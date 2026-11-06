@@ -33,15 +33,7 @@ public partial class CartPage : ContentPage
 
     private async Task RefreshCartStateAsync()
     {
-        if (!_auth.IsSignedIn)
-        {
-            GuestLoginCard.IsVisible = true;
-            EmptyCartCard.IsVisible = false;
-            CartContentSection.IsVisible = false;
-            return;
-        }
-
-        GuestLoginCard.IsVisible = false;
+        GuestLoginCard.IsVisible = !_auth.IsSignedIn;
         await _vm.LoadCartAsync();
         EmptyCartCard.IsVisible = _vm.IsEmpty && !_vm.HasError;
         CartContentSection.IsVisible = _vm.HasItems;
@@ -100,12 +92,34 @@ public partial class CartPage : ContentPage
 
     private async void OnOpenOrdersClicked(object? sender, EventArgs e)
     {
-        if (!_auth.IsSignedIn)
-        {
-            await _auth.LeaveAsync();
-            return;
-        }
         var ordersPage = _services.GetRequiredService<OrdersPage>();
         await Navigation.PushAsync(ordersPage);
+    }
+
+    private async void OnHomeNavClicked(object? sender, EventArgs e)
+    {
+        if (Navigation.NavigationStack.Count > 1)
+            await Navigation.PopToRootAsync();
+    }
+
+    private async void OnCatalogNavClicked(object? sender, EventArgs e)
+    {
+        var catalogPage = _services.GetRequiredService<MainPage>();
+        if (catalogPage.Parent is null)
+            await Navigation.PushAsync(catalogPage);
+        else
+            await Navigation.PopAsync();
+    }
+
+    private async void OnCartNavClicked(object? sender, EventArgs e)
+    {
+        await RefreshCartStateAsync();
+    }
+
+    private async void OnAccountNavClicked(object? sender, EventArgs e)
+    {
+        var action = _auth.IsSignedIn ? "Đăng xuất" : "Đăng nhập / Đăng ký";
+        if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, action) == action)
+            await _auth.LeaveAsync();
     }
 }

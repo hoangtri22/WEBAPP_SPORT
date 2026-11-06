@@ -83,6 +83,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         Left?.Invoke();
     }
 
+    // Đổi giữa tab Đăng nhập và Đăng ký trên AuthPage, xóa lỗi cũ.
     private Task SwitchAsync(bool register)
     {
         _isRegister = register;
@@ -125,6 +126,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         Entered?.Invoke();
     }
 
+    // Kiểm tra form theo quy tắc AccountController.Validate của web, thêm định dạng tên đăng nhập của API.
     private string? Validate()
     {
         var username = Username.Trim();
@@ -145,6 +147,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         Notify(nameof(HasError));
     }
 
+    // Bật tắt trạng thái đang xử lý và cập nhật các nút trên AuthPage.
     private void SetBusy(bool busy)
     {
         _isBusy = busy;

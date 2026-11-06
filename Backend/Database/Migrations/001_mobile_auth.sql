@@ -1,4 +1,4 @@
--- Additive, repeatable migration. Run against the existing sports_shop schema; preserves all existing data.
+-- Thêm bảng phiên đăng nhập mobile; chạy lại được, giữ nguyên dữ liệu cũ.
 CREATE TABLE IF NOT EXISTS MOBILE_AUTH_SESSION (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,

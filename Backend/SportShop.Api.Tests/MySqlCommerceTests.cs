@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
-// Creates and removes only this test's records in an explicitly configured dedicated database.
+// Chỉ tạo và xóa bản ghi của test này trên CSDL test riêng.
 [Trait("Category", "MySql")]
 public sealed class MySqlCommerceTests
 {
@@ -219,7 +219,7 @@ public sealed class MySqlCommerceTests
         }
 
         MySqlConnection Open() { var connection = new MySqlConnection(_connectionString); connection.Open(); return connection; }
-        public ShopStore Shop() => new(_configuration, new CartStore(_environment, _configuration));
+        public ShopStore Shop() => new(_configuration, new CartStore(_environment, _configuration), new CatalogCache(_configuration));
         public int Stock() { using var connection = Open(); return connection.ExecuteScalar<int>("SELECT so_luong_ton FROM BIEN_THE_SP WHERE ma_bien_the=@VariantId", new { VariantId }); }
         public void DeleteVariant() { using var connection = Open(); connection.Execute("DELETE FROM BIEN_THE_SP WHERE ma_bien_the=@VariantId", new { VariantId }); }
         public void MarkPaid(int orderId) { using var connection = Open(); connection.Execute("UPDATE DON_HANG SET trang_thai_thanh_toan='da_thanh_toan' WHERE ma_don_hang=@orderId", new { orderId }); }

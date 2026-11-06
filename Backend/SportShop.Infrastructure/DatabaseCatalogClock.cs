@@ -15,9 +15,10 @@ public sealed class DatabaseCatalogClock : ICatalogClock
         _timeProvider = timeProvider;
     }
 
-    // Existing MySQL DATETIME values represent wall-clock time in the configured database zone.
+    // Giá trị DATETIME trong MySQL là giờ địa phương theo múi giờ cấu hình.
     public DateTime LocalNow => TimeZoneInfo.ConvertTime(_timeProvider.GetUtcNow(), _databaseZone).DateTime;
 
+    // Gắn offset múi giờ CSDL vào DATETIME đọc từ MySQL; giờ không xác định thì báo lỗi.
     public DateTimeOffset WithOffset(DateTime databaseTime)
     {
         var local = DateTime.SpecifyKind(databaseTime, DateTimeKind.Unspecified);

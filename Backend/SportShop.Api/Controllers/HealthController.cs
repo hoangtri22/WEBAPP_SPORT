@@ -13,7 +13,7 @@ public sealed class HealthController(IDatabaseReadiness database) : ControllerBa
     [ProducesResponseType<HealthDto>(StatusCodes.Status200OK)]
     public ActionResult<HealthDto> Live() => Ok(new HealthDto("healthy"));
 
-    /// <summary>Kiểm tra kết nối và schema API khách hàng, gồm auth/cart migrations, bằng truy vấn chỉ đọc.</summary>
+    /// <summary>Kiểm tra kết nối và schema API khách hàng qua IDatabaseReadiness.CheckAsync(), chỉ đọc.</summary>
     [HttpGet("ready")]
     [ProducesResponseType<HealthDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]

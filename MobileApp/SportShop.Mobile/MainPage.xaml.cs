@@ -13,7 +13,7 @@ public partial class MainPage : ContentPage
         BindingContext = _viewModel = viewModel;
     }
 
-    // Tải catalog thật khi mở trang; hủy request đầu tiên khi rời trang.
+    // Tải catalog qua CatalogViewModel.LoadAsync() khi mở trang; hủy request đầu tiên khi rời trang.
     protected override async void OnAppearing()
     {
         base.OnAppearing();

@@ -36,15 +36,15 @@
                         </Grid>
                         <Grid ColumnDefinitions="*,*,*">
                             <VerticalStackLayout>
-                                <Label Text="10K+" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
+                                <Label Text="45+" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
                                 <Label Text="Khách hàng tin chọn" FontSize="9" TextColor="{StaticResource TealSoft}" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="1">
-                                <Label Text="500+" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
+                                <Label Text="65" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
                                 <Label Text="Sản phẩm chính hãng" FontSize="9" TextColor="{StaticResource TealSoft}" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="2">
-                                <Label Text="4.9/5" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
+                                <Label Text="4.2/5" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
                                 <Label Text="Đánh giá trung bình" FontSize="9" TextColor="{StaticResource TealSoft}" />
                             </VerticalStackLayout>
                         </Grid>
@@ -93,7 +93,7 @@
                                 <Image Source="ic_zap_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
                                 <VerticalStackLayout>
                                     <Label Text="Giày chạy bộ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="86 sản phẩm" FontSize="11" TextColor="White" />
+                                    <Label Text="5 sản phẩm" FontSize="11" TextColor="White" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -102,7 +102,7 @@
                                 <Image Source="ic_user_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
                                 <VerticalStackLayout>
                                     <Label Text="Đồ tập nam" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="124 sản phẩm" FontSize="11" TextColor="White" />
+                                    <Label Text="11 sản phẩm" FontSize="11" TextColor="White" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -111,7 +111,7 @@
                                 <Image Source="ic_sparkles_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
                                 <VerticalStackLayout>
                                     <Label Text="Đồ tập nữ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="108 sản phẩm" FontSize="11" TextColor="White" />
+                                    <Label Text="8 sản phẩm" FontSize="11" TextColor="White" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -120,7 +120,7 @@
                                 <Image Source="ic_activity_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
                                 <VerticalStackLayout>
                                     <Label Text="Dụng cụ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="72 sản phẩm" FontSize="11" TextColor="White" />
+                                    <Label Text="17 sản phẩm" FontSize="11" TextColor="White" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -246,4 +246,4 @@
             </VerticalStackLayout>
         </Grid>
     </Grid>
-</ContentPage>
+</ContentPage>

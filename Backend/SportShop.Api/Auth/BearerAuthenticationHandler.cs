@@ -11,6 +11,7 @@ public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSc
 {
     public const string GuestDeviceHeader = "X-Guest-Device-Key";
 
+    // Đọc header Authorization, kiểm tra qua MobileTokenStore.ValidateAsync() rồi tạo claim mã khách, vai trò, session_id.
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var header = Request.Headers.Authorization.ToString();
@@ -48,12 +49,14 @@ public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSc
         path.StartsWithSegments("/api/v1/checkout", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWithSegments("/api/v1/orders", StringComparison.OrdinalIgnoreCase);
 
+    // Trả lỗi 401 dạng ProblemDetails qua ApiProblems khi thiếu hoặc sai token.
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.Headers.WWWAuthenticate = "Bearer";
         return ApiProblems.WriteAsync(Context, ApiProblems.Create(Context, 401, "UNAUTHENTICATED", "Bạn cần đăng nhập hoặc làm mới phiên đăng nhập."));
     }
 
+    // Trả lỗi 403 dạng ProblemDetails qua ApiProblems khi sai vai trò.
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
         => ApiProblems.WriteAsync(Context, ApiProblems.Create(Context, 403, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác này."));
 }

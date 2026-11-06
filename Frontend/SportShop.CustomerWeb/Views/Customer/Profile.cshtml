@@ -77,6 +77,7 @@
 
 @section Scripts {
     <script>
+        // Chọn sở thích: khi gửi form thêm input ẩn interests từ các nút đang chọn.
         document.querySelectorAll('#interests button').forEach(function (b) {
             b.addEventListener('click', function () { b.classList.toggle('selected'); });
         });

@@ -1,15 +1,4 @@
--- TEST FIXTURE ONLY. Never import into a development, shared, or production DB.
--- Requires the separate MySQL instance bound to 127.0.0.1:13380, with its
--- datadir below .test-artifacts/mysql-api-phase1 (a timestamp suffix is OK).
--- First import Backend/Database/sports_shop.sql into that isolated instance.
--- Run this file with mysql --no-defaults --protocol=TCP --host=127.0.0.1
---   --port=13380 --user=root --default-character-set=utf8mb4
---   --execute="source D:/WEBAPP_SPORT/Backend/SportShop.Api.Tests/Fixtures/catalog-edge-cases.sql"
--- Do not use --force. The guard performs no writes: an unsafe server causes
--- PREPARE to fail against a deliberately nonexistent information_schema table.
--- Every INSERT is additionally gated by @api_fixture_safe, even if a caller
--- ignores SQL errors. No CREATE, UPDATE, DELETE, DROP, or TRUNCATE is used.
--- Re-running on the same fixture adds no duplicate rows and resets no data.
+-- CHỈ DÙNG CHO TEST: nhập vào MySQL riêng cổng 13380 sau sports_shop.sql, không dùng --force, không nhập vào CSDL thật; mọi INSERT chặn bởi @api_fixture_safe, chạy lại không trùng dòng.
 
 SET @api_fixture_safe = (
     @@port = 13380
@@ -108,8 +97,7 @@ SELECT @api_archived_product, 'one', 'one', 10000.00, 100.00, 1, 'hien'
 WHERE @api_fixture_safe
   AND NOT EXISTS (SELECT 1 FROM BIEN_THE_SP WHERE ma_san_pham = @api_archived_product AND kich_co = 'one' AND mau_sac = 'one');
 
--- Promotion time is frozen at 2026-10-15 10:00 in Asia/Ho_Chi_Minh by
--- MySqlCatalogTests. Include both inclusive boundaries and every exclusion.
+-- Giờ khuyến mãi cố định 2026-10-15 10:00 (Asia/Ho_Chi_Minh) theo MySqlCatalogTests; có đủ mốc biên và các trường hợp loại trừ.
 INSERT INTO CTKM (ten_ctkm, loai_khuyen_mai, ngay_bat_dau, ngay_ket_thuc,
                   gia_tri_giam_toi_da, hang_ap_dung, so_luong_gioi_han,
                   so_luot_da_dung, gioi_han_khach_hang, trang_thai)

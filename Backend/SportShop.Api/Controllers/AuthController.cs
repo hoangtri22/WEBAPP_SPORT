@@ -14,7 +14,7 @@ namespace SportShop.Api.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AuthController(CustomerStore customers, MobileTokenStore tokens, LoginThrottle throttle) : ControllerBase
 {
-    /// <summary>Registers a customer. Existing web and mobile users share the same account records.</summary>
+    /// <summary>Đăng ký khách qua CustomerStore.Register() rồi cấp token bằng MobileTokenStore.IssueAsync(); web và mobile dùng chung tài khoản.</summary>
     [HttpPost("register")]
     [ProducesResponseType<TokenResponse>(201)]
     [ProducesResponseType<ProblemDetails>(409)]
@@ -29,7 +29,7 @@ public sealed class AuthController(CustomerStore customers, MobileTokenStore tok
         return result is null ? Error(401, "UNAUTHENTICATED", "Tài khoản không còn hoạt động.") : StatusCode(201, result);
     }
 
-    /// <summary>Signs in with username or email. Five failed attempts lock this username/IP pair for five minutes.</summary>
+    /// <summary>Đăng nhập bằng tên hoặc email qua CustomerStore.Login(); sai 5 lần thì LoginThrottle khóa cặp tên/IP 5 phút.</summary>
     [HttpPost("login")]
     [ProducesResponseType<TokenResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -54,7 +54,7 @@ public sealed class AuthController(CustomerStore customers, MobileTokenStore tok
         return result is null ? Error(401, "INVALID_CREDENTIALS", "Tài khoản không còn hoạt động.") : Ok(result);
     }
 
-    /// <summary>Rotates both tokens. A reused refresh token revokes its entire session.</summary>
+    /// <summary>Xoay token qua MobileTokenStore.RefreshAsync(); dùng lại refresh token cũ thì thu hồi cả phiên.</summary>
     [HttpPost("refresh")]
     [ProducesResponseType<TokenResponse>(200)]
     [ProducesResponseType<ProblemDetails>(401)]
@@ -64,7 +64,7 @@ public sealed class AuthController(CustomerStore customers, MobileTokenStore tok
         return result is null ? Error(401, "INVALID_REFRESH_TOKEN", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.") : Ok(result);
     }
 
-    /// <summary>Revokes the current device session and its refresh token.</summary>
+    /// <summary>Thu hồi phiên hiện tại qua MobileTokenStore.RevokeAsync().</summary>
     [HttpPost("logout"), Authorize(Roles = "Customer")]
     [ProducesResponseType(204)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)

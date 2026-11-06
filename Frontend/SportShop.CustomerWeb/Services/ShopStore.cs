@@ -33,24 +33,26 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     // Khóa sắp xếp: như Fold nhưng "đ" đứng cùng "d" (cách MySQL xếp tên và màu: Cam, Đen, Đỏ, Hồng).
     static string SortKey(string? s) => Fold(s).Replace('đ', 'd');
 
-    // Tìm kiếm sản phẩm dùng chung (ProductQuery), lọc ngay trên danh mục trong CatalogCache (không truy vấn MySQL mỗi lần gõ): mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại (không phân biệt hoa thường và dấu);
-    // bộ lọc nâng cao (khoảng giá, size, màu) áp lên biến thể còn bán và còn hàng; giá thấp nhất/cao nhất và tồn kho tổng hợp từ các biến thể đang bán.
+    // Tìm kiếm sản phẩm dùng chung (ProductQuery), lọc trên CatalogCache không truy vấn MySQL: mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại; khoảng giá, size, màu áp lên biến thể còn bán và còn hàng; điều kiện Không (nq, ncat, nsize, ncolor) đảo hoặc loại trừ theo ProductQuery.
     public List<ShopProduct> Search(ProductQuery q)
     {
-        // Khách nhập ngược khoảng giá (từ lớn hơn đến) thì tự đổi chỗ
         if (q.MinPrice > 0 && q.MaxPrice > 0 && q.MinPrice > q.MaxPrice) (q.MinPrice, q.MaxPrice) = (q.MaxPrice, q.MinPrice);
         var words = q.Words.Select(Fold).ToArray();
+        var notWords = q.NotWords.Select(Fold).ToArray();
         string size = Fold(q.Size?.Trim()), color = Fold(q.Color?.Trim());
 
         var found = new List<(CatalogProduct P, decimal? Min, decimal? Max, int Stock)>();
         foreach (var p in catalog.Get().Products)
         {
-            if (q.Category is int category && p.CategoryId != category) continue;
+            if (q.Category is int category && (p.CategoryId == category) == q.NotCategory) continue;
             var text = Fold(p.Name) + "\n" + Fold(p.Category);
-            if (words.Any(w => !text.Contains(w))) continue;
-            if (q.IsAdvanced && !p.Variants.Any(v => v.Visible && v.Stock > 0
+            if (words.Any(w => !text.Contains(w)) || notWords.Any(text.Contains)) continue;
+            bool Has(Func<CatalogVariant, bool> match) => p.Variants.Any(v => v.Visible && v.Stock > 0 && match(v));
+            if (q.NotSize && size.Length > 0 && Has(v => Fold(v.Size) == size)) continue;
+            if (q.NotColor && color.Length > 0 && Has(v => Fold(v.Color) == color)) continue;
+            if (q.HasVariantFilter && !p.Variants.Any(v => v.Visible && v.Stock > 0
                 && !(q.MinPrice is > 0 && v.Price < q.MinPrice) && !(q.MaxPrice is > 0 && v.Price > q.MaxPrice)
-                && (size.Length == 0 || Fold(v.Size) == size) && (color.Length == 0 || Fold(v.Color) == color))) continue;
+                && (size.Length == 0 || q.NotSize || Fold(v.Size) == size) && (color.Length == 0 || q.NotColor || Fold(v.Color) == color))) continue;
             var visible = p.Variants.Where(v => v.Visible).ToList();
             found.Add((p, visible.Count == 0 ? null : visible.Min(v => v.Price), visible.Count == 0 ? null : visible.Max(v => v.Price), visible.Sum(v => v.Stock)));
         }
@@ -63,7 +65,6 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             _ => found.OrderByDescending(x => x.P.Id),
         };
         return sorted.Take(q.Take ?? 1000).Select(x => new ShopProduct(x.P.Id, x.P.Name, x.P.Category, x.P.Unit, x.P.Description,
-            // Ảnh đại diện: biến thể có ảnh, ưu tiên biến thể đang bán rồi theo mã
             x.P.Variants.Where(v => v.Image != null).OrderBy(v => !v.Visible).ThenBy(v => v.Id).FirstOrDefault()?.Image,
             x.Min, x.Max, x.Stock)).ToList();
     }
@@ -132,12 +133,13 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? GetCart(id) : [];
     public Dictionary<int, int> GetCart(int customerId) => carts.Get(customerId);
     public void ClearCart(ISession s) { if (CustomerOf(s) > 0) ClearCart(CustomerOf(s)); }
+    // Xóa hết giỏ của khách qua CartStore.Save().
     public void ClearCart(int customerId) => carts.Save(customerId, []);
     public int CartCount(ISession s) => GetCart(s).Values.Sum();
 
     public string? AddToCart(ISession session, int variantId, int qty) => AddToCart(CustomerOf(session), variantId, qty);
 
-    // Both hosts use this operation, with a customer lock to prevent lost cart updates.
+    // Thêm vào giỏ (web và API cùng gọi): kiểm tra tồn kho trong BIEN_THE_SP, khóa khách qua CartStore.Mutate() để không mất cập nhật.
     public string? AddToCart(int customerId, int variantId, int qty)
     {
         if (customerId <= 0) return "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.";
@@ -163,6 +165,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         if (CustomerOf(session) > 0) SetQty(CustomerOf(session), variantId, qty);
     }
 
+    // Đổi số lượng dòng giỏ qua CartStore.Mutate(): 0 là xóa, không vượt tồn kho BIEN_THE_SP hoặc 999.
     public string? SetQty(int customerId, int variantId, int qty) => carts.Mutate<string?>(customerId, cart =>
     {
         if (!cart.ContainsKey(variantId)) return "Không tìm thấy sản phẩm trong giỏ hàng.";
@@ -180,9 +183,9 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
 
     public List<CartLine> CartLines(ISession session) => CustomerOf(session) > 0 ? CartLines(CustomerOf(session)) : [];
 
+    // Dòng giỏ: số lượng từ CartStore, giá và tồn kho từ BIEN_THE_SP; giữ dòng hết hàng đến khi checkout từ chối hoặc khách xóa.
     public List<CartLine> CartLines(int customerId)
     {
-        // Retain unavailable lines in storage until checkout rejects them or the user removes them.
         var cart = GetCart(customerId);
         if (cart.Count == 0) return [];
         var ids = cart.Keys.ToArray();
@@ -196,7 +199,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
                 D(r,"gia_ban"),cart[I(r,"ma_bien_the")],I(r,"stock"))).OrderBy(l => l.Name).ToList();
     }
 
-    // The additive migration provisions the existing four simulated web payment methods.
+    // Phương thức thanh toán mô phỏng từ PHUONG_THUC_THANH_TOAN (migration 003 tạo sẵn).
     public List<PaymentMethod> PaymentMethods()
     {
         using var c = Open();
@@ -218,7 +221,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         return new ReceiverInfo(k == null ? "" : S(k, "ten"), k == null ? "" : S(k, "so_dien_thoai"), "");
     }
 
-    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), còn lượt và chưa vượt giới hạn mỗi khách (mã khách mới / theo hạng mặc định 1 lần); trả về mã CTKM và số tiền giảm.
+    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), còn lượt và chưa vượt giới hạn mỗi khách (Catalog.VoucherUseLimit()); trả về mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
         // Đang đặt hàng (có giao dịch): khóa dòng chương trình để nhiều khách đặt cùng lúc lần lượt kiểm tra lượt dùng, không vượt giới hạn
@@ -238,7 +241,6 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             throw new OrderError("Mã dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
         if (NI(km, "so_luong_gioi_han") is int lim && I(km, "so_luot_da_dung") >= lim) throw new OrderError("Mã giảm giá đã hết lượt sử dụng.");
         int ctId = I(km, "ma_ctkm");
-        // Số lần mỗi khách được dùng: khách mới 1, hạng Bạc 2, hạng Vàng 3 (Catalog.VoucherUseLimit); mã khác theo giới hạn của chương trình
         int? perLimit = Catalog.VoucherUseLimit(newCustomerOnly, needTier) ?? NI(km, "gioi_han_khach_hang");
         if (perLimit is int per
             && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customerId", new { ctId, customerId }, tx) >= per)
@@ -258,7 +260,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     // Phí vận chuyển: miễn phí từ FreeShipFrom (500.000đ), còn lại ShipFee (30.000đ).
     public static decimal ShippingFor(decimal subtotal) => subtotal >= FreeShipFrom || subtotal == 0 ? 0 : ShipFee;
 
-    // Atomic mobile checkout. Replay returns the original order without reading or clearing a newer cart.
+    // Đặt đơn từ giỏ cho mobile trong một transaction: gửi lại cùng Idempotency-Key thì trả đơn cũ, không đọc hay xóa giỏ mới hơn.
     public (int? OrderId, string? Error, bool Replayed) PlaceCartOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, string requestKey)
     {
         if (string.IsNullOrWhiteSpace(requestKey) || requestKey.Length > 128 || requestKey.Any(ch => ch < 33 || ch > 126))
@@ -288,7 +290,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         catch (OrderError error) { return (null, error.Message, false); }
     }
 
-    // Compatibility entry point for web callers supplying an explicit cart; shares the same transaction writer.
+    // Đặt đơn cho web với giỏ truyền vào; dùng chung WriteOrder().
     public (int? OrderId, string? Error) PlaceOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
     {
         using var c = Open();
@@ -305,6 +307,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         catch (OrderError error) { return (null, error.Message); }
     }
 
+    // Ghi đơn trong transaction: kiểm tra giỏ và người nhận, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, SO_DIA_CHI và trừ tồn kho.
     int WriteOrder(MySqlConnection c, MySqlTransaction tx, int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
     {
         if (cart.Count == 0) throw new OrderError("Giỏ hàng đang trống.");
@@ -400,6 +403,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         }).ToList();
     }
 
+    // Đếm đơn của khách trong DON_HANG, lọc theo trạng thái; OrdersController của API dùng để phân trang.
     public long OrderCount(int customerId, string? status = null)
     {
         using var c = Open();

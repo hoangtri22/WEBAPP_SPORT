@@ -55,7 +55,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         set { _isRefreshing = value; Notify(); }
     }
 
-    // Lấy catalog theo từ khóa/phân trang; giữ trang cũ nếu tải thêm lỗi để retry đúng trang.
+    // Lấy catalog qua ICatalogApi.GetProductsAsync() theo từ khóa / trang; giữ trang cũ nếu tải thêm lỗi để thử lại đúng trang.
     public async Task LoadAsync(bool append = false, CancellationToken cancellationToken = default)
     {
         if (_isBusy) { IsRefreshing = false; return; }
@@ -87,6 +87,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         }
     }
 
+    // Báo lại MainPage và các command sau mỗi lần đổi trạng thái tải.
     private void UpdateState()
     {
         foreach (var name in new[] { nameof(IsBusy), nameof(IsIdle), nameof(HasLoaded), nameof(HasError),

@@ -5,6 +5,7 @@ namespace SportShop.Api.OpenApi;
 
 internal static class MobileApiDocument
 {
+    // Bổ sung tài liệu OpenAPI: khai báo Bearer, gắn bảo mật cho endpoint cần đăng nhập, thêm phản hồi lỗi và ví dụ request. Gọi từ Program.cs.
     public static void Complete(OpenApiDocument document)
     {
         document.Components ??= new();
@@ -39,6 +40,7 @@ internal static class MobileApiDocument
         }
     }
 
+    // Thêm mô tả phản hồi lỗi vào operation nếu chưa có. Gọi từ Complete().
     static void Error(OpenApiOperation operation, OpenApiDocument document, string status, string code, string description)
     {
         operation.Responses ??= new OpenApiResponses();

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
-// These tests only SELECT from explicitly configured test databases. They never seed or repair them.
+// Các test này chỉ SELECT trên CSDL test được cấu hình, không thêm hay sửa dữ liệu.
 [Trait("Category", "MySql")]
 public sealed class MySqlCatalogTests
 {
@@ -103,7 +103,7 @@ public sealed class MySqlCatalogTests
 
         foreach (var query in new[] { "%", "_", "!", "%_!", "%' OR 1=1 --", "Giày" })
         {
-            // LOCATE has no wildcard syntax and provides an independent DB-collation-aware oracle for LIKE escaping.
+            // LOCATE không có ký tự đại diện nên dùng đối chiếu độc lập với phép escape LIKE.
             var matched = await connection.QueryAsync<int>("""
                 SELECT sp.ma_san_pham FROM SAN_PHAM sp JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
                 WHERE LOCATE(@query, sp.ten_san_pham) > 0 OR LOCATE(@query, l.ten_loai) > 0

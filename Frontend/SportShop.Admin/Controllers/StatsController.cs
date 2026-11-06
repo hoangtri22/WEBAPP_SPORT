@@ -79,6 +79,14 @@ public class StatsController(ShopData db) : Controller
         return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"thong-ke-{vm.Kind}-{DateTime.Today:yyyyMMdd}.xlsx");
     }
 
+    // Tải file PDF các bảng đang xem: lấy dữ liệu qua Build() rồi dựng file bằng StatsPdf.Build() (Models/StatsPdf.cs).
+    public IActionResult Pdf(DateTime? from, DateTime? to, string? kind, string? group)
+    {
+        var vm = Build(from, to, kind, group);
+        return File(StatsPdf.Build(vm, Kinds.First(k => k.Key == vm.Kind).Text), "application/pdf", $"thong-ke-{vm.Kind}-{DateTime.Now:yyyyMMdd}.pdf");
+    }
+
+    // Dựng dữ liệu trang thống kê từ ShopData.InvoiceRows() và các bảng đang chọn; dùng chung cho Index, xuất Excel và tải PDF.
     StatsVm Build(DateTime? from, DateTime? to, string? kind, string? group)
     {
         var all = db.InvoiceRows();

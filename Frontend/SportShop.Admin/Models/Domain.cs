@@ -90,6 +90,7 @@ public static class Fmt
 
     public static string Money(decimal v) => string.Format(Vi, "{0:N0}đ", v);
 
+    // Rút gọn số tiền (tỷ đ, tr) để hiển thị.
     public static string Compact(decimal v) => v switch
     {
         >= 1_000_000_000 => string.Format(Vi, "{0:0.##} tỷ đ", v / 1_000_000_000),
@@ -103,6 +104,7 @@ public static class Fmt
 
     public static string Pct(decimal v) => string.Format(Vi, "{0:0.#}%", v);
 
+    // Đổi thời điểm thành chữ "x phút trước", "Hôm qua"...
     public static string Ago(DateTime t)
     {
         var d = DateTime.Now - t;
@@ -113,6 +115,7 @@ public static class Fmt
         return $"{(int)d.TotalDays} ngày trước";
     }
 
+    // Dựng HTML cho ô bảng: tiền tố [l] là danh sách, [x] là nhãn màu, còn lại là chữ; nội dung luôn được encode.
     public static IHtmlContent Cell(string s)
     {
         if (s.StartsWith("[l]"))
@@ -134,6 +137,7 @@ public static class Fmt
         return new HtmlString(WebUtility.HtmlEncode(s));
     }
 
+    // Đổi mã trạng thái đơn sang nhãn hiển thị.
     public static string OrderStatus(string s) => s switch
     {
         "cho_xac_nhan" => "[o]Chờ xác nhận",

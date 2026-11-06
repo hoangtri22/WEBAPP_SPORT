@@ -323,7 +323,7 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
-    /// <summary>One shared validator for mobile JSON and web survey forms.</summary>
+    /// <summary>Bộ kiểm tra dùng chung cho JSON mobile và form khảo sát web.</summary>
     public static string? ValidateSurveyAnswers(List<SurveyQ> questions, Dictionary<int, (List<int> Options, string? Text)> answers)
     {
         if (answers.Keys.Any(id => questions.All(q => q.Id != id))) return "Câu hỏi không thuộc khảo sát này.";
@@ -351,6 +351,7 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
+    // Gửi phản hồi từ mobile: kiểm tra sản phẩm đã nhận trong đơn da_giao rồi gọi SendFeedback(). Gọi từ FeedbackController của API.
     public string? AddPurchasedFeedback(int customerId, int productId, int stars, string content, int? orderId = null)
     {
         if (stars is < 1 or > 5 || string.IsNullOrWhiteSpace(content) || content.Length > 1000) return "Phản hồi không hợp lệ.";
@@ -366,6 +367,7 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
+    // Lịch sử phản hồi cho mobile từ PHAN_HOI, kèm trả lời mới nhất trong TRA_LOI_PHAN_HOI.
     public List<MobileFeedback> MobileFeedbacks(int customerId)
     {
         using var c = Open();

@@ -198,7 +198,7 @@ ALTER TABLE KHACH_HANG ADD COLUMN da_xoa TINYINT(1) NOT NULL DEFAULT 0 AFTER ton
 
 ## Phân tích và thiết kế API cho MobileApp
 
-REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới dùng hash có salt;
+REST API được mở rộng ngày 01/11/2026, dùng chung service/model gốc qua `SportShop.Shared`. Mật khẩu mới mã hóa AES-GCM (Quản lý xem lại được, khóa nằm trong code);
 đăng nhập hợp lệ nâng cấp dữ liệu plaintext demo cũ. Mobile dùng opaque bearer access/refresh token, refresh rotation và thu hồi phiên;
 đặt đơn có `Idempotency-Key`. Đơn đã thanh toán cần cửa hàng xử lý hoàn tiền, khách không tự hủy để tránh lệch hóa đơn/điểm.
 Không đưa token, mật khẩu hoặc DB credential vào app/Git/log. App MAUI chưa được triển khai.

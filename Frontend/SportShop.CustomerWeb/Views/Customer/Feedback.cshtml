@@ -78,6 +78,7 @@
 
 @section Scripts {
     <script>
+        // Chọn số sao: ghi vào ô #stars để gửi cùng form phản hồi.
         (function () {
             var stars = document.querySelectorAll('#rating button'), text = document.getElementById('ratingText');
             function paint(n) {
@@ -88,6 +89,7 @@
             stars.forEach(function (b) { b.addEventListener('click', function () { paint(parseInt(b.dataset.star, 10)); }); });
         })();
 
+        // Mở hộp chi tiết phản hồi: nội dung lấy từ data-* của nút .detail-link.
         (function () {
             var modal = document.getElementById('fbModal');
             function close() { modal.hidden = true; }

@@ -16,8 +16,16 @@
     <div class="note">@Model.Note</div>
 }
 
+@if (Model.DetailHint != null)
+{
+    @:<div class="md-split"><div class="md-list">
+}
 @foreach (var s in Model.Sections)
 {
     n++;
     <partial name="_Section" model="s" view-data='new ViewDataDictionary(ViewData) { { "id", "tbl" + n }, { "hint", Model.Title.ToLowerInvariant() } }' />
+}
+@if (Model.DetailHint != null)
+{
+    @:</div><aside class="card md-detail" id="mdDetail"><div class="empty">@Model.DetailHint</div></aside></div>
 }

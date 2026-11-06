@@ -78,6 +78,7 @@
 
 @section Scripts {
     <script>
+        // Chọn voucher: thêm trường apply rồi gửi form đến CartController.Checkout để tính lại giảm giá.
         document.querySelectorAll('.voucher-opt input').forEach(r => r.addEventListener('change', () => {
             const f = r.form, a = document.createElement('input');
             a.type = 'hidden'; a.name = 'apply'; a.value = '1';

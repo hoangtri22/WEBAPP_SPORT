@@ -8,6 +8,7 @@ public class TableSection
     public string[] Columns { get; init; } = [];
     public List<Row> Rows { get; init; } = [];
     public string? AddLabel { get; init; }
+    public string? ExportUrl { get; init; }
     public bool ShowActions { get; init; }
     public bool Toolbar { get; init; } = true;
     public int PageSize { get; init; } = 8;
@@ -25,5 +26,6 @@ public class TablePage
     public string Title { get; init; } = "";
     public string? Subtitle { get; init; }
     public string? Note { get; init; }
+    public string? DetailHint { get; init; }
     public List<TableSection> Sections { get; init; } = [];
 }

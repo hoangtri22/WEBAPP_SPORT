@@ -17,6 +17,7 @@ public record Opt(string Value, string Label, string? Data = null);
 
 public class UserError(string message) : Exception(message);
 
+// Đọc giá trị đã làm sạch từ form gửi lên CrudController.
 public class Form(IFormCollection f)
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
@@ -104,6 +105,7 @@ public class ShopCommands
         };
     }
 
+    // Danh sách ảnh cho ô chọn: gộp thư mục Images và Uploads qua ImagesIn().
     List<Opt> ImageOptions()
     {
         var list = new List<Opt> { new("", "(Chưa có ảnh)") };
@@ -190,6 +192,7 @@ public class ShopCommands
         return values;
     }
 
+    // Sở thích đã chọn của khách từ KHACH_HANG_SO_THICH, điền sẵn biểu mẫu sửa khách.
     public HashSet<string> CustomerInterests(int customerId)
     {
         using var c = new MySqlConnection(_cs);
@@ -222,6 +225,7 @@ public class ShopCommands
             .Select(r => (S(r, "noi_dung"), S(r, "loai_cau_hoi"), S(r, "bat_buoc") is "1" or "True", string.Join("\n", opts[S(r, "ma_cau_hoi")]))).ToList();
     }
 
+    // Khảo sát đã có khách làm chưa (KHAO_SAT_KHACH_HANG), dùng để khóa sửa câu hỏi.
     public bool SurveyHasAnswers(int id)
     {
         using var c = new MySqlConnection(_cs);
@@ -323,6 +327,7 @@ public class ShopCommands
         return $"Đã lưu khách hàng {last} {first}.";
     }
 
+    // Cập nhật email, SĐT trong TAI_KHOAN (kiểm tra trùng email) và địa chỉ mặc định trong SO_DIA_CHI. Gọi từ SaveCustomer().
     void UpdateCustomerAccountAndAddress(MySqlConnection c, MySqlTransaction tx, int id, Form f, string last, string first, string phone)
     {
         int? accountId = c.ExecuteScalar<int?>("SELECT ma_tai_khoan FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }, tx);
@@ -568,7 +573,7 @@ public class ShopCommands
         return $"Đã lập phiếu nhập PN{slip:D3}: {lines.Count} mặt hàng, tổng {total:N0}đ. Tồn kho và giá vốn đã được cập nhật.";
     }
 
-    // Tạo đơn tại quầy: tính tiền theo giá BIEN_THE_SP, áp voucher (KM_THEO_VOUCHER + CTKM; mã khách mới chỉ dùng ở lần mua đầu, mã khách mới / theo hạng mặc định 1 lần mỗi khách), ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
+    // Tạo đơn tại quầy: tính tiền theo giá BIEN_THE_SP, áp voucher (KM_THEO_VOUCHER + CTKM, lượt dùng theo Catalog.VoucherUseLimit()), ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string CreateOrder(MySqlConnection c, MySqlTransaction tx, Form f, Ctx me)
     {
         int customer = f.I("ma_khach_hang");
@@ -582,7 +587,7 @@ public class ShopCommands
         if (pay == 0) throw new UserError("Vui lòng chọn phương thức thanh toán.");
         if (ship < 0) throw new UserError("Phí vận chuyển không được âm.");
 
-        // Match mobile checkout lock order: customer, variants by ID, promotion.
+        // Khóa cùng thứ tự với checkout mobile: khách, biến thể theo mã, khuyến mãi.
         if (c.ExecuteScalar<int?>("SELECT ma_khach_hang FROM KHACH_HANG WHERE ma_khach_hang=@customer AND da_xoa=0 FOR UPDATE", new { customer }, tx) is null)
             throw new UserError("Khách hàng không tồn tại hoặc đã bị xóa.");
 
@@ -624,7 +629,6 @@ public class ShopCommands
                 throw new UserError("Voucher dành cho khách mới chỉ dùng được ở lần mua hàng đầu tiên.");
             if (S(km, "so_luong_gioi_han") is { Length: > 0 } lim && int.Parse(S(km, "so_luot_da_dung")) >= int.Parse(lim)) throw new UserError("Voucher đã hết lượt sử dụng.");
             int ctId = int.Parse(S(km, "ma_ctkm"));
-            // Số lần mỗi khách được dùng: khách mới 1, hạng Bạc 2, hạng Vàng 3 (Catalog.VoucherUseLimit); mã khác theo giới hạn của chương trình
             int? perLimit = Catalog.VoucherUseLimit(newCustomerOnly, needTier) ?? (int.TryParse(S(km, "gioi_han_khach_hang"), out int cfg) ? cfg : null);
             if (perLimit is int per
                 && c.ExecuteScalar<int>("SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI WHERE ma_ctkm=@ctId AND ma_khach_hang=@customer", new { ctId, customer }, tx) >= per)
@@ -666,8 +670,7 @@ public class ShopCommands
     // Cập nhật trạng thái đơn / thanh toán / vận chuyển: hủy đơn thì hoàn tồn kho và hoàn tiền (RefundInvoice()); đơn đã giao và đã thanh toán thì lập hóa đơn qua CreateInvoice().
     string UpdateOrder(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
-        // Read immutable ownership outside this transaction so waiting for its customer lock
-        // does not establish a stale repeatable-read snapshot for invoice/loyalty queries.
+        // Đọc mã khách ngoài transaction để lúc chờ khóa khách không tạo snapshot cũ cho truy vấn hóa đơn / điểm.
         int? customer;
         using (var lookup = new MySqlConnection(_cs))
             customer = lookup.ExecuteScalar<int?>("SELECT ma_khach_hang FROM DON_HANG WHERE ma_don_hang=@id", new { id });
@@ -1127,8 +1130,7 @@ public class ShopCommands
     });
 
 
-    // Nhập sản phẩm từ file Excel (.xlsx, cùng mẫu với nút "Xuất Excel" ở trang Quản lý sản phẩm): cột A–I = Tên sản phẩm, Loại sản phẩm, Đơn vị tính, Mô tả, Kích cỡ, Màu sắc, Giá bán, Giá vốn, Tồn kho.
-    // Sản phẩm chưa có (theo tên) thì thêm vào SAN_PHAM; biến thể chưa có (theo kích cỡ + màu) thì thêm vào BIEN_THE_SP, đã có thì cập nhật giá và tồn kho. Có dòng lỗi thì không ghi gì và báo các dòng đó.
+    // Nhập sản phẩm từ file .xlsx (cùng mẫu nút "Xuất Excel", cột A–I): thêm SAN_PHAM theo tên, thêm hoặc cập nhật BIEN_THE_SP theo kích cỡ + màu; có dòng lỗi thì không ghi gì và báo các dòng đó.
     public Result ImportProducts(Stream file) => Run((c, tx) =>
     {
         ClosedXML.Excel.IXLWorksheet sheet;
@@ -1213,6 +1215,7 @@ public class ShopCommands
         catch (MySqlException e) { return new Result(false, Friendly(e)); }
     }
 
+    // Sản phẩm đã có trong đơn, hóa đơn hoặc phiếu nhập chưa.
     static bool ProductHasHistory(MySqlConnection c, MySqlTransaction tx, int product) => c.ExecuteScalar<int>("""
         SELECT (SELECT COUNT(*) FROM CHI_TIET_DON_HANG x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
              + (SELECT COUNT(*) FROM CHI_TIET_HOA_DON x JOIN BIEN_THE_SP b ON b.ma_bien_the = x.ma_bien_the WHERE b.ma_san_pham = @product)
@@ -1221,11 +1224,13 @@ public class ShopCommands
              + (SELECT COUNT(*) FROM PHAN_HOI WHERE ma_san_pham = @product)
         """, new { product }, tx) > 0;
 
+    // Lấy hoặc tạo loại lưu trữ Catalog.ArchivedCategory trong LOAI_SP.
     static int ArchivedCategoryId(MySqlConnection c, MySqlTransaction tx)
     {
         var id = c.ExecuteScalar<int?>("SELECT ma_loai FROM LOAI_SP WHERE ten_loai=@name", new { name = Catalog.ArchivedCategory }, tx);
         return id ?? c.ExecuteScalar<int>("INSERT INTO LOAI_SP (ten_loai) VALUES (@name); SELECT LAST_INSERT_ID();", new { name = Catalog.ArchivedCategory }, tx);
     }
+    // Đổi mã lỗi MySQL thành thông báo tiếng Việt. Gọi từ Run().
     static string Friendly(MySqlException e) => e.Number switch
     {
         1062 => "Dữ liệu bị trùng (tên đăng nhập, email, mã voucher hoặc biến thể đã tồn tại).",
@@ -1244,11 +1249,13 @@ public class ShopCommands
         if (!me.IsManager) throw new UserError("Chỉ tài khoản Quản lý mới được thao tác với mục này.");
     }
 
+    // Kiểm tra định dạng email; sai thì báo UserError.
     static void CheckEmail(string email)
     {
         if (!Regex.IsMatch(email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$")) throw new UserError("Email chưa đúng định dạng.");
     }
 
+    // Kiểm tra SĐT 10 số bắt đầu bằng 0; sai thì báo UserError.
     static void CheckPhone(string phone, bool required)
     {
         if (phone.Length == 0) { if (required) throw new UserError("Vui lòng nhập số điện thoại."); return; }

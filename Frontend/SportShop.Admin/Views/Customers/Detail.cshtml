@@ -34,7 +34,7 @@
                 @if (string.IsNullOrEmpty(M.Username)) { <text>-</text> }
                 else if (User.IsInRole("Quản lý"))
                 {
-                    <span id="pwText" data-pw="@M.Password">••••••••</span>
+                    <span id="pwText" data-pw="@Model.Password">••••••••</span>
                     <button type="button" class="btn-outline" style="height:30px;padding:0 12px;margin-left:8px" onclick="var s=document.getElementById('pwText'),h=this.dataset.shown==='1';s.textContent=h?'••••••••':s.dataset.pw;this.dataset.shown=h?'0':'1';this.textContent=h?'Hiện':'Ẩn'">Hiện</button>
                 }
                 else { <span class="muted">Chỉ tài khoản Quản lý xem được</span> }

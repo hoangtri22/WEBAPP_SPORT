@@ -14,6 +14,7 @@
     </div>
     <div class="head-actions">
         <a class="btn-outline" asp-action="Export" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Xuất Excel</a>
+        <a class="btn-outline" asp-action="Pdf" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Tải PDF</a>
         <button type="button" class="btn-primary" onclick="window.print()">@Icons.Svg("printer", 18) In / Lưu PDF</button>
     </div>
 </div>

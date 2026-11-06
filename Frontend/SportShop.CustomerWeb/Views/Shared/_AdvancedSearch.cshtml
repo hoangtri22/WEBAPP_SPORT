@@ -1,5 +1,5 @@
 @*
-    Tìm kiếm nâng cao ở trang cửa hàng: từ khóa, loại, khoảng giá, size, màu và cách sắp xếp.
+    Tìm kiếm nâng cao ở trang cửa hàng: từ khóa, từ khóa loại trừ, loại, khoảng giá, size, màu (có ô Không) và cách sắp xếp.
     Gửi bằng GET đến /Shop (ShopController.Index → ProductQuery → ShopStore.Search), tự mở ra khi đang dùng bộ lọc nâng cao.
 *@
 @model AdvancedSearchVm
@@ -11,26 +11,30 @@
     <summary>@Icons.Svg("search", 17) Tìm kiếm nâng cao</summary>
     <form method="get" asp-controller="Shop" asp-action="Index" class="adv-form">
         <label class="adv-wide"><span>Từ khóa</span><span class="adv-keyword"><partial name="_SearchInput" model="keywordBox" /></span></label>
-        <label><span>Loại sản phẩm</span>
-            <select name="cat">
+        <label class="adv-wide"><span>Không chứa từ khóa</span><input name="nq" maxlength="100" value="@q.NotKeyword" placeholder="Từ cần loại trừ..." autocomplete="off" /></label>
+        <div class="adv-field">
+            <div class="adv-head"><label for="advCat">Loại sản phẩm</label><label class="adv-not"><input type="checkbox" name="ncat" value="true" checked="@q.NotCategory" /> Không</label></div>
+            <select id="advCat" name="cat">
                 <option value="">Tất cả loại</option>
                 @foreach (var c in Model.Categories) { <option value="@c.Id" selected="@(q.Category == c.Id)">@c.Name</option> }
             </select>
-        </label>
+        </div>
         <label><span>Giá từ (₫)</span><input type="number" name="min" min="0" step="1000" value="@(q.MinPrice is > 0 ? q.MinPrice.Value.ToString("0.##") : "")" placeholder="0" /></label>
         <label><span>Giá đến (₫)</span><input type="number" name="max" min="0" step="1000" value="@(q.MaxPrice is > 0 ? q.MaxPrice.Value.ToString("0.##") : "")" placeholder="Không giới hạn" /></label>
-        <label><span>Size</span>
-            <select name="size">
+        <div class="adv-field">
+            <div class="adv-head"><label for="advSize">Size</label><label class="adv-not"><input type="checkbox" name="nsize" value="true" checked="@q.NotSize" /> Không</label></div>
+            <select id="advSize" name="size">
                 <option value="">Mọi size</option>
                 @foreach (var s in Model.Sizes) { <option selected="@(s == q.Size)">@s</option> }
             </select>
-        </label>
-        <label><span>Màu sắc</span>
-            <select name="color">
+        </div>
+        <div class="adv-field">
+            <div class="adv-head"><label for="advColor">Màu sắc</label><label class="adv-not"><input type="checkbox" name="ncolor" value="true" checked="@q.NotColor" /> Không</label></div>
+            <select id="advColor" name="color">
                 <option value="">Mọi màu</option>
                 @foreach (var c in Model.Colors) { <option selected="@(c == q.Color)">@c</option> }
             </select>
-        </label>
+        </div>
         <label><span>Sắp xếp</span>
             <select name="sort">
                 <option value="new" selected="@(q.Sort == "new")">Mới nhất</option>

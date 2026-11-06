@@ -14,7 +14,7 @@ namespace SportShop.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
 public sealed class ProductsController(ICatalogReader reader, MediaUrlResolver media) : ControllerBase
 {
-    /// <summary>Tìm sản phẩm đang bán, có lọc, sắp xếp và phân trang tại CSDL.</summary>
+    /// <summary>Tìm sản phẩm đang bán qua ICatalogReader.ProductsAsync(), có lọc, sắp xếp và phân trang tại CSDL.</summary>
     [HttpGet]
     [ProducesResponseType<PagedResponse<ProductSummaryDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<ProductSummaryDto>>> List(
@@ -26,7 +26,7 @@ public sealed class ProductsController(ICatalogReader reader, MediaUrlResolver m
             page.Page, page.PageSize, page.TotalItems));
     }
 
-    /// <summary>Chi tiết sản phẩm và các biến thể đang hiện, gồm cả biến thể hết hàng.</summary>
+    /// <summary>Chi tiết sản phẩm và các biến thể đang hiện qua ICatalogReader.ProductAsync(), gồm cả biến thể hết hàng.</summary>
     [HttpGet("{productId}")]
     [ProducesResponseType<ProductDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

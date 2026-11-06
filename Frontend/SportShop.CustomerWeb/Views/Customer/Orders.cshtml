@@ -102,6 +102,7 @@
             }, 8000);
         })();
 
+        // Chọn số sao ở form đánh giá: ghi vào ô giá trị để gửi cùng form.
         document.querySelectorAll('[data-rating]').forEach(function (box) {
             var stars = box.querySelectorAll('button'), label = box.querySelector('span'), value = box.parentNode.querySelector('input[name=stars]');
             var words = ['Chọn số sao', 'Rất tệ', 'Chưa tốt', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];

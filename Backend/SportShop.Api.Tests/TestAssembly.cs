@@ -1,4 +1,4 @@
 using Xunit;
 
-// Integration fixtures insert records; catalog counts must see a stable database snapshot between tests.
+// Fixture tích hợp có ghi dữ liệu nên chạy tuần tự để số liệu catalog ổn định.
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

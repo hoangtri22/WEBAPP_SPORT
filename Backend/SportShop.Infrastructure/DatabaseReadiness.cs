@@ -8,7 +8,7 @@ namespace SportShop.Infrastructure;
 
 public sealed class DatabaseReadiness(MySqlConnectionFactory connections) : IDatabaseReadiness
 {
-    // LIMIT 0 checks catalog and customer transaction prerequisites without reading personal data.
+    // LIMIT 0 kiểm tra đủ bảng và cột cần cho catalog, giao dịch khách mà không đọc dữ liệu cá nhân.
     private const string RequiredSchema = """
         SELECT ma_loai, ten_loai FROM LOAI_SP LIMIT 0;
         SELECT ma_san_pham, ma_loai, ten_san_pham, don_vi_tinh, mo_ta, trang_thai FROM SAN_PHAM LIMIT 0;
@@ -45,6 +45,7 @@ public sealed class DatabaseReadiness(MySqlConnectionFactory connections) : IDat
         SELECT ma_khao_sat, ma_khach_hang, ma_cau_hoi, ma_lua_chon, noi_dung_tra_loi FROM TRA_LOI_KHAO_SAT LIMIT 0;
         """;
 
+    // Chạy RequiredSchema trong transaction chỉ đọc để kiểm tra kết nối và schema. Gọi từ HealthController.
     public async Task CheckAsync(CancellationToken cancellationToken)
     {
         try

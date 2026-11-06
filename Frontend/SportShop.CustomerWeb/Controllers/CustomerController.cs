@@ -111,6 +111,7 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return order.HasValue ? RedirectToAction(nameof(Orders)) : RedirectToAction(nameof(Feedback));
     }
 
+    // Khách đã nhận sản phẩm chưa: có mã đơn thì xét ShopStore.Orders(), không thì xét CustomerStore.PurchasedProducts().
     bool HasReceivedProduct(int product, int? order) => order is int orderId
         ? shop.Orders(CustomerId, orderId).Any(o => o.Status == "da_giao" && o.Lines.Any(l => l.ProductId == product))
         : store.PurchasedProducts(CustomerId).Any(p => p.Id == product);
@@ -157,6 +158,7 @@ public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop
         return RedirectToAction(nameof(Surveys), new { id = (int?)null, done = true });
     }
 
+    // Khảo sát mẫu khi chưa kết nối CSDL.
     static SurveyPageVm SampleSurveys(int? id)
     {
         var items = new List<SurveyItem>

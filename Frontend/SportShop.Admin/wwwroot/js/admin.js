@@ -1,15 +1,18 @@
 
+// Nút menu: màn hình hẹp thì mở ngăn menu, rộng thì thu gọn sidebar.
 document.querySelectorAll('.js-nav-toggle').forEach(function (btn) {
     btn.addEventListener('click', function () {
         if (window.innerWidth <= 900) document.body.classList.toggle('nav-open');
         else document.body.classList.toggle('collapsed');
     });
 });
+// Bấm logo khi sidebar đang thu gọn thì mở lại.
 document.querySelectorAll('.brand-mark').forEach(function (logo) {
     logo.addEventListener('click', function () {
         if (window.innerWidth > 900 && document.body.classList.contains('collapsed')) document.body.classList.remove('collapsed');
     });
 });
+// Bấm ngoài menu thì đóng ngăn menu.
 document.addEventListener('click', function (e) {
     if (document.body.classList.contains('nav-open') && !e.target.closest('.sidebar') && !e.target.closest('.js-nav-toggle'))
         document.body.classList.remove('nav-open');
@@ -32,6 +35,7 @@ try {
     if (flash) { sessionStorage.removeItem('flash'); setTimeout(function () { showToast(flash); }, 150); }
 } catch (e) { }
 
+// Lấy token chống giả mạo từ input __RequestVerificationToken trong trang.
 function antiToken() {
     var t = document.querySelector('input[name="__RequestVerificationToken"]');
     return t ? t.value : '';
@@ -60,6 +64,7 @@ function handleResult(res, onFail) {
 var money = function (n) { return (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ'; };
 
 var drawer = document.getElementById('drawer'), backdrop = document.getElementById('drawerBackdrop');
+// Đóng ngăn trượt biểu mẫu và xóa nội dung sau hiệu ứng.
 function closeDrawer() {
     if (!drawer) return;
     drawer.classList.remove('open'); backdrop.classList.remove('open');
@@ -341,6 +346,7 @@ document.querySelectorAll('.dtable').forEach(function (card) {
     render();
 });
 
+// Ctrl + K: đưa con trỏ vào ô tìm kiếm của trang.
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         var s = document.querySelector('.search input');
@@ -348,16 +354,17 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
-// Bấm vào một dòng có trang chi tiết (data-peek) thì mở trang chi tiết; bỏ qua khi bấm nút, link, ô nhập hoặc khi đang bôi đen chữ.
+// Bấm dòng có trang chi tiết (data-peek): Ctrl + bấm mở tab mới, màn hình dưới 1200px mở trang chi tiết, còn lại để khối xem nhanh bên dưới xử lý; bỏ qua khi bấm nút, link, ô nhập hoặc khi đang bôi đen chữ.
 document.addEventListener('click', function (e) {
     var tr = e.target.closest('tr[data-peek]:not([data-peek=""])');
     if (!tr || e.target.closest('a, button, input, select, textarea, label')) return;
     if (String(window.getSelection())) return;
+    if (!e.ctrlKey && !e.metaKey && window.matchMedia('(min-width: 1200px)').matches) return;
     if (e.ctrlKey || e.metaKey) window.open(tr.getAttribute('data-peek'), '_blank');
     else location.href = tr.getAttribute('data-peek');
 });
 
-// Xem nhanh dòng có trang chi tiết (data-peek): rê chuột vào dòng thì fetch trang chi tiết, lấy phần nội dung qua build() rồi hiện ở khung bên phải (màn hình dưới 1600px tự thu gọn menu trái trong lúc xem).
+// Xem nhanh dòng data-peek (màn hình từ 1200px): bấm dòng thì fetch trang chi tiết, lấy nội dung qua build() rồi hiện ở khung bên phải, bấm lại dòng đó thì đóng; dưới 1600px tự thu gọn menu trái.
 (function () {
     var rows = document.querySelectorAll('tr[data-peek]:not([data-peek=""])');
     if (rows.length === 0) return;
@@ -365,7 +372,7 @@ document.addEventListener('click', function (e) {
     var panel = document.createElement('aside');
     panel.className = 'peek'; panel.hidden = true; panel.setAttribute('aria-label', 'Xem chi tiết');
     document.body.appendChild(panel);
-    var cache = {}, current = '', showTimer = 0, hideTimer = 0, autoCollapsed = false;
+    var cache = {}, current = '', autoCollapsed = false;
 
     // Lấy phần nội dung của trang chi tiết (giữ nút "Chỉnh sửa" và ô cập nhật trạng thái; bỏ nút quay lại, in hóa đơn và dòng chữ xanh phía trên tiêu đề)
     function build(url, html) {
@@ -382,13 +389,11 @@ document.addEventListener('click', function (e) {
     }
 
     function close() {
-        clearTimeout(showTimer); clearTimeout(hideTimer);
         panel.hidden = true; current = '';
         document.body.classList.remove('peek-open');
         if (autoCollapsed) { document.body.classList.remove('collapsed'); autoCollapsed = false; }
         rows.forEach(function (r) { r.classList.remove('peek-on'); });
     }
-    function scheduleHide() { clearTimeout(hideTimer); hideTimer = setTimeout(close, 350); }
 
     function show(url) {
         panel.innerHTML = cache[url];
@@ -412,16 +417,39 @@ document.addEventListener('click', function (e) {
             .catch(function () { if (current === url) close(); });
     }
 
-    rows.forEach(function (tr) {
-        tr.addEventListener('mouseenter', function () {
-            if (!wide.matches) return;
-            clearTimeout(hideTimer); clearTimeout(showTimer);
-            showTimer = setTimeout(function () { open(tr); }, 120);
+    // Trang Master-Sub (.md-split, Quản lý hóa đơn): bấm dòng thì tải trang chi tiết (data-peek), lấy nội dung qua build() rồi hiện ở khung cố định #mdDetail thay cho khung xem nhanh.
+    var master = document.getElementById('mdDetail');
+    if (master) {
+        var pick = function (tr) {
+            var url = tr.getAttribute('data-peek');
+            rows.forEach(function (r) { r.classList.toggle('peek-on', r === tr); });
+            current = url;
+            if (cache[url]) { master.innerHTML = cache[url]; master.scrollTop = 0; return; }
+            fetch(url, { credentials: 'same-origin' })
+                .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
+                .then(function (html) {
+                    cache[url] = build(url, html);
+                    if (current === url && cache[url]) { master.innerHTML = cache[url]; master.scrollTop = 0; }
+                })
+                .catch(function () { if (current === url) showToast('Không tải được chi tiết hóa đơn, vui lòng thử lại.', true); });
+        };
+        rows.forEach(function (tr) {
+            tr.addEventListener('click', function (e) {
+                if (!wide.matches || e.ctrlKey || e.metaKey || e.target.closest('a, button, input, select, textarea, label') || String(window.getSelection())) return;
+                pick(tr);
+            });
         });
-        tr.addEventListener('mouseleave', function () { clearTimeout(showTimer); scheduleHide(); });
+        if (wide.matches) pick(rows[0]);
+        wide.addEventListener('change', function () { if (wide.matches && !current) pick(rows[0]); });
+        return;
+    }
+
+    rows.forEach(function (tr) {
+        tr.addEventListener('click', function (e) {
+            if (!wide.matches || e.ctrlKey || e.metaKey || e.target.closest('a, button, input, select, textarea, label') || String(window.getSelection())) return;
+            if (tr.getAttribute('data-peek') === current && !panel.hidden) close(); else open(tr);
+        });
     });
-    panel.addEventListener('mouseenter', function () { clearTimeout(hideTimer); });
-    panel.addEventListener('mouseleave', scheduleHide);
     panel.addEventListener('click', function (e) { if (e.target.closest('.peek-close')) close(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) close(); });
     wide.addEventListener('change', function () { if (!wide.matches) close(); });

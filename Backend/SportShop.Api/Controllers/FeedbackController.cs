@@ -16,7 +16,7 @@ public sealed class FeedbackController(CustomerStore customers, ICatalogClock cl
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Lists the customer's feedback and latest store replies.</summary>
+    /// <summary>Lịch sử phản hồi của khách kèm trả lời mới nhất, đọc qua CustomerStore.MobileFeedbacks().</summary>
     [HttpGet]
     [ProducesResponseType<PagedResponse<FeedbackResponse>>(200)]
     public IActionResult List([Range(1, int.MaxValue)] int page = 1, [Range(1, 100)] int pageSize = 20)
@@ -27,12 +27,12 @@ public sealed class FeedbackController(CustomerStore customers, ICatalogClock cl
         return Ok(new PagedResponse<FeedbackResponse>(items, page, pageSize, all.Count));
     }
 
-    /// <summary>Lists products eligible for review (purchased in a delivered order).</summary>
+    /// <summary>Sản phẩm được đánh giá (đã mua trong đơn đã giao), đọc qua CustomerStore.PurchasedProducts().</summary>
     [HttpGet("eligible-products")]
     [ProducesResponseType<IEnumerable<EligibleProductResponse>>(200)]
     public IActionResult EligibleProducts() => Ok(customers.PurchasedProducts(CustomerId).Select(p => new EligibleProductResponse(p.Id, p.Name)));
 
-    /// <summary>Reviews a received product. Optional orderId must belong to the authenticated customer.</summary>
+    /// <summary>Đánh giá sản phẩm đã nhận qua CustomerStore.AddPurchasedFeedback(); orderId nếu có phải thuộc khách đang đăng nhập.</summary>
     [HttpPost]
     [ProducesResponseType<FeedbackCreatedResponse>(201)]
     public IActionResult Create(FeedbackRequest request)

@@ -25,7 +25,7 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     bool IsGuest => User.HasClaim("is_guest", "true");
 
-    /// <summary>Lịch sử đơn của tài khoản, lọc trạng thái và phân trang tại CSDL.</summary>
+    /// <summary>Lịch sử đơn của tài khoản qua ShopStore.Orders(), lọc trạng thái và phân trang tại CSDL.</summary>
     [HttpGet, ProducesResponseType<PagedResponse<OrderDto>>(200)]
     public ActionResult<PagedResponse<OrderDto>> List([Range(1, int.MaxValue)] int page = 1,
         [Range(1, 100)] int pageSize = 20,
@@ -36,7 +36,7 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
             page, pageSize, shop.OrderCount(CustomerId, status)));
     }
 
-    /// <summary>Đơn thuộc tài khoản, kèm sản phẩm, giao hàng, trạng thái và hóa đơn.</summary>
+    /// <summary>Đơn thuộc tài khoản qua ShopStore.Orders(), kèm sản phẩm, giao hàng, trạng thái và hóa đơn.</summary>
     [HttpGet("{orderId}"), ProducesResponseType<OrderDto>(200)]
     public ActionResult<OrderDto> Detail([Range(1, int.MaxValue)] int orderId)
     {
@@ -45,7 +45,7 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
             : Ok(CommerceMapping.Order(order, media, clock));
     }
 
-    /// <summary>Đặt giỏ hiện tại trong một transaction; Idempotency-Key bảo vệ khi mạng gửi lại.</summary>
+    /// <summary>Đặt giỏ hiện tại qua ShopStore.PlaceCartOrder() trong một transaction; Idempotency-Key bảo vệ khi mạng gửi lại.</summary>
     [HttpPost, ProducesResponseType<OrderDto>(201), ProducesResponseType<OrderDto>(200)]
     public async Task<ActionResult<OrderDto>> Place(PlaceOrderRequest request,
         [FromHeader(Name = "Idempotency-Key"), Required, StringLength(128, MinimumLength = 1), RegularExpression("^[!-~]{1,128}$")] string requestKey,
@@ -63,7 +63,7 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
         return CreatedAtAction(nameof(Detail), new { orderId = id }, order);
     }
 
-    /// <summary>Hủy đơn còn chờ xác nhận; trả lại tồn kho và lượt dùng voucher đúng một lần.</summary>
+    /// <summary>Hủy đơn còn chờ xác nhận qua ShopStore.CancelOrder(); trả lại tồn kho và lượt dùng voucher đúng một lần.</summary>
     [HttpPost("{orderId}/cancel"), ProducesResponseType<OrderDto>(200)]
     public ActionResult<OrderDto> Cancel([Range(1, int.MaxValue)] int orderId)
     {

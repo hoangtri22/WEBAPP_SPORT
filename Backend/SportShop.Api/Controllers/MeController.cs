@@ -14,7 +14,7 @@ public sealed class MeController(CustomerStore customers, LoginThrottle throttle
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Returns the current profile, membership, points and selected sports interests.</summary>
+    /// <summary>Hồ sơ, hạng thành viên, điểm và sở thích của khách, đọc qua CustomerStore.GetProfile() và Interests().</summary>
     [HttpGet]
     [ProducesResponseType<CustomerMeResponse>(200)]
     public IActionResult Get()
@@ -26,7 +26,7 @@ public sealed class MeController(CustomerStore customers, LoginThrottle throttle
             profile.Email, profile.Phone, profile.Birth, profile.Gender, profile.Tier, profile.Orders, profile.Points), interests.Selected));
     }
 
-    /// <summary>Replaces profile fields and selected interests. Interest names come from GET /interests.</summary>
+    /// <summary>Cập nhật hồ sơ và sở thích qua CustomerStore.UpdateProfile(); tên sở thích lấy từ GET /interests.</summary>
     [HttpPut]
     [ProducesResponseType<CustomerMeResponse>(200), ProducesResponseType<ProblemDetails>(409)]
     public IActionResult Update(UpdateProfileRequest request)
@@ -39,7 +39,7 @@ public sealed class MeController(CustomerStore customers, LoginThrottle throttle
         return error is null ? Get() : Error(error.Contains("Email") ? 409 : 400, "PROFILE_UPDATE_FAILED", error);
     }
 
-    /// <summary>Changes the password. Every existing mobile session is invalidated, including this session.</summary>
+    /// <summary>Đổi mật khẩu qua CustomerStore.ChangePassword(); mọi phiên mobile đều hết hiệu lực, kể cả phiên này.</summary>
     [HttpPost("password")]
     [ProducesResponseType(204)]
     public IActionResult Password(ChangePasswordRequest request)

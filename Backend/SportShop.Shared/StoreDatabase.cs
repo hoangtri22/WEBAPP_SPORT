@@ -5,7 +5,7 @@ namespace SportShop.CustomerWeb.Services;
 
 internal static class StoreDatabase
 {
-    // Apply the same bounded, explicit connection configuration to shared MVC/mobile operations.
+    // Áp cùng cấu hình kết nối có giới hạn cho các thao tác dùng chung web và mobile.
     internal static MySqlConnection Connection(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))

@@ -19,11 +19,11 @@ public sealed class CartController(ShopStore shop, MediaUrlResolver media) : Con
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Giỏ hàng dùng chung giữa Web và Mobile, giá/tồn lấy từ CSDL.</summary>
+    /// <summary>Giỏ hàng dùng chung web và mobile qua ShopStore.CartLines(); giá, tồn kho lấy từ CSDL.</summary>
     [HttpGet, ProducesResponseType<CartDto>(200)]
     public ActionResult<CartDto> Get() => Ok(CommerceMapping.Cart(shop.CartLines(CustomerId), media));
 
-    /// <summary>Thêm biến thể vào giỏ, cộng vào số lượng đã có.</summary>
+    /// <summary>Thêm biến thể vào giỏ qua ShopStore.AddToCart(), cộng vào số lượng đã có.</summary>
     [HttpPost("items"), ProducesResponseType<CartDto>(200)]
     public ActionResult<CartDto> Add(AddCartItemRequest request)
     {
@@ -31,7 +31,7 @@ public sealed class CartController(ShopStore shop, MediaUrlResolver media) : Con
         return error is null ? Get() : Conflict(ApiProblems.Create(HttpContext, 409, "CART_CONFLICT", error));
     }
 
-    /// <summary>Thay số lượng dòng giỏ; không vượt quá tồn kho hoặc 999.</summary>
+    /// <summary>Thay số lượng dòng giỏ qua ShopStore.SetQty(); không vượt quá tồn kho hoặc 999.</summary>
     [HttpPut("items/{variantId}"), ProducesResponseType<CartDto>(200)]
     [ProducesResponseType<ProblemDetails>(404)]
     public ActionResult<CartDto> Set([Range(1, int.MaxValue)] int variantId, SetCartQuantityRequest request)
@@ -42,7 +42,7 @@ public sealed class CartController(ShopStore shop, MediaUrlResolver media) : Con
         return error is null ? Get() : Conflict(ApiProblems.Create(HttpContext, 409, "CART_CONFLICT", error));
     }
 
-    /// <summary>Xóa dòng giỏ của tài khoản đang đăng nhập; gọi lại vẫn thành công.</summary>
+    /// <summary>Xóa dòng giỏ của tài khoản đang đăng nhập qua ShopStore.SetQty() với số lượng 0; gọi lại vẫn thành công.</summary>
     [HttpDelete("items/{variantId}"), ProducesResponseType<CartDto>(200)]
     public ActionResult<CartDto> Remove([Range(1, int.MaxValue)] int variantId)
     {
@@ -50,7 +50,7 @@ public sealed class CartController(ShopStore shop, MediaUrlResolver media) : Con
         return Get();
     }
 
-    /// <summary>Xóa toàn bộ giỏ của tài khoản đang đăng nhập.</summary>
+    /// <summary>Xóa toàn bộ giỏ của tài khoản đang đăng nhập qua ShopStore.ClearCart().</summary>
     [HttpDelete, ProducesResponseType(204)]
     public IActionResult Clear() { shop.ClearCart(CustomerId); return NoContent(); }
 }

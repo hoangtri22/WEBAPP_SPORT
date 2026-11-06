@@ -3,13 +3,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace SportShop.CustomerWeb.Services;
 
-/// <summary>
-/// Cho phép mở nhiều tab, mỗi tab một tài khoản. Trình duyệt dùng chung cookie cho mọi tab nên ở đây "ảo hóa" cookie theo mã tab:
-/// cookie do ứng dụng đặt (đăng nhập, chống giả mạo...) được đổi tên thành "tên.t&lt;mã tab&gt;" khi gửi về trình duyệt,
-/// và khi nhận về chỉ giữ cookie của đúng tab đang gọi rồi trả lại tên gốc. Phần còn lại của ứng dụng không cần biết gì về tab.
-/// Mã tab do wwwroot/js/tab-session.js tạo, gửi bằng header X-Tab-Id (fetch) hoặc cookie <c>tabCookie</c> (mở trang);
-/// không có mã tab (chưa chạy JS) thì dùng cookie như bình thường.
-/// </summary>
+/// <summary>Mỗi tab một tài khoản: đổi tên cookie theo mã tab (tên.t&lt;mã&gt;) khi gửi đi, khi nhận chỉ giữ cookie của tab đang gọi; mã tab lấy từ header X-Tab-Id hoặc cookie do wwwroot/js/tab-session.js tạo.</summary>
 public class TabCookieMiddleware(RequestDelegate next, string tabCookie)
 {
     static readonly Regex TabIdFormat = new("^[0-9a-f]{32}$", RegexOptions.Compiled);

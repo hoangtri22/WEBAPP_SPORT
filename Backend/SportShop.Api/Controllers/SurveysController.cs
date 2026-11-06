@@ -16,7 +16,7 @@ public sealed class SurveysController(CustomerStore customers, ICatalogClock clo
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Lists surveys assigned to the customer, including completion and availability.</summary>
+    /// <summary>Khảo sát đã giao cho khách kèm trạng thái hoàn thành, đọc qua CustomerStore.Surveys().</summary>
     [HttpGet]
     [ProducesResponseType<PagedResponse<SurveyResponse>>(200)]
     public IActionResult List([Range(1, int.MaxValue)] int page = 1, [Range(1, 100)] int pageSize = 20)
@@ -25,7 +25,7 @@ public sealed class SurveysController(CustomerStore customers, ICatalogClock clo
         return Ok(new PagedResponse<SurveyResponse>(all.Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).Select(Map).ToList(), page, pageSize, all.Count));
     }
 
-    /// <summary>Loads an assigned survey's questions and choices. Unassigned and draft surveys return 404.</summary>
+    /// <summary>Câu hỏi và lựa chọn của khảo sát đã giao, đọc qua CustomerStore.Questions(); khảo sát không được giao hoặc nháp trả 404.</summary>
     [HttpGet("{id:int:min(1)}")]
     [ProducesResponseType<SurveyDetailResponse>(200), ProducesResponseType<ProblemDetails>(404)]
     public IActionResult Get(int id)
@@ -36,7 +36,7 @@ public sealed class SurveysController(CustomerStore customers, ICatalogClock clo
                 q.Options.Select(o => new SurveyOptionResponse(o.Id, o.Text)).ToList())).ToList()));
     }
 
-    /// <summary>Submits answers once. Validates ownership, dates, required answers and choice membership atomically.</summary>
+    /// <summary>Nộp câu trả lời một lần qua CustomerStore.SubmitSurvey(); kiểm tra quyền, hạn, câu bắt buộc và lựa chọn hợp lệ trong transaction.</summary>
     [HttpPost("{id:int:min(1)}/responses")]
     [ProducesResponseType(204)]
     [ProducesResponseType<ProblemDetails>(404), ProducesResponseType<ProblemDetails>(409)]

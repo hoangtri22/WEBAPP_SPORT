@@ -1,4 +1,4 @@
--- TEST ONLY: requires the fresh isolated loopback MySQL datadir created by Test-MobileApi.ps1.
+-- CHỈ DÙNG CHO TEST: cần MySQL riêng mới tạo bởi Test-MobileApi.ps1.
 SET @mobile_fixture_safe = (
     DATABASE() = 'sports_shop_mobile_test'
     AND LOCATE('/.test-artifacts/mobile-api-', REPLACE(@@datadir, CHAR(92), '/')) > 0

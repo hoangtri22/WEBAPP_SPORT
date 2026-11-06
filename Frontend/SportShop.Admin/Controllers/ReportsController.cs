@@ -133,6 +133,7 @@ public class ReportsController(ShopData db) : Controller
         });
     }
 
+    // Làm tròn giá trị lớn nhất lên mốc đẹp cho trục biểu đồ.
     static double NiceMax(double v)
     {
         if (v <= 0) return 4;
@@ -142,6 +143,7 @@ public class ReportsController(ShopData db) : Controller
         return 10 * pow;
     }
 
+    // Dựng đường cong SVG đi qua các điểm của biểu đồ.
     static string SmoothPath(List<(double X, double Y)> p)
     {
         var sb = new System.Text.StringBuilder($"M{F(p[0].X)},{F(p[0].Y)}");
@@ -161,6 +163,7 @@ public class ReportsController(ShopData db) : Controller
         return last == null || recent > 0 ? today : last.Value;
     }
 
+    // Tính phần trăm thay đổi so với kỳ trước cho thẻ số liệu.
     static Delta Change(decimal cur, decimal prev)
     {
         if (prev == 0) return new("Chưa có dữ liệu kỳ trước", true);

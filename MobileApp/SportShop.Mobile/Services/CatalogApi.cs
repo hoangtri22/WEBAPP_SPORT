@@ -13,7 +13,7 @@ public interface ICatalogApi
 
 public sealed class CatalogApi(HttpClient http) : ICatalogApi
 {
-    // Gọi REST API; không kết nối MySQL hoặc tự dựng dữ liệu sản phẩm trong app.
+    // Gọi GET api/v1/products (ProductsController của API); không kết nối MySQL hoặc tự dựng dữ liệu sản phẩm trong app.
     public async Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(
         string? query, int page, CancellationToken cancellationToken)
     {

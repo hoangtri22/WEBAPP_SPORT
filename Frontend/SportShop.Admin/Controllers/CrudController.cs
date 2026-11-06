@@ -62,7 +62,7 @@ public class CrudController(ShopCommands cmd) : Controller
         return Json(cmd.Delete(entity, id, Me()));
     }
 
-    // Thao tác riêng (khóa khách, trả lời / ẩn phản hồi, đóng khảo sát): gọi ShopCommands.Act(), trả JSON cho admin.js.
+    // Thao tác riêng (khóa, khôi phục, trả lời / ẩn phản hồi, đóng khảo sát): gọi ShopCommands.Act(), trả JSON cho admin.js.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Act(string action, int id)
         => Json(cmd.Act(action, id, new Form(Request.Form), Me()));

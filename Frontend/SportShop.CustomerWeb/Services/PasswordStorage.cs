@@ -1,27 +1,52 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 
 namespace SportShop.CustomerWeb.Services;
 
-/// <summary>Mã hóa mật khẩu dùng chung (PBKDF2-SHA256); mật khẩu demo cũ được nâng cấp sau khi đăng nhập đúng.</summary>
+/// <summary>Mã hóa mật khẩu dùng chung bằng AES-GCM để Quản lý xem lại được; bản PBKDF2 cũ chỉ kiểm tra được, mật khẩu demo dạng chữ được mã hóa sau khi đăng nhập đúng.</summary>
 public static class PasswordStorage
 {
     const string Prefix = "$sportshop$";
-    const int Iterations = 210000;
+    const string Reversible = Prefix + "aes$";
+    const int NonceSize = 12, TagSize = 16;
+    static readonly byte[] Key = SHA256.HashData(Encoding.UTF8.GetBytes("SportShop.PasswordStorage.v1"));
 
-    // Băm mật khẩu bằng PBKDF2-SHA256 với salt ngẫu nhiên.
+    // Mã hóa mật khẩu bằng AES-GCM với nonce ngẫu nhiên; khóa nằm trong code nên ai có cả code và CSDL đều giải được.
     public static string Hash(string password)
     {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var derived = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, 32);
-        return $"{Prefix}{Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(derived)}";
+        var plain = Encoding.UTF8.GetBytes(password);
+        var box = new byte[NonceSize + TagSize + plain.Length];
+        RandomNumberGenerator.Fill(box.AsSpan(0, NonceSize));
+        using var aes = new AesGcm(Key, TagSize);
+        aes.Encrypt(box.AsSpan(0, NonceSize), plain, box.AsSpan(NonceSize + TagSize), box.AsSpan(NonceSize, TagSize));
+        return Reversible + Convert.ToBase64String(box);
     }
+
+    // Giải mã bản AES-GCM; dữ liệu hỏng thì trả null.
+    static string? Decrypt(string stored)
+    {
+        try
+        {
+            var box = Convert.FromBase64String(stored[Reversible.Length..]);
+            var plain = new byte[box.Length - NonceSize - TagSize];
+            using var aes = new AesGcm(Key, TagSize);
+            aes.Decrypt(box.AsSpan(0, NonceSize), box.AsSpan(NonceSize + TagSize), box.AsSpan(NonceSize, TagSize), plain);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch (Exception e) when (e is FormatException or CryptographicException or OverflowException) { return null; }
+    }
+
+    // Trả mật khẩu gốc cho Quản lý xem (ShopData.CustomerPassword()): dạng chữ hoặc AES-GCM; bản PBKDF2 cũ không giải được thì trả null.
+    public static string? Reveal(string stored)
+        => !IsEncoded(stored) ? stored : stored.StartsWith(Reversible, StringComparison.Ordinal) ? Decrypt(stored) : null;
 
     public static bool IsEncoded(string password) => password.StartsWith(Prefix, StringComparison.Ordinal);
 
-    // So mật khẩu nhập với bản lưu: bản băm thì tính lại PBKDF2, mật khẩu demo cũ thì so trực tiếp.
+    // So mật khẩu nhập với bản lưu: bản AES-GCM thì giải mã, bản PBKDF2 cũ thì tính lại, mật khẩu demo thì so trực tiếp.
     public static bool Verify(string stored, string entered)
     {
+        if (stored.StartsWith(Reversible, StringComparison.Ordinal))
+            return Decrypt(stored) is { } plain && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(plain), Encoding.UTF8.GetBytes(entered));
         if (!IsEncoded(stored))
             return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(entered));
         try

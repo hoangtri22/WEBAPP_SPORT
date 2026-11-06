@@ -53,12 +53,14 @@ public static class StatsPdf
         });
     });
 
+    // Vẽ một ô tiêu đề bảng nền xanh nhạt.
     static void Head(IContainer cell, string text, float size, bool right)
     {
         var box = cell.Background(HeadColor).Padding(3);
         (right ? box.AlignRight() : box).Text(text).FontSize(size).Bold();
     }
 
+    // Vẽ một dòng dữ liệu: nhãn và các giá trị theo định dạng cột trong StatTable.Cols.
     static void Line(TableDescriptor table, StatTable t, string label, decimal[] values, float size, bool bold)
     {
         Body(table.Cell(), label, size, bold, false);
@@ -66,6 +68,7 @@ public static class StatsPdf
             Body(table.Cell(), t.Cols[i].Money ? Fmt.Money(values[i]) : values[i].ToString("N0"), size, bold, true);
     }
 
+    // Vẽ một ô dữ liệu có viền dưới; cột số canh phải.
     static void Body(IContainer cell, string text, float size, bool bold, bool right)
     {
         var box = cell.BorderBottom(1).BorderColor(LineColor).Padding(3);

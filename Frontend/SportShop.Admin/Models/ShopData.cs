@@ -501,6 +501,14 @@ public class ShopData
     }
 
 
+    // Mật khẩu gốc của khách cho Quản lý xem: đọc TAI_KHOAN.mat_khau rồi giải bằng PasswordStorage.Reveal(); bản mã hóa một chiều cũ thì báo không xem được. Gọi từ CustomersController.Detail.
+    public string CustomerPassword(int customerId)
+    {
+        var r = Query("SELECT tk.mat_khau FROM KHACH_HANG kh JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan WHERE kh.ma_khach_hang = @customerId", new { customerId }).FirstOrDefault();
+        if (r == null) return "";
+        return SportShop.CustomerWeb.Services.PasswordStorage.Reveal(S(r, "mat_khau")) ?? "Không xem được, hãy đặt mật khẩu mới";
+    }
+
     // Thiết bị dùng Mobile App với tư cách khách từ MOBILE_GUEST_DEVICE (migration 004, API ghi qua GuestDeviceStore); chưa chạy migration thì trả danh sách rỗng để trang khách hàng vẫn mở được.
     public List<GuestDevice> GuestDevices()
     {

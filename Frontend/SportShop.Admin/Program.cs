@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using MySqlConnector;
 using SportShop.Admin.Models;
 
+// Giấy phép QuestPDF cho StatsPdf.cs; dùng font hệ thống (Arial) để hiện đúng tiếng Việt trong PDF.
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 QuestPDF.Settings.UseSystemFonts = true;
 

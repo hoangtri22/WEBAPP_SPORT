@@ -22,7 +22,7 @@ giỏ MySQL chung với web, checkout/voucher, đặt đơn chống retry trùng
 
 Trước khi chạy bản mới, áp dụng lần lượt `Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql`, `004_guest_devices.sql` vào cùng schema.
 Các migration tăng thêm bảng session/refresh-used/cart/idempotency và các phương thức thanh toán mô phỏng mặc định, giữ dữ liệu cũ.
-File giỏ JSON được import một lần theo customer rồi web/API cùng ghi DB. Mật khẩu mới được hash; plaintext demo cũ nâng cấp khi login hợp lệ.
+File giỏ JSON được import một lần theo customer rồi web/API cùng ghi DB. Mật khẩu mới mã hóa AES-GCM (giải mã được để Quản lý xem lại); plaintext demo cũ nâng cấp khi login hợp lệ.
 Khách chỉ tự hủy đơn chờ và chưa thanh toán; đơn đã trả tiền chuyển cửa hàng xử lý để bảo toàn hóa đơn/điểm. Thanh toán vẫn mô phỏng như web.
 
 Xem [kiểm kê chức năng](../API_INVENTORY.md), [tài liệu API](../MOBILE_API_DOCUMENTATION.md), [hướng dẫn tích hợp](../MOBILE_INTEGRATION_GUIDE.md),

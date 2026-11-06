@@ -39,7 +39,7 @@ public class CustomersController(ShopData db) : Controller
         });
     }
 
-    // Hồ sơ chi tiết một khách hàng (Views/Customers/Detail.cshtml) từ ShopData.Customers.
+    // Hồ sơ chi tiết một khách hàng (Views/Customers/Detail.cshtml) từ ShopData.Customers; chỉ Quản lý nhận mật khẩu gốc qua ShopData.CustomerPassword().
     public IActionResult Detail(int id)
     {
         ViewBag.Menu = "customers";
@@ -47,7 +47,7 @@ public class CustomersController(ShopData db) : Controller
         if (c == null) return NotFound();
         var orders = db.Orders.Where(o => o.CustomerId == c.Id).OrderByDescending(o => o.Id).ToList();
         var notes = db.CareNotes.Where(n => n.CustomerId == c.Id).OrderByDescending(n => n.Date).ToList();
-        return View(new CustomerDetailVm(c, orders, notes,
+        return View(new CustomerDetailVm(c, User.IsInRole("Quản lý") ? db.CustomerPassword(c.Id) : "", orders, notes,
             orders.SelectMany(o => o.Lines).Select(l => l.VariantId).Distinct().ToDictionary(v => v, v => db.VariantName(v)),
             notes.Select(n => n.EmployeeId).Distinct().ToDictionary(e => e, e => db.Employee(e).FirstName)));
     }

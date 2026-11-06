@@ -102,7 +102,7 @@ Migration 003 thêm các phương thức mô phỏng mặc định trước đâ
 ## Phiên và giao dịch dùng chung
 
 Access token 15 phút, refresh/phiên tối đa 30 ngày; DB chỉ lưu hash token, refresh xoay cả hai token và reuse thu hồi phiên.
-Mật khẩu mới dùng PBKDF2 có salt; đăng nhập hợp lệ nâng cấp plaintext demo cũ. Khóa/xóa tài khoản/khách hoặc đổi mật khẩu vô hiệu phiên mobile.
+Mật khẩu mới mã hóa AES-GCM để Quản lý xem lại được (bản PBKDF2 cũ vẫn đăng nhập được nhưng không xem được); đăng nhập hợp lệ nâng cấp plaintext demo cũ. Khóa/xóa tài khoản/khách hoặc đổi mật khẩu vô hiệu phiên mobile.
 Không log token/body auth, không đưa DB credential vào app. Đổi password thành công phải login lại.
 CustomerWeb kiểm tra lại trạng thái tài khoản/khách để xóa Session cũ khi khóa/xóa/đổi vai trò; shared StoreDatabase có timeout và trả lỗi DB rõ khi chưa cấu hình.
 

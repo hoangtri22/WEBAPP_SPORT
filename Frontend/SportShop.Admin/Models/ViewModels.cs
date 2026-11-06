@@ -1,4 +1,4 @@
-namespace SportShop.Admin.Models;
+﻿namespace SportShop.Admin.Models;
 
 public record HomeVm(decimal RevToday, decimal RevYesterday, int OrdToday, int OrdYesterday, int StaffTotal, int StaffWorking,
     int Customers, int CustomersActive, int Unanswered, int FollowToday, List<Order> Recent, Dictionary<int, string> CustomerNames);
@@ -9,7 +9,7 @@ public record ProductsVm(List<string> Categories, List<Product> Products, Dictio
 
 public record AccountDetailVm(Account Account, Employee? Employee, Customer? Customer);
 
-public record CustomerDetailVm(Customer Customer, List<Order> Orders, List<CareNote> Notes, Dictionary<int, string> VariantNames, Dictionary<int, string> EmployeeNames);
+public record CustomerDetailVm(Customer Customer, string Password, List<Order> Orders, List<CareNote> Notes, Dictionary<int, string> VariantNames, Dictionary<int, string> EmployeeNames);
 
 public record GroupDetailVm(CustomerGroup Group, List<Customer> Members);
 

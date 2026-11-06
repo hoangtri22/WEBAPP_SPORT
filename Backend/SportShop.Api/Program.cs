@@ -25,6 +25,11 @@ builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MobileTokenStore>();
 builder.Services.AddScoped<GuestDeviceStore>();
+builder.Services.AddScoped<PasswordResetStore>();
+builder.Services.AddScoped<GoogleAccountStore>();
+builder.Services.AddSingleton<GoogleLoginTickets>();
+builder.Services.AddHttpClient<IGoogleOAuthClient, GoogleOAuthClient>();
+builder.Services.AddSingleton<IPasswordResetMailer, SmtpPasswordResetMailer>();
 builder.Services.AddAuthentication("Bearer")
     .AddScheme<AuthenticationSchemeOptions, BearerAuthenticationHandler>("Bearer", _ => { });
 builder.Services.AddAuthorization();

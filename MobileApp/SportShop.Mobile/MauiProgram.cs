@@ -33,6 +33,14 @@ public static class MauiProgram
         builder.Services.AddSingleton<ICatalogApi, CatalogApi>();
         builder.Services.AddSingleton<IAuthApi, AuthApi>();
         builder.Services.AddSingleton<ISessionStore, SessionStore>();
+        builder.Services.AddSingleton<ISessionManager, SessionManager>();
+        // Client riêng cho API cần đăng nhập; AuthApi giữ client thường để refresh không đi vòng qua AuthorizedHandler.
+        builder.Services.AddSingleton<IAccountApi>(services => new AccountApi(new HttpClient(
+            new AuthorizedHandler(services.GetRequiredService<ISessionManager>()) { InnerHandler = new HttpClientHandler() })
+        {
+            BaseAddress = ApiSettings.BaseUri,
+            Timeout = TimeSpan.FromSeconds(20)
+        }));
         builder.Services.AddSingleton<IDeviceIdentity, DeviceIdentity>();
         builder.Services.AddSingleton<ICommerceApi, CommerceApi>();
 
@@ -47,6 +55,14 @@ public static class MauiProgram
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<CheckoutPage>();
         builder.Services.AddTransient<OrdersPage>();
+        builder.Services.AddSingleton<IPasswordResetApi, PasswordResetApi>();
+        builder.Services.AddSingleton<IGoogleSignIn, GoogleSignIn>();
+        builder.Services.AddTransient<ForgotPasswordViewModel>();
+        builder.Services.AddTransient<ForgotPasswordPage>();
+        builder.Services.AddTransient<ProfileViewModel>();
+        builder.Services.AddTransient<ChangePasswordViewModel>();
+        builder.Services.AddTransient<ProfilePage>();
+        builder.Services.AddTransient<ChangePasswordPage>();
         return builder.Build();
     }
 }

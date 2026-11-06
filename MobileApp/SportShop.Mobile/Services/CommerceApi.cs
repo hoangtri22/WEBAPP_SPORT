@@ -27,13 +27,11 @@ public interface ICommerceApi
 
 public sealed class CommerceApi(
     HttpClient http,
-    ISessionStore sessions,
-    IAuthApi authApi,
+    ISessionManager session,
     AppMemoryCache? cache = null,
     IDeviceIdentity? deviceIdentity = null) : ICommerceApi
 {
     public const string GuestDeviceHeader = "X-Guest-Device-Key";
-    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/cart"), cancellationToken);
@@ -133,7 +131,7 @@ public sealed class CommerceApi(
             using var resp = await http.SendAsync(req, cancellationToken);
             if (resp.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(token))
             {
-                token = await TryForceRefreshTokenAsync(cancellationToken);
+                token = await RenewAccessTokenAsync(token, cancellationToken);
                 using var retryReq = requestFactory();
                 AttachAuthOrGuestHeader(retryReq, token);
                 using var retryResp = await http.SendAsync(retryReq, cancellationToken);
@@ -161,7 +159,7 @@ public sealed class CommerceApi(
             using var resp = await http.SendAsync(req, cancellationToken);
             if (resp.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(token))
             {
-                token = await TryForceRefreshTokenAsync(cancellationToken);
+                token = await RenewAccessTokenAsync(token, cancellationToken);
                 using var retryReq = requestFactory();
                 AttachAuthOrGuestHeader(retryReq, token);
                 using var retryResp = await http.SendAsync(retryReq, cancellationToken);
@@ -207,41 +205,21 @@ public sealed class CommerceApi(
         return FallbackGuestKey;
     }
 
+    // SessionManager là nơi duy nhất làm mới token; khách (chưa đăng nhập) nhận null và gửi kèm mã thiết bị.
     private async Task<string?> TryGetValidAccessTokenAsync(CancellationToken cancellationToken)
     {
-        var token = await sessions.GetAccessTokenAsync();
-        if (!string.IsNullOrWhiteSpace(token))
-            return token;
-        return await TryForceRefreshTokenAsync(cancellationToken);
+        try { return await session.GetAccessTokenAsync(cancellationToken); }
+        catch (AuthException ex) { throw new CommerceException(ex.Message, ex); }
     }
 
-    private async Task<string?> TryForceRefreshTokenAsync(CancellationToken cancellationToken)
+    private async Task<string> RenewAccessTokenAsync(string rejected, CancellationToken cancellationToken)
     {
-        await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            var refresh = await sessions.GetRefreshTokenAsync();
-            if (string.IsNullOrWhiteSpace(refresh))
-            {
-                sessions.Clear();
-                return null;
-            }
-            try
-            {
-                var refreshed = await authApi.RefreshAsync(refresh, cancellationToken);
-                await sessions.SaveAsync(refreshed);
-                return refreshed.AccessToken;
-            }
-            catch (AuthException)
-            {
-                sessions.Clear();
-                return null;
-            }
+            return await session.RenewAsync(rejected, cancellationToken)
+                ?? throw new CommerceException("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         }
-        finally
-        {
-            _refreshLock.Release();
-        }
+        catch (AuthException ex) { throw new CommerceException(ex.Message, ex); }
     }
 
     private static async Task<T> ReadResponseAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)

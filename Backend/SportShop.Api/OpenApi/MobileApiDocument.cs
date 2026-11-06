@@ -64,6 +64,8 @@ internal static class MobileApiDocument
         ["/api/v1/auth/register"] = """{"username":"mobile_customer","email":"customer@example.com","phone":"0901234567","password":"replace-with-user-password"}""",
         ["/api/v1/auth/login"] = """{"username":"mobile_customer","password":"replace-with-user-password"}""",
         ["/api/v1/auth/refresh"] = """{"refreshToken":"<refresh-token-from-login>"}""",
+        ["/api/v1/auth/password/forgot"] = """{"email":"customer@example.com"}""",
+        ["/api/v1/auth/password/reset"] = """{"email":"customer@example.com","code":"123456","newPassword":"<new-password>"}""",
         ["/api/v1/me"] = """{"fullName":"Nguyễn Minh An","email":"customer@example.com","phone":"0901234567","birth":"2000-01-01","gender":"Nam","interests":["Chạy bộ"]}""",
         ["/api/v1/me/password"] = """{"currentPassword":"<current-password>","newPassword":"<new-password>"}""",
         ["/api/v1/me/feedback"] = """{"productId":1,"stars":5,"content":"Sản phẩm phù hợp.","orderId":1}""",

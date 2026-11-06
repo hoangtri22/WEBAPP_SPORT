@@ -92,7 +92,7 @@ public sealed class PlacedOrderLineItem(OrderItemDto dto)
 }
 
 // ViewModel cho Giỏ hàng & Thanh toán (Checkout) — đồng bộ 100% chức năng và hiển thị với SportShop.CustomerWeb (Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml), hỗ trợ cả Khách hàng có tài khoản và Khách hàng vãng lai (Guest).
-public sealed class CartViewModel(ICommerceApi api, ISessionStore? session = null) : INotifyPropertyChanged
+public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = null) : INotifyPropertyChanged
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
     public const decimal FreeShipFrom = 500_000m;

@@ -26,6 +26,8 @@ public sealed class DatabaseReadiness(MySqlConnectionFactory connections) : IDat
         SELECT ma_don_hang, ma_khach_hang, trang_thai_don_hang FROM DON_HANG LIMIT 0;
         SELECT customer_id, access_hash, refresh_hash, password_fingerprint, revoked FROM MOBILE_AUTH_SESSION LIMIT 0;
         SELECT refresh_hash, session_id FROM MOBILE_AUTH_REFRESH_USED LIMIT 0;
+        SELECT account_id, code_hash, expires_utc, sent_utc, attempts FROM MOBILE_PASSWORD_RESET LIMIT 0;
+        SELECT google_sub, account_id FROM MOBILE_GOOGLE_LOGIN LIMIT 0;
         SELECT customer_id, legacy_imported FROM CUSTOMER_CART_STATE LIMIT 0;
         SELECT customer_id, variant_id, quantity FROM CUSTOMER_CART_ITEM LIMIT 0;
         SELECT customer_id, request_key, request_hash, order_id FROM MOBILE_ORDER_REQUEST LIMIT 0;

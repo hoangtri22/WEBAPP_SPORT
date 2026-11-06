@@ -118,8 +118,8 @@ public partial class CartPage : ContentPage
 
     private async void OnAccountNavClicked(object? sender, EventArgs e)
     {
-        var action = _auth.IsSignedIn ? "Đăng xuất" : "Đăng nhập / Đăng ký";
-        if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, action) == action)
+        if (_auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
+        else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
             await _auth.LeaveAsync();
     }
 }

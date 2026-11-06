@@ -15,7 +15,7 @@ public sealed class AuthTests
     public async Task LoginSavesTokensAndEntersApp()
     {
         var api = new FakeApi();
-        var session = new FakeSession();
+        var session = new SessionManager(api, new FakeSession());
         var vm = new AuthViewModel(api, session, new FakeDevice()) { Username = " minhanh ", Password = "123456" };
         var entered = new TaskCompletionSource();
         vm.Entered += entered.SetResult;
@@ -30,7 +30,7 @@ public sealed class AuthTests
     public async Task RegisterValidatesBeforeCallingApi()
     {
         var api = new FakeApi();
-        var vm = new AuthViewModel(api, new FakeSession(), new FakeDevice());
+        var vm = new AuthViewModel(api, new SessionManager(api, new FakeSession()), new FakeDevice());
         vm.ShowRegisterCommand.Execute(null);
         vm.Username = "minhanh"; vm.Email = "sai-email"; vm.Phone = "0912345678"; vm.Password = "123456";
         vm.SubmitCommand.Execute(null);
@@ -43,7 +43,7 @@ public sealed class AuthTests
     public async Task GuestStillEntersWhenDeviceCannotBeSent()
     {
         var api = new FakeApi { Failure = new AuthException("offline") };
-        var vm = new AuthViewModel(api, new FakeSession(), new FakeDevice());
+        var vm = new AuthViewModel(api, new SessionManager(api, new FakeSession()), new FakeDevice());
         var entered = new TaskCompletionSource();
         vm.Entered += entered.SetResult;
         vm.GuestCommand.Execute(null);
@@ -55,7 +55,8 @@ public sealed class AuthTests
     public async Task RejectedRefreshClearsSavedSession()
     {
         var session = new FakeSession { Refresh = "old" };
-        var vm = new AuthViewModel(new FakeApi { Failure = new AuthException("hết hạn", rejected: true) }, session, new FakeDevice());
+        var api = new FakeApi { Failure = new AuthException("hết hạn", rejected: true) };
+        var vm = new AuthViewModel(api, new SessionManager(api, session), new FakeDevice());
         await vm.RestoreAsync();
         Assert.Null(session.Refresh);
     }
@@ -125,11 +126,11 @@ public sealed class AuthTests
     sealed class FakeSession : ISessionStore
     {
         public string? Refresh;
-        public bool IsSignedIn { get; private set; }
         public Task<string?> GetAccessTokenAsync() => Task.FromResult<string?>("access");
         public Task<string?> GetRefreshTokenAsync() => Task.FromResult(Refresh);
-        public Task SaveAsync(TokenResponse tokens) { IsSignedIn = true; return Task.CompletedTask; }
-        public void Clear() { IsSignedIn = false; Refresh = null; }
+        public Task<DateTimeOffset?> GetAccessExpiryAsync() => Task.FromResult<DateTimeOffset?>(null);
+        public Task SaveAsync(TokenResponse tokens) => Task.CompletedTask;
+        public void Clear() => Refresh = null;
     }
 
     sealed class FakeDevice : IDeviceIdentity

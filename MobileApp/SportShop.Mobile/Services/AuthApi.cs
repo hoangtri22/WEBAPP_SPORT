@@ -17,11 +17,16 @@ public interface IAuthApi
 
 public interface ISessionStore
 {
-    bool IsSignedIn { get; }
     Task<string?> GetAccessTokenAsync();
     Task<string?> GetRefreshTokenAsync();
+    Task<DateTimeOffset?> GetAccessExpiryAsync();
     Task SaveAsync(TokenResponse tokens);
     void Clear();
+}
+
+public interface IGoogleSignIn
+{
+    Task<TokenResponse?> SignInAsync(CancellationToken cancellationToken);
 }
 
 public interface IDeviceIdentity
@@ -87,7 +92,7 @@ public sealed class AuthApi(HttpClient http) : IAuthApi
     }
 
     // Đọc ProblemDetails của API thành AuthException; lỗi 401 đánh dấu Rejected.
-    private static async Task<AuthException> FailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    internal static async Task<AuthException> FailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         bool rejected = response.StatusCode == HttpStatusCode.Unauthorized;
         if (response.StatusCode == HttpStatusCode.ServiceUnavailable)

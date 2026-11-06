@@ -19,6 +19,8 @@ tài khoản/hồ sơ, catalog, giỏ MySQL chung web, checkout/voucher, đặt 
 
 Hướng xây dựng: MAUI dùng HttpClient gọi API riêng qua HTTPS, lưu refresh token trong SecureStorage; không kết nối MySQL trực tiếp.
 Access token sống 15 phút; refresh tối đa 30 ngày, xoay token và phát hiện reuse. Chỉ chạy một refresh tại một thời điểm.
+`SessionManager` là nơi duy nhất làm mới token (30 giây trước khi hết hạn, hoặc khi API trả 401); API cần đăng nhập dùng `HttpClient` có `AuthorizedHandler`.
+Mất mạng khi mở app vẫn giữ phiên; chỉ khi API từ chối refresh token thì app xóa phiên và về màn hình đăng nhập.
 Checkout giữ các phương thức thanh toán mô phỏng như web, chưa có cổng thanh toán thật; giỏ đồng bộ DB với web.
 Đặt đơn gửi cùng Idempotency-Key/body khi retry; khách chỉ tự hủy đơn chờ chưa thanh toán.
 
@@ -26,7 +28,10 @@ API chạy riêng cổng 5080. Backend cần áp dụng migration 001–003 và 
 Media:PublicBaseUrl phải truy cập được từ thiết bị. Màn hình ngoài cùng (`AuthPage`) đăng nhập, đăng ký qua API thật và cho dùng với tư cách khách
 (gửi tên thiết bị lên `POST /api/v1/guest-devices`, cần migration 004; Web Admin hiện ở trang Quản lý khách hàng).
 `HomePage` mới là giao diện theo trang chủ web khách hàng, dữ liệu mẫu trong `ViewModels/HomeSample.cs`, chưa nối API.
-Các màn hình chi tiết sản phẩm, giỏ hàng, checkout và tài khoản chưa được triển khai trong app.
+Tab Tài khoản mở `ProfilePage`: xem, sửa hồ sơ qua `GET/PUT /api/v1/me`, đăng xuất; `ChangePasswordPage` đổi mật khẩu qua `POST /api/v1/me/password`, API thu hồi mọi phiên nên app về màn hình đăng nhập.
+Màn hình đăng nhập có `ForgotPasswordPage`: gửi OTP 6 số qua email (`POST /api/v1/auth/password/forgot`), rồi đặt lại mật khẩu (`POST /api/v1/auth/password/reset`). Cần migration 005 và mục `Smtp` trong `appsettings.Local.json`; chưa cấu hình thì bản Development ghi mã ra log API.
+Nút Tiếp tục với Google mở `GET /api/v1/auth/google/start` trong trình duyệt; API đổi mã với Google rồi trả vé một lần qua `sportshop://auth`, app đổi vé bằng `POST /api/v1/auth/google/exchange`. Cần migration 006 và mục `Google` trong `appsettings.Local.json`.
+Màn hình chi tiết sản phẩm chưa được triển khai trong app.
 Không coi test API là bằng chứng app native đã chạy.
 
 ## Chạy Android thật từ VS Code qua USB

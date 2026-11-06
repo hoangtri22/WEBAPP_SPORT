@@ -73,5 +73,29 @@ public sealed class AuthController(CustomerStore customers, MobileTokenStore tok
         return NoContent();
     }
 
+    /// <summary>Gửi OTP đặt lại mật khẩu. Luôn trả 202 và gửi mail ở nền, để không dò được email nào có tài khoản.</summary>
+    [HttpPost("password/forgot")]
+    [ProducesResponseType(202)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, [FromServices] PasswordResetStore resets,
+        [FromServices] IPasswordResetMailer mailer, [FromServices] ILogger<AuthController> logger, CancellationToken cancellationToken)
+    {
+        var reset = await resets.CreateAsync(request.Email.Trim(), cancellationToken);
+        if (reset is not null)
+            _ = Task.Run(async () =>
+            {
+                try { await mailer.SendAsync(reset.Email, reset.Code, CancellationToken.None); }
+                catch (Exception e) { logger.LogError(e, "Không gửi được email đặt lại mật khẩu."); }
+            }, CancellationToken.None);
+        return Accepted();
+    }
+
+    /// <summary>Đặt lại mật khẩu bằng OTP; thành công thì mọi phiên mobile cũ hết hiệu lực.</summary>
+    [HttpPost("password/reset")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, [FromServices] PasswordResetStore resets, CancellationToken cancellationToken)
+        => await resets.ResetAsync(request.Email.Trim(), request.Code, request.NewPassword, cancellationToken)
+            ? NoContent() : Error(400, "INVALID_RESET_CODE", "Mã xác nhận không đúng hoặc đã hết hạn.");
+
     IActionResult Error(int status, string code, string title) => StatusCode(status, ApiProblems.Create(HttpContext, status, code, title));
 }

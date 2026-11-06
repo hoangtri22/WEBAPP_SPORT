@@ -36,6 +36,15 @@ public sealed record ChangePasswordRequest(
     [Required, StringLength(128)] string CurrentPassword,
     [Required, StringLength(128, MinimumLength = 6)] string NewPassword);
 
+public sealed record ForgotPasswordRequest([Required, EmailAddress, StringLength(100)] string Email);
+
+public sealed record ResetPasswordRequest(
+    [Required, EmailAddress, StringLength(100)] string Email,
+    [Required, RegularExpression(@"^[0-9]{6}$")] string Code,
+    [Required, StringLength(128, MinimumLength = 6)] string NewPassword);
+
+public sealed record GoogleExchangeRequest([Required, StringLength(64)] string Ticket, [Required, StringLength(128)] string Verifier);
+
 public sealed record FeedbackRequest(
     [Range(1, int.MaxValue)] int ProductId,
     [Range(1, 5)] int Stars,

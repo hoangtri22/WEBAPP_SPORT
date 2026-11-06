@@ -65,6 +65,9 @@
                         </Grid>
                     </Border>
 
+                    <Button Text="Quên mật khẩu?" Clicked="OnForgotPasswordClicked" IsVisible="{Binding IsLogin}" BackgroundColor="Transparent" TextColor="{StaticResource Teal}"
+                            FontSize="13" Padding="0" HeightRequest="32" HorizontalOptions="End" Margin="0,-6,0,-6" AutomationId="ForgotPassword" />
+
                     <Border IsVisible="{Binding HasError}" BackgroundColor="#FDECEC" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="14,10">
                         <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="13" AutomationId="AuthError" />
                     </Border>
@@ -81,6 +84,7 @@
                         <BoxView Grid.Column="2" HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Center" />
                     </Grid>
 
+                    <Button Text="Tiếp tục với Google" Command="{Binding GoogleCommand}" Style="{StaticResource OutlineButton}" AutomationId="GoogleLogin" />
                     <Button Text="Dùng với tư cách khách" Command="{Binding GuestCommand}" Style="{StaticResource OutlineButton}" AutomationId="Guest" />
                     <Label Text="Không cần tài khoản. Tên thiết bị sẽ được gửi lên hệ thống của cửa hàng."
                            FontSize="12" TextColor="{StaticResource Muted}" HorizontalTextAlignment="Center" />

@@ -16,6 +16,10 @@
     <Compile Include="../SportShop.Mobile/Services/AppMemoryCache.cs" Link="Client/AppMemoryCache.cs" />
     <Compile Include="../SportShop.Mobile/Services/CommerceApi.cs" Link="Client/CommerceApi.cs" />
     <Compile Include="../SportShop.Mobile/Services/AdvancedOrderSearch.cs" Link="Client/AdvancedOrderSearch.cs" />
+    <Compile Include="../SportShop.Mobile/Services/AccountApi.cs" Link="Client/AccountApi.cs" />
+    <Compile Include="../SportShop.Mobile/Services/AuthorizedHandler.cs" Link="Client/AuthorizedHandler.cs" />
+    <Compile Include="../SportShop.Mobile/Services/SessionManager.cs" Link="Client/SessionManager.cs" />
+    <Compile Include="../SportShop.Mobile/Services/PasswordResetApi.cs" Link="Client/PasswordResetApi.cs" />
     <Compile Include="../SportShop.Mobile/ViewModels/*.cs" Link="Client/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

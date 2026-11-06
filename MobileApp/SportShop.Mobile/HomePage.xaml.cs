@@ -1,3 +1,4 @@
+using SportShop.Mobile.Services;
 using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
@@ -7,14 +8,16 @@ public partial class HomePage : ContentPage
     private readonly AuthViewModel _auth;
     private readonly MainPage _catalog;
     private readonly CartPage _cartPage;
+    private readonly IServiceProvider _services;
 
-    public HomePage(AuthViewModel auth, MainPage catalog, CartPage cartPage)
+    public HomePage(AuthViewModel auth, MainPage catalog, CartPage cartPage, IServiceProvider services)
     {
         InitializeComponent();
         NavigationPage.SetHasNavigationBar(this, false);
         _auth = auth;
         _catalog = catalog;
         _cartPage = cartPage;
+        _services = services;
     }
 
     // Mở trang sản phẩm có sẵn (MainPage); các nút khác của Trang chủ chỉ là giao diện.
@@ -29,11 +32,11 @@ public partial class HomePage : ContentPage
         if (_cartPage.Parent is null) await Navigation.PushAsync(_cartPage);
     }
 
-    // Tab Tài khoản: hỏi rồi gọi AuthViewModel.LeaveAsync() để đăng xuất hoặc rời chế độ khách.
+    // Tab Tài khoản: đã đăng nhập thì mở hồ sơ; khách được mời đăng nhập hoặc đăng ký.
     private async void OnAccountClicked(object? sender, EventArgs e)
     {
-        var action = _auth.IsSignedIn ? "Đăng xuất" : "Đăng nhập / Đăng ký";
-        if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, action) == action)
+        if (_auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
+        else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
             await _auth.LeaveAsync();
     }
 }

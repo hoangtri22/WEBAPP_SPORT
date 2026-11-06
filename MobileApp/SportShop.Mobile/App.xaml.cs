@@ -1,3 +1,4 @@
+using SportShop.Mobile.Services;
 using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
@@ -13,10 +14,16 @@ public partial class App : Application
         UserAppTheme = AppTheme.Light;
         _services = services;
         auth.Entered += () => Show(new NavigationPage(_services.GetRequiredService<HomePage>()));
-        auth.Left += () => Show(_services.GetRequiredService<AuthPage>());
+        // Rời phiên thì xóa cache để tài khoản sau không thấy đơn hàng của tài khoản trước.
+        auth.Left += () =>
+        {
+            _services.GetRequiredService<AppMemoryCache>().Clear();
+            Show(_services.GetRequiredService<AuthPage>());
+        };
     }
 
     protected override Window CreateWindow(IActivationState? activationState) => new(_services.GetRequiredService<AuthPage>());
 
-    private void Show(Page page) => Windows[0].Page = page;
+    // Phiên có thể hết hạn trên luồng nền (AuthorizedHandler), nên đổi trang luôn qua luồng giao diện.
+    private void Show(Page page) => Dispatcher.Dispatch(() => Windows[0].Page = page);
 }

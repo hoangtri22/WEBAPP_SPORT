@@ -42,6 +42,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
                  AND available.trang_thai = 'hien' AND available.so_luong_ton > 0))
         """;
 
+    // Danh mục từ LOAI_SP kèm số sản phẩm đang bán còn hàng (SAN_PHAM, BIEN_THE_SP). Gọi từ CatalogController.
     public Task<IReadOnlyList<CategoryDto>> CategoriesAsync(CancellationToken cancellationToken) => ReadAsync(async () =>
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
@@ -57,6 +58,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         return (IReadOnlyList<CategoryDto>)rows.Select(row => new CategoryDto(row.Id, row.Name, row.ProductCount)).ToArray();
     });
 
+    // Tìm, lọc, sắp xếp và phân trang sản phẩm từ SAN_PHAM, LOAI_SP, BIEN_THE_SP. Gọi từ ProductsController.
     public Task<PagedResponse<CatalogProduct>> ProductsAsync(ProductSearch search, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(search);
@@ -97,6 +99,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         });
     }
 
+    // Chi tiết một sản phẩm kèm biến thể đang hiện trong BIEN_THE_SP. Gọi từ ProductsController.
     public Task<CatalogProductDetail?> ProductAsync(int productId, CancellationToken cancellationToken) => ReadAsync(async () =>
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
@@ -124,6 +127,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         return result;
     });
 
+    // Voucher từ KM_THEO_VOUCHER JOIN CTKM. Gọi từ CatalogController.
     public Task<IReadOnlyList<CatalogPromotion>> PromotionsAsync(CancellationToken cancellationToken) => ReadAsync(async () =>
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
@@ -143,6 +147,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
             row.PerCustomerLimit, row.StartsAt, row.EndsAt)).ToArray();
     });
 
+    // Danh sách sở thích từ SO_THICH. Gọi từ CatalogController.
     public Task<IReadOnlyList<InterestDto>> InterestsAsync(CancellationToken cancellationToken) => ReadAsync(async () =>
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
@@ -152,6 +157,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         return (IReadOnlyList<InterestDto>)rows.Select(row => new InterestDto(row.Id, row.Name)).ToArray();
     });
 
+    // Phương thức thanh toán từ PHUONG_THUC_THANH_TOAN. Gọi từ CatalogController.
     public Task<IReadOnlyList<PaymentMethodDto>> PaymentMethodsAsync(CancellationToken cancellationToken) => ReadAsync(async () =>
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
@@ -165,6 +171,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
             row.Name == CodMethodName ? "cod" : $"method_{row.Id}", row.Name)).ToArray();
     });
 
+    // Escape từ khóa thành mẫu LIKE %...% (ký tự escape là !).
     private static string? ContainsPattern(string? query) => string.IsNullOrWhiteSpace(query) ? null :
         "%" + query.Trim().Replace("!", "!!", StringComparison.Ordinal)
             .Replace("%", "!%", StringComparison.Ordinal).Replace("_", "!_", StringComparison.Ordinal) + "%";
@@ -173,6 +180,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         MySqlTransaction? transaction = null) => new(sql, parameters, transaction,
             commandTimeout: MySqlConnectionFactory.CommandTimeoutSeconds, cancellationToken: cancellationToken);
 
+    // Đổi lỗi MySQL không khả dụng thành DatabaseUnavailableException.
     private static async Task<T> ReadAsync<T>(Func<Task<T>> read)
     {
         try { return await read(); }

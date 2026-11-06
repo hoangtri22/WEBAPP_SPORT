@@ -10,7 +10,7 @@ public sealed class MySqlConnectionFactory(IConfiguration configuration)
 {
     public const int CommandTimeoutSeconds = 5;
 
-    // Opens only a connection; catalog reads never create or repair database objects.
+    // Chỉ mở kết nối; đọc catalog không tạo hay sửa đối tượng CSDL.
     public async Task<MySqlConnection> OpenAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -52,6 +52,7 @@ public sealed class MySqlConnectionFactory(IConfiguration configuration)
         }
     }
 
+    // Nhận biết lỗi kết nối hoặc sai schema; ApiExceptionHandler và MySqlCatalogReader dùng để trả 503.
     public static bool IsUnavailable(MySqlException exception) => exception.IsTransient || exception.ErrorCode is
         MySqlErrorCode.UnableToConnectToHost or
         MySqlErrorCode.DatabaseAccessDenied or

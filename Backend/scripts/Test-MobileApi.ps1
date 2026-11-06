@@ -30,7 +30,7 @@ $mysqlServer = $null
 $previousVariables = @{}
 $environmentNames = @('SPORTSHOP_TEST_MYSQL', 'SPORTSHOP_TEST_MYSQL_NO_COD', 'SPORTSHOP_EXPORT_OPENAPI')
 
-# Resolve and verify every managed path before creating files or starting the server.
+# Kiểm tra mọi đường dẫn trước khi tạo file hoặc chạy server.
 $workspacePrefix = $workspaceRoot.TrimEnd([char[]] '\/') + [IO.Path]::DirectorySeparatorChar
 $artifactPrefix = $artifactRoot.TrimEnd([char[]] '\/') + [IO.Path]::DirectorySeparatorChar
 if (-not $artifactRoot.StartsWith($workspacePrefix, [StringComparison]::OrdinalIgnoreCase) -or
@@ -57,7 +57,7 @@ foreach ($requiredFile in @($solution, $testProject, $sourceSchema)) {
     if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) { throw "Required source file missing: $requiredFile" }
 }
 
-# Fail if the requested port is occupied; never connect to or stop an existing shop server.
+# Cổng đã bị chiếm thì dừng; không kết nối hay tắt server đang có.
 $portProbe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $Port)
 try { $portProbe.Start() }
 catch { throw "Loopback port $Port is unavailable. Select another port with -Port." }
@@ -123,7 +123,7 @@ try {
     }
     if (-not $ready) { throw "Isolated MySQL did not become ready within 45 seconds; inspect $runDirectory." }
 
-    # Verify server identity before the first schema write, including protection against a port race.
+    # Xác minh đúng server trước lần ghi schema đầu tiên, chống tranh chấp cổng.
     $serverIdentity = & $mysqlExecutable @clientArguments '--execute=SELECT @@port, @@datadir, @@bind_address' 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the isolated MySQL server identity.' }
     $identityParts = ($serverIdentity | Out-String).Trim() -split "`t"
@@ -147,7 +147,7 @@ try {
     foreach ($migration in (Get-ChildItem -LiteralPath $migrationDirectory -Filter '*.sql' -File | Sort-Object Name)) {
         Invoke-TestSqlFile -FilePath $migration.FullName -Database $schemaName -LogName ("migration-" + $migration.BaseName)
     }
-    # Also execute the additive migrations twice to catch non-repeatable DDL or duplicate seeds.
+    # Chạy migration hai lần để phát hiện DDL không lặp lại được hoặc seed trùng.
     foreach ($migration in (Get-ChildItem -LiteralPath $migrationDirectory -Filter '*.sql' -File | Sort-Object Name)) {
         Invoke-TestSqlFile -FilePath $migration.FullName -Database $schemaName -LogName ("migration-repeat-" + $migration.BaseName)
     }
@@ -171,7 +171,7 @@ VALUES ('Chuyển khoản','hoat_dong'),('Thanh toán khi nhận hàng (COD)','n
     foreach ($variableName in $environmentNames) {
         $previousVariables[$variableName] = [Environment]::GetEnvironmentVariable($variableName, 'Process')
     }
-    # The empty credential exists only in this fresh loopback-only test instance; never print connection strings.
+    # Mật khẩu rỗng chỉ có ở instance test local mới tạo; không in chuỗi kết nối.
     [Environment]::SetEnvironmentVariable('SPORTSHOP_TEST_MYSQL', "Server=127.0.0.1;Port=$Port;Database=$schemaName;User ID=root;Password=;SslMode=None;Allow User Variables=true", 'Process')
     [Environment]::SetEnvironmentVariable('SPORTSHOP_TEST_MYSQL_NO_COD', "Server=127.0.0.1;Port=$Port;Database=$noCodSchema;User ID=root;Password=;SslMode=None;Allow User Variables=true", 'Process')
     [Environment]::SetEnvironmentVariable('SPORTSHOP_EXPORT_OPENAPI', (Join-Path $workspaceRoot 'Backend\docs\openapi-v1.json'), 'Process')
@@ -192,7 +192,7 @@ finally {
     if ($null -ne $mysqlServer) {
         $mysqlServer.Refresh()
         if (-not $mysqlServer.HasExited) {
-            # InputObject is the process instance created above; no process enumeration or broad termination.
+            # InputObject là tiến trình tạo ở trên; không duyệt hay tắt tiến trình khác.
             Stop-Process -InputObject $mysqlServer -ErrorAction SilentlyContinue
             $mysqlServer.WaitForExit(10000) | Out-Null
         }

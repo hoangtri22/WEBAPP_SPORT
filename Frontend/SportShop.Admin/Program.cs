@@ -5,6 +5,9 @@ using Microsoft.Extensions.FileProviders;
 using MySqlConnector;
 using SportShop.Admin.Models;
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+QuestPDF.Settings.UseSystemFonts = true;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);

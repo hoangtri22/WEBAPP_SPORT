@@ -86,6 +86,7 @@ public sealed class AuthApi(HttpClient http) : IAuthApi
         }
     }
 
+    // Đọc ProblemDetails của API thành AuthException; lỗi 401 đánh dấu Rejected.
     private static async Task<AuthException> FailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         bool rejected = response.StatusCode == HttpStatusCode.Unauthorized;

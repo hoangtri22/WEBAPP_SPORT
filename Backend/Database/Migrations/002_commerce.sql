@@ -1,4 +1,4 @@
-﻿-- Additive migration; preserves existing customers, orders, stock, and JSON cart backups.
+﻿-- Thêm bảng giỏ hàng và đặt đơn mobile; giữ nguyên khách, đơn, tồn kho và bản sao giỏ JSON.
 CREATE TABLE IF NOT EXISTS CUSTOMER_CART_STATE (
  customer_id INT NOT NULL PRIMARY KEY,
  legacy_imported TINYINT(1) NOT NULL DEFAULT 1,

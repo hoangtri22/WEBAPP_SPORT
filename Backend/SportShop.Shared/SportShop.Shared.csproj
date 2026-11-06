@@ -9,7 +9,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Dapper" Version="2.1.89" />
     <PackageReference Include="MySqlConnector" Version="2.6.2" />
-    <!-- One implementation compiled once for both hosts; preserve Razor model namespaces. -->
+    <!-- Một bản code biên dịch chung cho hai host; giữ namespace model của Razor. -->
     <Compile Include="../../Frontend/SportShop.CustomerWeb/Services/**/*.cs" Link="Services/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../Frontend/SportShop.CustomerWeb/Models/**/*.cs" Link="Models/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>

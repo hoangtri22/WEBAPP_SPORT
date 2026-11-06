@@ -1,6 +1,4 @@
-// Bộ công cụ tìm kiếm dùng chung cho trang quản trị: tìm không phân biệt hoa thường và dấu tiếng Việt, nhiều từ khóa (phải khớp đủ),
-// và bảng "Tìm kiếm nâng cao" tự dựng theo các cột của bảng: điều kiện "cột – toán tử quan hệ – giá trị" nối bằng toán tử logic Và / Hoặc.
-// admin.js (bảng .dtable) và các trang Sản phẩm, Phản hồi cùng dùng SearchKit.matches() nên cách tìm giống nhau ở mọi nơi.
+// Tìm kiếm dùng chung của trang quản trị: không phân biệt hoa thường và dấu, nhiều từ khóa; bảng "Tìm kiếm nâng cao" tự dựng theo cột. admin.js và các trang Sản phẩm, Phản hồi cùng gọi SearchKit.matches().
 var SearchKit = (function () {
     // Chữ thường, bỏ dấu tiếng Việt, gộp khoảng trắng: "Giày  Chạy" -> "giay chay".
     function fold(s) {
@@ -40,7 +38,6 @@ var SearchKit = (function () {
         function most(test) { return filled.filter(test).length >= Math.max(1, Math.ceil(filled.length * 0.6)); }
         if (most(function (t) { return parseDate(t) !== null; })) return { type: 'date' };
         if (most(function (t) { return /\d\s*[₫đ]/.test(t); })) return { type: 'money' };
-        // Cột số: ô bắt đầu bằng số ngắn (tối đa 8 chữ số, không phải số điện thoại / mã dài), có thể kèm đơn vị như "5 sản phẩm"
         if (most(function (t) { var m = /^-?(\d[\d.,]*)(\s*\S+(\s\S+)?)?$/.exec(t); return !!m && t.length <= 24 && m[1].replace(/[.,]/g, '').length <= 8; })) return { type: 'number' };
         var distinct = filled.filter(function (t, i) { return filled.indexOf(t) === i; });
         if (distinct.length >= 2 && distinct.length <= 8 && filled.length > distinct.length) return { type: 'choice', values: distinct.sort() };
@@ -86,9 +83,7 @@ var SearchKit = (function () {
         }
     }
 
-    // Dựng bảng tìm kiếm nâng cao cho một .dtable: nút .js-adv mở / đóng khung .adv-panel, mỗi dòng là một điều kiện "cột – toán tử – giá trị";
-    // các điều kiện nối với nhau bằng Và / Hoặc (Và tính trước Hoặc, như toán tử logic thông thường). Điều kiện chưa nhập giá trị thì bỏ qua.
-    // onChange() được gọi mỗi khi bộ lọc đổi; trả về { matches(tr), count() } để bảng lọc từng dòng.
+    // Dựng bảng tìm kiếm nâng cao cho .dtable: nút .js-adv mở khung .adv-panel, điều kiện "[Không] cột – toán tử – giá trị" nối bằng Và / Hoặc; onChange() báo khi lọc đổi, trả về { matches(tr), count() }.
     function advancedPanel(card, rows, onChange) {
         var btn = card.querySelector('.js-adv'), panel = card.querySelector('.adv-panel');
         if (!btn || !panel) return null;
@@ -122,7 +117,6 @@ var SearchKit = (function () {
             onChange();
         }
 
-        // Ô nhập giá trị và danh sách toán tử theo kiểu của cột đang chọn
         function buildValue(c) {
             var f = fields[c.field.selectedIndex], el;
             if (f.type === 'choice') {
@@ -140,7 +134,6 @@ var SearchKit = (function () {
             c.op.innerHTML = options(OPS[f.type]);
         }
 
-        // Dòng đầu hiện chữ "Khi", các dòng sau hiện ô chọn Và / Hoặc
         function layout() {
             conds.forEach(function (c, i) { c.join.hidden = i === 0; c.lead.hidden = i !== 0; });
         }
@@ -156,6 +149,11 @@ var SearchKit = (function () {
             c.lead = document.createElement('span');
             c.lead.className = 'adv-lead';
             c.lead.textContent = 'Khi';
+            c.not = document.createElement('select');
+            c.not.className = 'adv-not';
+            c.not.setAttribute('aria-label', 'Phủ định điều kiện');
+            c.not.innerHTML = '<option value="">—</option><option value="not">Không</option>';
+            c.not.addEventListener('change', changed);
             c.field = document.createElement('select');
             c.field.innerHTML = fields.map(function (f, i) { return '<option value="' + i + '">' + esc(f.label) + '</option>'; }).join('');
             c.op = document.createElement('select');
@@ -168,7 +166,7 @@ var SearchKit = (function () {
                 if (conds.length === 1) { c.value.value = ''; } else { conds.splice(conds.indexOf(c), 1); row.remove(); layout(); }
                 changed();
             });
-            row.appendChild(c.join); row.appendChild(c.lead); row.appendChild(c.field); row.appendChild(c.op); row.appendChild(c.value); row.appendChild(c.del);
+            row.appendChild(c.join); row.appendChild(c.lead); row.appendChild(c.not); row.appendChild(c.field); row.appendChild(c.op); row.appendChild(c.value); row.appendChild(c.del);
             conds.push(c); list.appendChild(row); layout();
         }
 
@@ -178,6 +176,7 @@ var SearchKit = (function () {
             conds.length = 1;
             conds[0].value.value = '';
             conds[0].join.value = 'and';
+            conds[0].not.value = '';
             changed();
         });
         btn.addEventListener('click', function (e) {
@@ -200,7 +199,8 @@ var SearchKit = (function () {
                 return g.every(function (c) {
                     var f = fields[c.field.selectedIndex];
                     var text = tr.children[f.index] ? tr.children[f.index].textContent.trim() : '';
-                    return test(f.type, c.op.value, c.value.value, text);
+                    var ok = test(f.type, c.op.value, c.value.value, text);
+                    return c.not.value === 'not' ? !ok : ok;
                 });
             });
         }

@@ -5,7 +5,6 @@
     int? cat = ViewBag.Cat; string q = ViewBag.Q ?? ""; string sort = ViewBag.Sort ?? "new";
     var adv = (AdvancedSearchVm)ViewBag.Advanced;
     var qBox = new SearchInputVm(q, "Tìm sản phẩm...", null, 17);
-    // Đang tìm theo từ khóa hoặc bộ lọc nâng cao: chỉ hiện kết quả, không hiện thanh lọc nhanh bên dưới
     bool searching = !string.IsNullOrWhiteSpace(q) || adv.Query.IsAdvanced;
 }
 <section class="shop-page">

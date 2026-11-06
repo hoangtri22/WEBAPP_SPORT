@@ -4,7 +4,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
-// Recheck persisted account state so a web session cannot bypass a lock/deletion/role change.
+// Kiểm tra lại tài khoản trong CSDL để phiên web không vượt qua khóa, xóa hoặc đổi vai trò.
 public sealed class CustomerSessionFilter(DbStatus db, CustomerStore customers) : IActionFilter
 {
     public void OnActionExecuting(ActionExecutingContext context)

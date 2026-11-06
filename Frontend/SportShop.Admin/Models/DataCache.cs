@@ -2,8 +2,7 @@ using System.Collections.Concurrent;
 
 namespace SportShop.Admin.Models;
 
-// Bộ nhớ đệm dùng chung giữa các request (singleton): ShopData cất các danh sách vừa nạp từ MySQL để lần sau dùng lại mà không truy vấn nữa; mỗi mục có hạn riêng
-// (mặc định 2 phút, danh sách loại / sản phẩm và dữ liệu hóa đơn cho thống kê giữ 10 phút). ShopCommands.Run() gọi Clear() sau mỗi lần ghi thành công nên dữ liệu không bị cũ.
+// Bộ nhớ đệm singleton: ShopData cất danh sách vừa nạp từ MySQL (mặc định 2 phút, LongAge 10 phút); ShopCommands.Run() gọi Clear() sau mỗi lần ghi thành công.
 public class DataCache
 {
     public static readonly TimeSpan DefaultAge = TimeSpan.FromMinutes(2);

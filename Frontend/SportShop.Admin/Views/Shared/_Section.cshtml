@@ -22,6 +22,10 @@
                 <button type="button" class="btn-outline js-adv" aria-expanded="false">@Icons.Svg("search", 18) Tìm kiếm nâng cao <span class="adv-count" hidden></span></button>
             }
             <span class="grow"></span>
+            @if (Model.ExportUrl != null)
+            {
+                <a class="btn-outline" href="@Model.ExportUrl">@Icons.Svg("download", 18) Xuất Excel</a>
+            }
             @if (Model.AddLabel != null)
             {
                 <button type="button" class="btn-primary" data-crud="create" data-entity="@Model.Entity">@Icons.Svg("plus", 18) @Model.AddLabel</button>

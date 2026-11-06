@@ -11,9 +11,7 @@ public record CatalogProduct(int Id, int CategoryId, string Name, string Categor
 
 public record CatalogSnapshot(List<(int Id, string Name)> Categories, List<CatalogProduct> Products);
 
-// Bộ nhớ đệm danh mục sản phẩm dùng chung cho mọi khách (singleton): nạp loại, sản phẩm đang hiện và mọi biến thể từ MySQL một lần rồi giữ 10 phút,
-// ShopStore.Search / Categories / FilterOptions lọc ngay trong bộ nhớ nên khách gõ nhiều từ khóa liên tiếp không phải truy vấn lại.
-// Khách đặt / hủy đơn (làm đổi tồn kho) gọi Clear() để nạp lại ngay; sản phẩm do trang quản trị sửa sẽ hiện sau tối đa 10 phút.
+// Bộ nhớ đệm danh mục singleton: nạp LOAI_SP, SAN_PHAM, BIEN_THE_SP một lần, giữ 10 phút cho ShopStore.Search / Categories / FilterOptions; đặt / hủy đơn gọi Clear(), sửa ở trang quản trị hiện sau tối đa 10 phút.
 public class CatalogCache(IConfiguration config)
 {
     static readonly TimeSpan MaxAge = TimeSpan.FromMinutes(10);
@@ -22,6 +20,7 @@ public class CatalogCache(IConfiguration config)
     CatalogSnapshot? _snapshot;
     long _loadedAt;
 
+    // Trả bản danh mục trong bộ nhớ, quá 10 phút thì nạp lại qua Load().
     public CatalogSnapshot Get()
     {
         lock (_lock)
@@ -35,11 +34,13 @@ public class CatalogCache(IConfiguration config)
         }
     }
 
+    // Xóa bản đã nạp để lần sau nạp lại. Gọi từ ShopStore khi đặt / hủy đơn.
     public void Clear()
     {
         lock (_lock) _snapshot = null;
     }
 
+    // Nạp danh mục, biến thể và sản phẩm từ MySQL. Gọi từ Get().
     CatalogSnapshot Load()
     {
         using var c = new MySqlConnection(_cs);

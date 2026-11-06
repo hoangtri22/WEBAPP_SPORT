@@ -9,7 +9,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
     bool LoggedIn => !string.IsNullOrEmpty(HttpContext.Session.GetString("customer")) && CustomerId > 0;
 
-    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở App_Data/carts.json, giá và tồn kho đọc từ BIEN_THE_SP); chưa đăng nhập thì chuyển sang trang đăng nhập.
+    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở CUSTOMER_CART_ITEM qua CartStore, giá và tồn kho đọc từ BIEN_THE_SP); chưa đăng nhập thì chuyển sang trang đăng nhập.
     public IActionResult Index()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
@@ -104,6 +104,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return View(order);
     }
 
+    // Lưu thông báo vào TempData["LoginNotice"] rồi chuyển sang Account/Login.
     IActionResult LoginRequired(string action)
     {
         TempData["LoginNotice"] = $"Vui lòng đăng nhập để {action}. Nếu chưa có tài khoản, hãy đăng ký.";

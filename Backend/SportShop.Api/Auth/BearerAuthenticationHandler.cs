@@ -9,6 +9,7 @@ namespace SportShop.Api.Auth;
 public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger, UrlEncoder encoder, MobileTokenStore tokens) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    // Đọc header Authorization, kiểm tra qua MobileTokenStore.ValidateAsync() rồi tạo claim mã khách, vai trò, session_id.
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var header = Request.Headers.Authorization.ToString();
@@ -21,12 +22,14 @@ public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSc
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));
     }
 
+    // Trả lỗi 401 dạng ProblemDetails qua ApiProblems khi thiếu hoặc sai token.
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.Headers.WWWAuthenticate = "Bearer";
         return ApiProblems.WriteAsync(Context, ApiProblems.Create(Context, 401, "UNAUTHENTICATED", "Bạn cần đăng nhập hoặc làm mới phiên đăng nhập."));
     }
 
+    // Trả lỗi 403 dạng ProblemDetails qua ApiProblems khi sai vai trò.
     protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
         => ApiProblems.WriteAsync(Context, ApiProblems.Create(Context, 403, "FORBIDDEN", "Bạn không có quyền thực hiện thao tác này."));
 }

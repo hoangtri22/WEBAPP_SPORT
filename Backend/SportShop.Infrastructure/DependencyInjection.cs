@@ -7,6 +7,7 @@ namespace SportShop.Infrastructure;
 
 public static class DependencyInjection
 {
+    // Đăng ký các dịch vụ đọc MySQL của API. Gọi từ Program.cs.
     public static IServiceCollection AddSportShopInfrastructure(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);

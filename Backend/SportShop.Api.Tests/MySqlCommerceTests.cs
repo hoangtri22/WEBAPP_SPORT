@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
-// Creates and removes only this test's records in an explicitly configured dedicated database.
+// Chỉ tạo và xóa bản ghi của test này trên CSDL test riêng.
 [Trait("Category", "MySql")]
 public sealed class MySqlCommerceTests
 {

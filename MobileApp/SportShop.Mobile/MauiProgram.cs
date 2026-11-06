@@ -7,6 +7,7 @@ namespace SportShop.Mobile;
 
 public static class MauiProgram
 {
+    // Cấu hình app: font, HttpClient tới ApiSettings.BaseUri, đăng ký service, ViewModel và các trang.
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();

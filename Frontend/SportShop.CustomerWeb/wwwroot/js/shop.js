@@ -47,9 +47,11 @@ document.addEventListener('click', function (e) {
     });
 })();
 
+// Nút yêu thích: chỉ đổi giao diện, chưa lưu dữ liệu.
 document.querySelectorAll('.heart').forEach(function (b) {
     b.addEventListener('click', function () { b.classList.toggle('liked'); });
 });
+// Tab sản phẩm nổi bật: chỉ đổi nút đang chọn.
 document.querySelectorAll('#productTabs button').forEach(function (b) {
     b.addEventListener('click', function () {
         document.querySelectorAll('#productTabs button').forEach(function (x) { x.classList.toggle('active', x === b); });

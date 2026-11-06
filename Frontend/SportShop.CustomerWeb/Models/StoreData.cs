@@ -57,10 +57,10 @@ public static class StoreData
 
     public static readonly List<StoreCategory> Categories =
     [
-        new("Giày chạy bộ", "86 sản phẩm", "running", "zap"),
-        new("Đồ tập nam", "124 sản phẩm", "men", "user"),
-        new("Đồ tập nữ", "108 sản phẩm", "women", "sparkles"),
-        new("Dụng cụ", "72 sản phẩm", "gear", "activity"),
+        new("Giày chạy bộ", "5 sản phẩm", "running", "zap"),
+        new("Đồ tập nam", "11 sản phẩm", "men", "user"),
+        new("Đồ tập nữ", "8 sản phẩm", "women", "sparkles"),
+        new("Dụng cụ", "17 sản phẩm", "gear", "activity"),
     ];
 
     public static readonly CustomerProfile Customer =

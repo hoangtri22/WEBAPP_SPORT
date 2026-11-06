@@ -74,6 +74,7 @@ public class ShopData
     public Customer Customer(int id) => Customers.First(c => c.Id == id);
     public Employee Employee(int id) => Employees.First(e => e.Id == id);
     public string VariantName(int id) => VariantName(Product(Variant(id).ProductId), Variant(id));
+    // Tên biến thể: tên sản phẩm kèm size / màu.
     public static string VariantName(Product p, Variant v)
     {
         var extra = string.Join(" / ", new[] { v.Size, v.Color }.Where(s => !string.IsNullOrEmpty(s)));
@@ -203,10 +204,12 @@ public class ShopData
             $"{S(r, "ho_lot")} {S(r, "ten")}", S(r, "ten"), S(r, "ten_vai_tro"), S(r, "chuc_vu"));
     }
 
+    // Đọc loại sản phẩm từ LOAI_SP, bỏ loại lưu trữ Catalog.ArchivedCategory.
     List<Category> LoadCategories() =>
         Query("SELECT ma_loai, ten_loai FROM LOAI_SP WHERE ten_loai <> @archived ORDER BY ma_loai", new { archived = Catalog.ArchivedCategory })
             .Select(r => new Category(I(r, "ma_loai"), S(r, "ten_loai"))).ToList();
 
+    // Đọc sản phẩm từ SAN_PHAM + LOAI_SP kèm ảnh đại diện trong BIEN_THE_SP.
     List<Product> LoadProducts() =>
         Query("""
             SELECT sp.ma_san_pham, l.ten_loai, sp.ten_san_pham, sp.don_vi_tinh, sp.trang_thai, sp.mo_ta,
@@ -217,11 +220,13 @@ public class ShopData
             """).Select(r => new Product(I(r, "ma_san_pham"), S(r, "ten_loai"), S(r, "ten_san_pham"), S(r, "don_vi_tinh"),
                 S(r, "trang_thai") == "hien", S(r, "mo_ta"), NS(r, "hinh_anh"))).ToList();
 
+    // Đọc biến thể từ BIEN_THE_SP.
     List<Variant> LoadVariants() =>
         Query("SELECT ma_bien_the, ma_san_pham, kich_co, mau_sac, gia_ban, gia_von, so_luong_ton FROM BIEN_THE_SP ORDER BY ma_bien_the")
             .Select(r => new Variant(I(r, "ma_bien_the"), I(r, "ma_san_pham"), NS(r, "kich_co"), NS(r, "mau_sac"),
                 M(r, "gia_ban"), M(r, "gia_von"), I(r, "so_luong_ton"))).ToList();
 
+    // Đọc nhân viên từ NHAN_VIEN + TAI_KHOAN.
     List<Employee> LoadEmployees() =>
         Query("""
             SELECT nv.ma_nhan_vien, nv.ho_lot, nv.ten, nv.gioi_tinh, nv.ngay_sinh, nv.chuc_vu, nv.luong_co_ban, nv.trang_thai,
@@ -281,6 +286,7 @@ public class ShopData
         }).ToList();
     }
 
+    // Đọc nhóm khách từ NHOM_KHACH_HANG kèm số khách trong KHACH_HANG_NHOM_KH.
     List<CustomerGroup> LoadGroups() =>
         Query("""
             SELECT n.*, st.ten_so_thich,
@@ -352,11 +358,13 @@ public class ShopData
         }).ToList();
     }
 
+    // Đọc lịch sử chăm sóc từ LICH_SU_CHAM_SOC.
     List<CareNote> LoadCareNotes() =>
         Query("SELECT * FROM LICH_SU_CHAM_SOC ORDER BY ngay_cham_soc")
             .Select(r => new CareNote(I(r, "ma_khach_hang"), I(r, "ma_nhan_vien"), S(r, "hinh_thuc"), S(r, "noi_dung"),
                 T(r, "ngay_cham_soc"), NT(r, "ngay_hen_lien_he_lai"))).ToList();
 
+    // Đọc phản hồi từ PHAN_HOI kèm sản phẩm và câu trả lời.
     List<FeedbackItem> LoadFeedback() =>
         Query("""
             SELECT ph.*, sp.ten_san_pham, hd.so_hoa_don,
@@ -376,6 +384,7 @@ public class ShopData
                 NS(r, "tl_noi_dung"), NT(r, "ngay_tra_loi"), NI(r, "tl_nhan_vien"));
         }).ToList();
 
+    // Đọc tài khoản từ TAI_KHOAN + VAI_TRO.
     List<Account> LoadAccounts() =>
         Query("""
             SELECT tk.ma_tai_khoan, tk.ten_dang_nhap, vt.ten_vai_tro, tk.email, tk.so_dien_thoai, tk.trang_thai
@@ -383,11 +392,13 @@ public class ShopData
             ORDER BY tk.ma_vai_tro, tk.ma_tai_khoan
             """).Select(r => new Account(S(r, "ten_dang_nhap"), S(r, "ten_vai_tro"), S(r, "email"), S(r, "so_dien_thoai"), S(r, "trang_thai"), I(r, "ma_tai_khoan"))).ToList();
 
+    // Đọc nhà cung cấp từ NHA_CUNG_CAP.
     List<Supplier> LoadSuppliers() =>
         Query("SELECT * FROM NHA_CUNG_CAP ORDER BY ma_ncc")
             .Select(r => new Supplier(I(r, "ma_ncc"), S(r, "ten_ncc"), S(r, "so_dien_thoai"), S(r, "email"), S(r, "dia_chi"),
                 S(r, "trang_thai") == "hop_tac")).ToList();
 
+    // Đọc phiếu nhập từ PHIEU_NHAP_HANG kèm các dòng CHI_TIET_PHIEU_NHAP_HANG.
     List<ImportSlip> LoadImports()
     {
         var items = Query("""
@@ -413,6 +424,7 @@ public class ShopData
                 S(r, "nv_ten"), M(r, "tong_tien"), string.Join((char)10, items[I(r, "ma_phieu_nhap")]))).ToList();
     }
 
+    // Đọc chương trình CTKM kèm chi tiết KM_THEO_SP, KM_THEO_DH, KM_THEO_VOUCHER.
     List<Promotion> LoadPromotions()
     {
         var bySp = Query("""
@@ -442,6 +454,7 @@ public class ShopData
         }).ToList();
     }
 
+    // Đọc chiến dịch từ CHIEN_DICH_THONG_BAO kèm nhóm khách.
     List<Campaign> LoadCampaigns() =>
         Query("""
             SELECT cd.ma_chien_dich, cd.tieu_de, cd.kenh_gui, cd.trang_thai, n.ten_nhom, km.ten_ctkm, CONCAT(nv.ho_lot, ' ', nv.ten) AS nv_ten
@@ -454,6 +467,7 @@ public class ShopData
                 S(r, "kenh_gui") switch { "email" => "Email", "sms" => "SMS", "app" => "App", var k => k },
                 NS(r, "ten_nhom") ?? "Tất cả khách", NS(r, "ten_ctkm") ?? "-", S(r, "nv_ten"), S(r, "trang_thai") == "da_gui", I(r, "ma_chien_dich"))).ToList();
 
+    // Đọc khảo sát từ KHAO_SAT kèm số câu hỏi và số khách nhận.
     List<Survey> LoadSurveys() =>
         Query("""
             SELECT ks.ma_khao_sat, ks.tieu_de, ks.ngay_ket_thuc, ks.trang_thai,
@@ -498,6 +512,7 @@ public class ShopData
         catch (MySqlException e) when (e.ErrorCode == MySqlErrorCode.NoSuchTable) { return []; }
     }
 
+    // Hàm chung: mở kết nối MySQL (ConnectionStrings:Default) và chạy SELECT bằng Dapper; các hàm đọc trong file đều gọi hàm này.
     List<IDictionary<string, object?>> Query(string sql, object? args = null)
     {
         using var conn = new MySqlConnection(_cs);

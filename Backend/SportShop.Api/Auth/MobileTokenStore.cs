@@ -6,13 +6,14 @@ using SportShop.Infrastructure;
 
 namespace SportShop.Api.Auth;
 
-/// <summary>Persists only token digests. Rotation and replay revocation are atomic across API processes.</summary>
+/// <summary>Chỉ lưu hash của token trong MOBILE_AUTH_SESSION; xoay token và thu hồi khi dùng lại đều nằm trong transaction.</summary>
 public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider clock)
 {
     const int AccessSeconds = 900;
     static string NewToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     static string Digest(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
+    // Cấp token mới: kiểm tra khách còn hoạt động (KHACH_HANG, TAI_KHOAN, VAI_TRO), ghi phiên vào MOBILE_AUTH_SESSION. Gọi từ AuthController.
     public virtual async Task<TokenResponse?> IssueAsync(int customerId, CancellationToken cancellationToken)
     {
         await using var c = await connections.OpenAsync(cancellationToken);
@@ -32,6 +33,7 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
         return response;
     }
 
+    // Kiểm tra access token theo MOBILE_AUTH_SESSION và trạng thái tài khoản. Gọi từ BearerAuthenticationHandler.
     public virtual async Task<TokenIdentity?> ValidateAsync(string accessToken, CancellationToken cancellationToken)
     {
         if (accessToken.Length != 64) return null;
@@ -47,6 +49,7 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
             ? new(row.CustomerId, row.SessionId) : null;
     }
 
+    // Xoay token trong transaction; refresh token đã dùng (MOBILE_AUTH_REFRESH_USED) thì thu hồi cả phiên. Gọi từ AuthController.Refresh.
     public virtual async Task<TokenResponse?> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
         if (refreshToken.Length != 64) return null;
@@ -84,6 +87,7 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
         return response;
     }
 
+    // Thu hồi một phiên trong MOBILE_AUTH_SESSION. Gọi từ AuthController.Logout.
     public virtual async Task RevokeAsync(long sessionId, int customerId, CancellationToken cancellationToken)
     {
         await using var c = await connections.OpenAsync(cancellationToken);
@@ -91,6 +95,7 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
             new { sessionId, customerId }, cancellationToken: cancellationToken));
     }
 
+    // Sinh cặp token mới (access 15 phút, refresh 30 ngày) cho phiên đăng nhập.
     TokenResponse Tokens(int customerId)
     {
         var now = clock.GetUtcNow();

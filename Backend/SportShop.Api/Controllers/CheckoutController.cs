@@ -19,15 +19,15 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Tải người nhận mặc định, giỏ, phương thức giả lập và voucher phù hợp.</summary>
+    /// <summary>Tải người nhận mặc định, giỏ, phương thức giả lập và voucher phù hợp qua Build().</summary>
     [HttpGet, ProducesResponseType<CheckoutDto>(200)]
     public ActionResult<CheckoutDto> Get() => Build(null);
 
-    /// <summary>Tính lại giá, phí giao hàng và voucher từ giỏ trên máy chủ, không tạo đơn.</summary>
+    /// <summary>Tính lại giá, phí giao hàng và voucher từ giỏ trên máy chủ qua Build(), không tạo đơn.</summary>
     [HttpPost("quote"), ProducesResponseType<CheckoutDto>(200)]
     public ActionResult<CheckoutDto> Quote(CheckoutQuoteRequest request) => Build(request.Voucher);
 
-    /// <summary>Các mã tài khoản có thể dùng với giỏ hiện tại, kèm số tiền giảm.</summary>
+    /// <summary>Các mã tài khoản có thể dùng với giỏ hiện tại, kèm số tiền giảm, lấy từ ShopStore.UsablePromos().</summary>
     [HttpGet("vouchers"), ProducesResponseType<IReadOnlyList<EligibleVoucherDto>>(200)]
     public ActionResult<IReadOnlyList<EligibleVoucherDto>> Vouchers()
     {
@@ -35,6 +35,7 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
         return Ok(shop.UsablePromos(CustomerId, subtotal).Select(item => CommerceMapping.Voucher(item, clock)).ToArray());
     }
 
+    // Dựng CheckoutDto từ ShopStore: CartLines(), PreviewVoucher(), Receiver(), PaymentMethods(), UsablePromos().
     ActionResult<CheckoutDto> Build(string? voucher)
     {
         var lines = shop.CartLines(CustomerId);

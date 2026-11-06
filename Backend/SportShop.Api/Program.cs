@@ -8,11 +8,11 @@ using SportShop.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Console logging also works under an unprivileged account without Windows Event Log access.
+// Ghi log ra console để chạy được cả với tài khoản không có quyền Windows Event Log.
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole();
 
-// API configuration is independent of both MVC hosts; never load their local secrets.
+// Cấu hình API độc lập với hai web, không đọc secret của chúng.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 builder.Configuration.AddEnvironmentVariables();
 
@@ -59,7 +59,7 @@ builder.Services.AddOpenApi("v1", options => options.AddDocumentTransformer((doc
 
 var app = builder.Build();
 
-// Resolve once at startup to validate media configuration without opening the DB.
+// Khởi tạo một lần lúc chạy để kiểm tra cấu hình media mà không mở CSDL.
 var media = app.Services.GetRequiredService<MediaUrlResolver>();
 app.UseExceptionHandler();
 app.Use(async (context, next) =>
@@ -91,5 +91,5 @@ if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
 app.Run();
 
-// Allows HTTP contract tests to host the real pipeline without running either MVC app.
+// Để test HTTP chạy pipeline thật mà không cần hai web MVC.
 public partial class Program { }

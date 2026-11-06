@@ -16,6 +16,7 @@ public sealed class MediaUrlResolver
     private readonly string _imagesDirectory;
     private readonly string _uploadsDirectory;
 
+    // Đọc Media:PublicBaseUrl, Paths:Images, Paths:Uploads từ cấu hình; URL không hợp lệ thì dừng khởi động.
     public MediaUrlResolver(IConfiguration configuration, IWebHostEnvironment environment)
     {
         var configuredUrl = configuration["Media:PublicBaseUrl"]?.Trim();
@@ -32,7 +33,7 @@ public sealed class MediaUrlResolver
             configuration["Paths:Uploads"] ?? "../../Frontend/Uploads");
     }
 
-    // Accept only image files in the shared media folders, never arbitrary DB-provided URLs.
+    // Chỉ nhận file ảnh trong thư mục media dùng chung, không nhận URL tùy ý từ CSDL.
     public string? Resolve(string? imagePath)
     {
         if (string.IsNullOrWhiteSpace(imagePath)) return null;
@@ -48,6 +49,7 @@ public sealed class MediaUrlResolver
         return new Uri(_publicBaseUrl, $"/{parts[1]}/{Uri.EscapeDataString(filename)}").AbsoluteUri;
     }
 
+    // Phục vụ thư mục ảnh tại /images và /uploads. Gọi từ Program.cs.
     public void MapStaticFiles(WebApplication app)
     {
         MapDirectory(app, _imagesDirectory, "/images");
@@ -57,6 +59,7 @@ public sealed class MediaUrlResolver
     private static string ResolveDirectory(string contentRoot, string directory)
         => Path.GetFullPath(Path.Combine(contentRoot, directory));
 
+    // Mở một thư mục ảnh tĩnh, chỉ cho các đuôi trong ImageTypes, cache 5 phút.
     private static void MapDirectory(WebApplication app, string directory, string requestPath)
     {
         if (!Directory.Exists(directory)) return;

@@ -17,7 +17,7 @@ public sealed record ProductSearch(
     int? CategoryId = null, string? Q = null, string Sort = "new",
     bool InStockOnly = true, int Page = 1, int PageSize = 20);
 
-// Internal read models retain DB image paths; the HTTP layer resolves public URLs.
+// Model đọc nội bộ giữ đường dẫn ảnh trong CSDL; tầng HTTP đổi thành URL công khai.
 public sealed record CatalogProduct(
     int Id, string Name, int CategoryId, string CategoryName, string Unit,
     string? Description, string? ImagePath, decimal? MinPrice, decimal? MaxPrice, long Stock);

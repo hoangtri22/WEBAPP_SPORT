@@ -15,7 +15,7 @@ using AdminCache = SportShop.Admin.Models.DataCache;
 
 namespace SportShop.Api.Tests;
 
-// Exercises the real Admin command model and shared mobile stores against owned fixture records.
+// Chạy lệnh thật của Admin và store dùng chung mobile trên bản ghi test riêng.
 [Trait("Category", "MySql")]
 public sealed class AdminCommerceIntegrationTests
 {

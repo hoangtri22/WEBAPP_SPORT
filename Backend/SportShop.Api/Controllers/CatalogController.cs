@@ -8,13 +8,13 @@ namespace SportShop.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
 public sealed class CatalogController(ICatalogReader reader, ICatalogClock clock) : ControllerBase
 {
-    /// <summary>Danh mục và số sản phẩm đang bán còn tồn kho.</summary>
+    /// <summary>Danh mục và số sản phẩm đang bán còn tồn kho, đọc qua ICatalogReader.CategoriesAsync().</summary>
     [HttpGet("categories")]
     [ProducesResponseType<IReadOnlyList<CategoryDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CategoryDto>>> Categories(CancellationToken cancellationToken)
         => Ok(await reader.CategoriesAsync(cancellationToken));
 
-    /// <summary>Voucher đang hiệu lực và còn lượt; chưa xác nhận điều kiện riêng của khách.</summary>
+    /// <summary>Voucher đang hiệu lực và còn lượt, đọc qua ICatalogReader.PromotionsAsync(); chưa xác nhận điều kiện riêng của khách.</summary>
     [HttpGet("promotions")]
     [ProducesResponseType<IReadOnlyList<PromotionDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PromotionDto>>> Promotions(CancellationToken cancellationToken)
@@ -26,13 +26,13 @@ public sealed class CatalogController(ICatalogReader reader, ICatalogClock clock
             clock.WithOffset(promotion.StartsAt), clock.WithOffset(promotion.EndsAt))).ToArray());
     }
 
-    /// <summary>Danh sách sở thích thể thao dùng cho hồ sơ khách hàng.</summary>
+    /// <summary>Danh sách sở thích thể thao cho hồ sơ khách hàng, đọc qua ICatalogReader.InterestsAsync().</summary>
     [HttpGet("interests")]
     [ProducesResponseType<IReadOnlyList<InterestDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<InterestDto>>> Interests(CancellationToken cancellationToken)
         => Ok(await reader.InterestsAsync(cancellationToken));
 
-    /// <summary>Các phương thức thanh toán đang hoạt động, cùng lựa chọn với Web User (thanh toán mô phỏng).</summary>
+    /// <summary>Các phương thức thanh toán đang hoạt động, đọc qua ICatalogReader.PaymentMethodsAsync() (thanh toán mô phỏng như web).</summary>
     [HttpGet("payment-methods")]
     [ProducesResponseType<IReadOnlyList<PaymentMethodDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PaymentMethodDto>>> PaymentMethods(CancellationToken cancellationToken)

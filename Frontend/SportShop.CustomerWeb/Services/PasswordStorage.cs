@@ -3,12 +3,13 @@ using System.Text;
 
 namespace SportShop.CustomerWeb.Services;
 
-/// <summary>Shared password encoding. Legacy demo passwords are upgraded after a successful sign-in.</summary>
+/// <summary>Mã hóa mật khẩu dùng chung (PBKDF2-SHA256); mật khẩu demo cũ được nâng cấp sau khi đăng nhập đúng.</summary>
 public static class PasswordStorage
 {
     const string Prefix = "$sportshop$";
     const int Iterations = 210000;
 
+    // Băm mật khẩu bằng PBKDF2-SHA256 với salt ngẫu nhiên.
     public static string Hash(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(16);
@@ -18,6 +19,7 @@ public static class PasswordStorage
 
     public static bool IsEncoded(string password) => password.StartsWith(Prefix, StringComparison.Ordinal);
 
+    // So mật khẩu nhập với bản lưu: bản băm thì tính lại PBKDF2, mật khẩu demo cũ thì so trực tiếp.
     public static bool Verify(string stored, string entered)
     {
         if (!IsEncoded(stored))

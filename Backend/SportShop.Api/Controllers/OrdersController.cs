@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SportShop.Api.Auth;
 using SportShop.Api.Errors;
 using SportShop.Api.Media;
 using SportShop.Application.Catalog;
@@ -19,9 +20,10 @@ namespace SportShop.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(404)]
 [ProducesResponseType<ProblemDetails>(409)]
 [ProducesResponseType<ProblemDetails>(503)]
-public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICatalogClock clock) : ControllerBase
+public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICatalogClock clock, GuestDeviceStore guests) : ControllerBase
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    bool IsGuest => User.HasClaim("is_guest", "true");
 
     /// <summary>Lịch sử đơn của tài khoản qua ShopStore.Orders(), lọc trạng thái và phân trang tại CSDL.</summary>
     [HttpGet, ProducesResponseType<PagedResponse<OrderDto>>(200)]
@@ -45,13 +47,17 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
 
     /// <summary>Đặt giỏ hiện tại qua ShopStore.PlaceCartOrder() trong một transaction; Idempotency-Key bảo vệ khi mạng gửi lại.</summary>
     [HttpPost, ProducesResponseType<OrderDto>(201), ProducesResponseType<OrderDto>(200)]
-    public ActionResult<OrderDto> Place(PlaceOrderRequest request,
-        [FromHeader(Name = "Idempotency-Key"), Required, StringLength(128, MinimumLength = 1), RegularExpression("^[!-~]{1,128}$")] string requestKey)
+    public async Task<ActionResult<OrderDto>> Place(PlaceOrderRequest request,
+        [FromHeader(Name = "Idempotency-Key"), Required, StringLength(128, MinimumLength = 1), RegularExpression("^[!-~]{1,128}$")] string requestKey,
+        CancellationToken cancellationToken)
     {
+        var voucher = IsGuest ? null : request.Voucher;
         var result = shop.PlaceCartOrder(CustomerId, new ReceiverInfo(request.Name, request.Phone, request.Address),
-            request.PaymentMethodId, request.Voucher, requestKey);
+            request.PaymentMethodId, voucher, requestKey);
         if (result.OrderId is not int id)
             return Conflict(ApiProblems.Create(HttpContext, 409, "ORDER_CONFLICT", result.Error ?? "Không thể tạo đơn hàng."));
+        if (IsGuest)
+            await guests.UpdateGuestContactAsync(CustomerId, request.Name, request.Phone, cancellationToken);
         var order = CommerceMapping.Order(shop.Orders(CustomerId, id).Single(), media, clock);
         if (result.Replayed) { Response.Headers["Idempotency-Replayed"] = "true"; return Ok(order); }
         return CreatedAtAction(nameof(Detail), new { orderId = id }, order);

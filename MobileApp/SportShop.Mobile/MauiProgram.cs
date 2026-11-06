@@ -29,15 +29,24 @@ public static class MauiProgram
             BaseAddress = ApiSettings.BaseUri,
             Timeout = TimeSpan.FromSeconds(20)
         });
+        builder.Services.AddSingleton<AppMemoryCache>();
         builder.Services.AddSingleton<ICatalogApi, CatalogApi>();
         builder.Services.AddSingleton<IAuthApi, AuthApi>();
         builder.Services.AddSingleton<ISessionStore, SessionStore>();
         builder.Services.AddSingleton<IDeviceIdentity, DeviceIdentity>();
+        builder.Services.AddSingleton<ICommerceApi, CommerceApi>();
+
         builder.Services.AddSingleton<AuthViewModel>();
+        builder.Services.AddSingleton<CatalogViewModel>();
+        builder.Services.AddSingleton<CartViewModel>();
+        builder.Services.AddSingleton<OrdersViewModel>();
+
         builder.Services.AddTransient<AuthPage>();
         builder.Services.AddTransient<HomePage>();
-        builder.Services.AddSingleton<CatalogViewModel>();
         builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddTransient<CartPage>();
+        builder.Services.AddTransient<CheckoutPage>();
+        builder.Services.AddTransient<OrdersPage>();
         return builder.Build();
     }
 }

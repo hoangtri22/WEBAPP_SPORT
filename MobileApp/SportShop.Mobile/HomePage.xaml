@@ -8,7 +8,7 @@
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Padding="18,12" BackgroundColor="White">
             <Label Text="SPORTSHOP" VerticalOptions="Center" FontFamily="OpenSansSemibold" FontSize="20" CharacterSpacing="1.5" TextColor="{StaticResource Teal}" />
             <ImageButton Grid.Column="1" Source="ic_search_ink.png" WidthRequest="40" HeightRequest="40" Padding="9" BackgroundColor="Transparent" SemanticProperties.Description="Tìm kiếm" />
-            <ImageButton Grid.Column="2" Source="ic_shopping_bag_ink.png" WidthRequest="40" HeightRequest="40" Padding="9" BackgroundColor="Transparent" SemanticProperties.Description="Giỏ hàng" />
+            <ImageButton Grid.Column="2" Source="ic_shopping_bag_ink.png" WidthRequest="40" HeightRequest="40" Padding="9" BackgroundColor="Transparent" SemanticProperties.Description="Giỏ hàng" Clicked="OnCartClicked" />
         </Grid>
 
         <ScrollView Grid.Row="1">
@@ -231,6 +231,9 @@
                 <Label Text="Sản phẩm" Style="{StaticResource NavLabel}" />
             </VerticalStackLayout>
             <VerticalStackLayout Grid.Column="2" Padding="0,9,0,7" Spacing="3">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCartClicked" />
+                </VerticalStackLayout.GestureRecognizers>
                 <Image Source="ic_shopping_bag_muted.png" WidthRequest="22" HeightRequest="22" />
                 <Label Text="Giỏ hàng" Style="{StaticResource NavLabel}" />
             </VerticalStackLayout>

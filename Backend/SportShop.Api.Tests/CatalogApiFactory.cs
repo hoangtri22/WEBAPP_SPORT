@@ -11,6 +11,7 @@ using SportShop.Contracts.Common;
 
 namespace SportShop.Api.Tests;
 
+// Dựng API test dùng catalog giả.
 internal sealed class CatalogApiFactory(
     bool replaceDatabaseServices = true,
     string environment = "Development",
@@ -19,6 +20,7 @@ internal sealed class CatalogApiFactory(
     public FakeCatalogReader Reader { get; } = new();
     public FakeDatabaseReadiness Readiness { get; } = new();
 
+    // Thay dịch vụ thật bằng bản giả và cấu hình test.
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(environment);
@@ -41,6 +43,7 @@ internal sealed class CatalogApiFactory(
         }
     }
 
+    // Tạo HttpClient không tự chuyển hướng.
     public HttpClient Client() => CreateClient(new WebApplicationFactoryClientOptions
     {
         AllowAutoRedirect = false,
@@ -48,6 +51,7 @@ internal sealed class CatalogApiFactory(
     });
 }
 
+// ICatalogReader giả trả dữ liệu cố định.
 internal sealed class FakeCatalogReader : ICatalogReader
 {
     public Exception? Failure { get; set; }
@@ -58,17 +62,20 @@ internal sealed class FakeCatalogReader : ICatalogReader
 
     CatalogProduct Product => new(7, "Giày chạy bộ", 2, "Giày", "đôi", "Mô tả sản phẩm", ImagePath, 1200000m, 1300000m, 4);
 
+    // Ném lỗi đã cài sẵn để thử xử lý lỗi.
     void ThrowIfFailed()
     {
         if (Failure is not null) throw Failure;
     }
 
+    // Trả danh mục giả.
     public Task<IReadOnlyList<CategoryDto>> CategoriesAsync(CancellationToken cancellationToken)
     {
         ThrowIfFailed();
         return Task.FromResult<IReadOnlyList<CategoryDto>>([new(2, "Giày", 1)]);
     }
 
+    // Trả danh sách sản phẩm giả và ghi lại điều kiện tìm.
     public Task<PagedResponse<CatalogProduct>> ProductsAsync(ProductSearch search, CancellationToken cancellationToken)
     {
         ThrowIfFailed();
@@ -78,6 +85,7 @@ internal sealed class FakeCatalogReader : ICatalogReader
         return Task.FromResult(new PagedResponse<CatalogProduct>(products, search.Page, search.PageSize, 23));
     }
 
+    // Trả chi tiết sản phẩm giả.
     public Task<CatalogProductDetail?> ProductAsync(int productId, CancellationToken cancellationToken)
     {
         ThrowIfFailed();
@@ -87,6 +95,7 @@ internal sealed class FakeCatalogReader : ICatalogReader
             : null);
     }
 
+    // Trả khuyến mãi giả.
     public Task<IReadOnlyList<CatalogPromotion>> PromotionsAsync(CancellationToken cancellationToken)
     {
         ThrowIfFailed();
@@ -95,12 +104,14 @@ internal sealed class FakeCatalogReader : ICatalogReader
                 new DateTime(2026, 10, 1), new DateTime(2026, 10, 31, 23, 59, 59))]);
     }
 
+    // Trả sở thích giả.
     public Task<IReadOnlyList<InterestDto>> InterestsAsync(CancellationToken cancellationToken)
     {
         ThrowIfFailed();
         return Task.FromResult<IReadOnlyList<InterestDto>>([new(1, "Chạy bộ")]);
     }
 
+    // Trả phương thức thanh toán giả.
     public Task<IReadOnlyList<PaymentMethodDto>> PaymentMethodsAsync(CancellationToken cancellationToken)
     {
         ThrowIfFailed();
@@ -108,10 +119,12 @@ internal sealed class FakeCatalogReader : ICatalogReader
     }
 }
 
+// IDatabaseReadiness giả để thử CSDL lỗi.
 internal sealed class FakeDatabaseReadiness : IDatabaseReadiness
 {
     public Exception? Failure { get; set; }
 
+    // Ném lỗi đã cài sẵn hoặc báo thành công.
     public Task CheckAsync(CancellationToken cancellationToken) => Failure is not null
         ? Task.FromException(Failure)
         : Task.CompletedTask;

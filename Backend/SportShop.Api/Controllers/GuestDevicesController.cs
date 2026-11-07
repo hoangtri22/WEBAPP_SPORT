@@ -4,6 +4,7 @@ using SportShop.Contracts.Customer;
 
 namespace SportShop.Api.Controllers;
 
+// API ghi nhận thiết bị dùng app với tư cách khách, xử lý qua GuestDeviceStore.
 [ApiController, Route("api/v1/guest-devices")]
 public sealed class GuestDevicesController(GuestDeviceStore devices) : ControllerBase
 {

@@ -36,6 +36,7 @@ public sealed class GoogleSignIn(HttpClient http) : IGoogleSignIn
         catch (HttpRequestException) { throw new AuthException("Không kết nối được cửa hàng. Vui lòng kiểm tra kết nối và thử lại."); }
     }
 
+    // Đổi mã lỗi đăng nhập Google sang thông báo tiếng Việt.
     private static string ErrorText(string error) => error switch
     {
         "not_configured" => "Đăng nhập Google chưa được cấu hình trên máy chủ.",
@@ -43,5 +44,6 @@ public sealed class GoogleSignIn(HttpClient http) : IGoogleSignIn
         _ => "Không kết nối được Google. Vui lòng thử lại."
     };
 
+    // Mã hóa base64url cho PKCE.
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

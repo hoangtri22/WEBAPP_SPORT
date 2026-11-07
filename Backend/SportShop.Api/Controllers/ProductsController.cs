@@ -9,6 +9,7 @@ using SportShop.Contracts.Common;
 
 namespace SportShop.Api.Controllers;
 
+// API tìm kiếm và xem chi tiết sản phẩm, đọc qua ICatalogReader.
 [ApiController, Route("api/v1/products")]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]

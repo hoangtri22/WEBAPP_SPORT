@@ -8,6 +8,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API hồ sơ và đổi mật khẩu của khách đang đăng nhập, xử lý qua CustomerStore.
 [ApiController, Authorize(Roles = "Customer"), Route("api/v1/me")]
 [ProducesResponseType<ProblemDetails>(400), ProducesResponseType<ProblemDetails>(401)]
 public sealed class MeController(CustomerStore customers, LoginThrottle throttle) : ControllerBase
@@ -59,5 +60,6 @@ public sealed class MeController(CustomerStore customers, LoginThrottle throttle
         return NoContent();
     }
 
+    // Trả lỗi dạng ProblemDetails qua ApiProblems.Create().
     IActionResult Error(int status, string code, string title) => StatusCode(status, ApiProblems.Create(HttpContext, status, code, title));
 }

@@ -5,22 +5,32 @@ using Microsoft.AspNetCore.Html;
 namespace SportShop.Admin.Models;
 
 
+// Loại sản phẩm (LOAI_SP).
 public record Category(int Id, string Name);
+// Một đơn dùng cho thẻ số liệu và biểu đồ của trang Báo cáo.
 public record ReportOrder(DateTime Date, decimal Revenue, decimal Cost);
+// Số liệu bán của một sản phẩm trên trang Báo cáo.
 public record ReportProduct(string Name, int Qty, decimal Revenue, decimal Cost);
+// Một hóa đơn dùng cho trang Thống kê doanh thu.
 public record InvoiceRow(string Number, DateTime Date, decimal Total, string Employee, string Customer);
+// Một dòng hóa đơn dùng cho bảng theo sản phẩm.
 public record InvoiceLine(DateTime Date, string Product, decimal Amount);
+// Một phiếu nhập dùng để tính tổng chi.
 public record ImportRow(DateTime Date, decimal Total);
 
+// Biến thể sản phẩm (BIEN_THE_SP).
 public record Variant(int Id, int ProductId, string? Size, string? Color, decimal Price, decimal Cost, int Stock);
 
+// Sản phẩm (SAN_PHAM).
 public record Product(int Id, string Category, string Name, string Unit, bool Visible, string Description, string? Image = null);
 
+// Một dòng sản phẩm trong đơn (CHI_TIET_DON_HANG).
 public record OrderLine(int VariantId, int Qty, decimal Price, decimal Discount, decimal Cost)
 {
     public decimal Amount => Qty * Price - Discount;
 }
 
+// Đơn hàng (DON_HANG) kèm các dòng sản phẩm.
 public record Order(
     int Id, string Code, int CustomerId, int? EmployeeId, DateTime Date,
     string Status, string PayStatus, string PayMethod,
@@ -34,25 +44,36 @@ public record Order(
     public int Quantity => Lines.Sum(l => l.Qty);
 }
 
+// Nhân viên (NHAN_VIEN).
 public record Employee(int Id, string LastName, string FirstName, string Gender, DateTime? Birth, string Position, decimal BaseSalary, bool Working, string Username, string Phone, string Email, string Role);
 
+// Tài khoản đăng nhập (TAI_KHOAN).
 public record Account(string Username, string Role, string Email, string Phone, string Status, int Id = 0);
 
+// Nhóm khách hàng (NHOM_KHACH_HANG).
 public record CustomerGroup(int Id, string Name, string Criterion, string Value, int Count);
 
+// Nhà cung cấp (NHA_CUNG_CAP).
 public record Supplier(int Id, string Name, string Phone, string Email, string Address, bool Active);
 
+// Phiếu nhập hàng (PHIEU_NHAP_HANG).
 public record ImportSlip(int Id, string Supplier, DateTime Date, int Quantity, string Employee, decimal Total, string Items = "");
 
+// Chương trình khuyến mãi (CTKM).
 public record Promotion(int Id, string Name, string Type, DateTime Start, DateTime End, string Discount, string Status, int Uses);
 
+// Chiến dịch thông báo (CHIEN_DICH_THONG_BAO).
 public record Campaign(string Title, string Channel, string Group, string Promotion, string Creator, bool Sent, int Id = 0);
 
+// Khảo sát (KHAO_SAT) kèm số liệu gửi và hoàn thành.
 public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status);
 
+// Ghi chú chăm sóc khách (LICH_SU_CHAM_SOC).
 public record CareNote(int CustomerId, int EmployeeId, string Channel, string Content, DateTime Date, DateTime? FollowUp);
+// Thiết bị dùng app với tư cách khách (MOBILE_GUEST_DEVICE).
 public record GuestDevice(string Name, string Model, string Os, DateTime FirstSeen, DateTime LastSeen, int Visits);
 
+// Phản hồi của khách (PHAN_HOI).
 public record FeedbackItem(
     int Id, int CustomerId, string Type, int? Stars, string Title, string Body, DateTime SentAt,
     string? Target, string Status, bool Visible, string? Reply, DateTime? ReplyAt, int? ReplyEmployeeId)
@@ -60,6 +81,7 @@ public record FeedbackItem(
     public bool Answered => Status == "da_tra_loi" || Reply != null;
 }
 
+// Khách hàng (KHACH_HANG) kèm tài khoản, địa chỉ, sở thích, nhóm.
 public class Customer
 {
     public int Id { get; init; }
@@ -84,10 +106,12 @@ public class Customer
     public int? Age => Birth is DateTime b ? DateTime.Today.Year - b.Year - (DateTime.Today.DayOfYear < b.DayOfYear ? 1 : 0) : null;
 }
 
+// Các hàm định dạng dữ liệu hiển thị ở Web Admin.
 public static class Fmt
 {
     static readonly CultureInfo Vi = new("vi-VN");
 
+    // Định dạng số tiền kiểu 1.000đ.
     public static string Money(decimal v) => string.Format(Vi, "{0:N0}đ", v);
 
     // Rút gọn số tiền (tỷ đ, tr) để hiển thị.
@@ -98,10 +122,14 @@ public static class Fmt
         _ => Money(v)
     };
 
+    // Định dạng ngày dd/MM/yyyy.
     public static string Date(DateTime d) => d.ToString("dd/MM/yyyy", Vi);
+    // Định dạng ngày giờ dd/MM/yyyy HH:mm.
     public static string DateTimeS(DateTime d) => d.ToString("dd/MM/yyyy HH:mm", Vi);
+    // Định dạng ngày và giờ cách nhau bằng dấu chấm giữa.
     public static string DateTimeDot(DateTime d) => d.ToString("dd/MM/yyyy", Vi) + " · " + d.ToString("HH:mm", Vi);
 
+    // Định dạng phần trăm.
     public static string Pct(decimal v) => string.Format(Vi, "{0:0.#}%", v);
 
     // Đổi thời điểm thành chữ "x phút trước", "Hôm qua"...
@@ -148,13 +176,17 @@ public static class Fmt
         _ => s
     };
 
+    // Nhãn trạng thái thanh toán.
     public static string PayStatus(string s) => s == "da_thanh_toan" ? "[g]Đã thanh toán" : "[x]Chưa thanh toán";
 
+    // Nhãn loại phản hồi.
     public static string FeedbackType(string t) => t switch { "danh_gia" => "Đánh giá", "gop_y" => "Góp ý", "khieu_nai" => "Khiếu nại", _ => t };
 
+    // Nhãn hình thức chăm sóc.
     public static string Channel(string c) => c switch { "goi_dien" => "Gọi điện", "email" => "Email", "tin_nhan" => "Tin nhắn", "gap_truc_tiep" => "Gặp trực tiếp", _ => c };
 }
 
+// Thống kê một câu hỏi khảo sát.
 public record QuestionStat(string Text, string Type, List<(string Label, int Count)> Options, List<string> Texts)
 {
     public int Total => Options.Sum(o => o.Count);
@@ -162,4 +194,5 @@ public record QuestionStat(string Text, string Type, List<(string Label, int Cou
         ? Options.Where(o => int.TryParse(o.Label, out _)).Sum(o => int.Parse(o.Label) * o.Count) / (double)Total : null;
 }
 
+// Thống kê một khảo sát kèm các câu hỏi.
 public record SurveyStats(int Id, string Title, string? Description, DateTime Start, DateTime End, string Status, int Sent, int Completed, List<QuestionStat> Questions);

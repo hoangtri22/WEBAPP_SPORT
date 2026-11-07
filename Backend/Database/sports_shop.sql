@@ -67,7 +67,7 @@ CREATE TABLE KHACH_HANG (
     da_xoa          TINYINT(1)    NOT NULL DEFAULT 0,
     CONSTRAINT FK_KH_TK FOREIGN KEY (ma_tai_khoan) REFERENCES TAI_KHOAN(ma_tai_khoan),
     CONSTRAINT CK_KH_GIOITINH CHECK (gioi_tinh IN ('Nam','Nữ','Khác')),
-    CONSTRAINT CK_KH_HANG CHECK (hang_thanh_vien IN ('thuong','bac','vang','VIP')),
+    CONSTRAINT CK_KH_HANG CHECK (hang_thanh_vien IN ('thuong','bac','vang')),
     CONSTRAINT CK_KH_DIEM CHECK (diem_tich_luy >= 0 AND tong_chi_tieu >= 0)
 );
 
@@ -188,7 +188,7 @@ CREATE TABLE CTKM (
     gioi_han_khach_hang INT           NULL,
     trang_thai          VARCHAR(20)   NOT NULL DEFAULT 'hoat_dong',
     CONSTRAINT CK_CTKM_LOAI CHECK (loai_khuyen_mai IN ('theo_san_pham','theo_don_hang','theo_voucher')),
-    CONSTRAINT CK_CTKM_HANG CHECK (hang_ap_dung IN ('thuong','bac','vang','VIP')),
+    CONSTRAINT CK_CTKM_HANG CHECK (hang_ap_dung IN ('thuong','bac','vang')),
     CONSTRAINT CK_CTKM_TRANGTHAI CHECK (trang_thai IN ('hoat_dong','het_han','ngung')),
     CONSTRAINT CK_CTKM_NGAY CHECK (ngay_ket_thuc > ngay_bat_dau)
 );
@@ -510,10 +510,10 @@ INSERT INTO NHOM_KHACH_HANG (ten_nhom, mo_ta, loai_tieu_chi, gia_tri_tu, gia_tri
 	('Khách nam',               'Khách hàng giới tính nam',        'gioi_tinh', NULL,     NULL, 'Nam', NULL),
 	('Yêu thích chạy bộ',       'Khách có sở thích chạy bộ',       'so_thich',  NULL,     NULL, NULL,  2),
 	('Yêu thích gym',           'Khách có sở thích gym',           'so_thich',  NULL,     NULL, NULL,  4),
-	('Chi tiêu trên 10 triệu',  'Khách VIP theo mức chi tiêu',     'chi_tieu',  10000000, NULL, NULL,  NULL);
+	('Chi tiêu trên 10 triệu',  'Khách chi tiêu cao',     'chi_tieu',  10000000, NULL, NULL,  NULL);
 
 INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, gioi_tinh, ngay_sinh, so_dien_thoai, hang_thanh_vien, diem_tich_luy, tong_chi_tieu) VALUES
-	(4, 'Phạm Minh', 'An', 'Nam', '1999-05-10', '0912000001', 'VIP', 1514, 15149150),
+	(4, 'Phạm Minh', 'An', 'Nam', '1999-05-10', '0912000001', 'vang', 1514, 15149150),
 	(5, 'Võ Thị', 'Bình', 'Nữ', '2002-09-21', '0912000002', 'vang', 752, 7531000),
 	(6, 'Đỗ Ngọc', 'Chi', 'Nữ', '1985-01-30', '0912000003', 'vang', 858, 8583000),
 	(7, 'Hoàng Văn', 'Dũng', 'Nam', '1995-12-05', '0912000004', 'thuong', 45, 453000),
@@ -529,8 +529,8 @@ INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, gioi_tinh, ngay_sinh, so_dien
 	(22, 'Hoàng Minh', 'Quân', 'Nam', '2002-03-27', '0351355101', 'thuong', 0, 0),
 	(23, 'Đặng Ngọc', 'Ánh', 'Nữ', '2000-08-17', '0349399017', 'bac', 440, 4400000),
 	(24, 'Bùi Tuấn', 'Kiệt', 'Nam', '2007-10-25', '0909612582', 'vang', 544, 5452400),
-	(25, 'Hồ Anh', 'Khoa', 'Nam', '2006-04-26', '0348510844', 'VIP', 1278, 12805100),
-	(26, 'Đỗ Hữu', 'Phước', 'Nam', '2000-02-17', '0911958398', 'VIP', 1367, 13679000),
+	(25, 'Hồ Anh', 'Khoa', 'Nam', '2006-04-26', '0348510844', 'vang', 1278, 12805100),
+	(26, 'Đỗ Hữu', 'Phước', 'Nam', '2000-02-17', '0911958398', 'vang', 1367, 13679000),
 	(27, 'Bùi Mỹ', 'Duyên', 'Nữ', '2003-10-13', '0388002166', 'thuong', 0, 0),
 	(28, 'Huỳnh Văn', 'Tài', 'Nam', '2000-12-10', '0352139338', 'thuong', 148, 1484500),
 	(29, 'Bùi Tấn', 'Phát', 'Nam', '2004-02-07', '0939065432', 'vang', 526, 5265900),

@@ -5,11 +5,13 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
+// Đăng nhập, đăng ký, đăng xuất của khách, xử lý qua CustomerStore và LoginThrottle.
 public class AccountController : Controller
 {
     readonly DbStatus _db;
     readonly CustomerStore _store;
     readonly LoginThrottle _throttle;
+    // Nhận DbStatus, CustomerStore và LoginThrottle.
     public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle) { _db = db; _store = store; _throttle = throttle; }
 
     // Hiển thị trang đăng nhập (Views/Account/Auth.cshtml); nhận thông báo từ TempData["LoginNotice"] do CartController.LoginRequired() gửi sang.

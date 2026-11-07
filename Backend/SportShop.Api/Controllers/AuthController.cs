@@ -9,6 +9,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API đăng ký, đăng nhập, làm mới token, đăng xuất của app khách, dùng CustomerStore và MobileTokenStore.
 [ApiController]
 [Route("api/v1/auth")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -97,5 +98,6 @@ public sealed class AuthController(CustomerStore customers, MobileTokenStore tok
         => await resets.ResetAsync(request.Email.Trim(), request.Code, request.NewPassword, cancellationToken)
             ? NoContent() : Error(400, "INVALID_RESET_CODE", "Mã xác nhận không đúng hoặc đã hết hạn.");
 
+    // Trả lỗi dạng ProblemDetails qua ApiProblems.Create().
     IActionResult Error(int status, string code, string title) => StatusCode(status, ApiProblems.Create(HttpContext, status, code, title));
 }

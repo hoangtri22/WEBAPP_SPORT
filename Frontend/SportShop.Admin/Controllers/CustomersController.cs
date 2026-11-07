@@ -3,15 +3,17 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý khách hàng, nhóm khách và hồ sơ chi tiết, đọc dữ liệu qua ShopData.
 public class CustomersController(ShopData db) : Controller
 {
-    // Quản lý khách hàng: danh sách khách (khách đã xóa tách sang bảng riêng có nút Khôi phục), nhóm khách và lịch hẹn liên hệ lại lấy từ ShopData (Customers, CustomerGroups, CareNotes).
+    // Quản lý khách hàng: danh sách khách (khách đã xóa tách sang bảng riêng có nút Khôi phục), nhóm khách và lịch hẹn liên hệ lại lấy từ ShopData (Customers, CustomerGroups, CareNotes); cột Thiết bị của khách không tài khoản lấy từ GuestCustomerDevices().
     public IActionResult Index()
     {
         ViewBag.Menu = "customers";
 
+        var devices = db.GuestCustomerDevices();
         var list = db.ActiveCustomers.Select(c => new Row(
-            [c.FullName, c.Phone, c.Tier, c.Points.ToString("N0"), Fmt.Money(c.TotalSpent), c.Username.Length == 0 ? "[b]Chưa có tài khoản" : c.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động"],
+            [c.FullName, c.Phone, devices.GetValueOrDefault(c.Id, "-"), c.Tier, c.Points.ToString("N0"), Fmt.Money(c.TotalSpent), c.Username.Length == 0 ? "[b]Chưa có tài khoản" : c.Locked ? "[x]Đã khóa" : "[g]Đang hoạt động"],
             Url.Action(nameof(Detail), new { id = c.Id }), c.Id, c.Username.Length > 0 ? c.Locked : null)).ToList();
 
         var deleted = db.Customers.Where(c => c.Deleted).Select(c => new Row(
@@ -30,7 +32,7 @@ public class CustomersController(ShopData db) : Controller
             Subtitle = "Thông tin và lịch sử mua hàng của khách hàng",
             Sections =
             [
-                new() { Columns = ["Khách hàng", "Số điện thoại", "Hạng", "Điểm tích lũy", "Tổng chi tiêu", "Trạng thái"], Rows = list, AddLabel = "Thêm mới", ShowActions = true, Entity = "customer", LockAction = "lock_customer" },
+                new() { Columns = ["Khách hàng", "Số điện thoại", "Thiết bị", "Hạng", "Điểm tích lũy", "Tổng chi tiêu", "Trạng thái"], Rows = list, AddLabel = "Thêm mới", ShowActions = true, Entity = "customer", LockAction = "lock_customer" },
                 new() { Heading = "Khách hàng đã xóa", Columns = ["Khách hàng", "Số điện thoại", "Hạng", "Tổng chi tiêu", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "customer", CanEdit = false, CanDelete = false, RestoreAction = "restore_customer" },
                 new() { Heading = "Khách dùng Mobile App (không tài khoản)", Columns = ["Tên thiết bị", "Dòng máy", "Hệ điều hành", "Lần đầu", "Gần nhất", "Số lần vào"], Rows = guests, Toolbar = false },
                 new() { Heading = "Nhóm khách hàng", Columns = ["Tên nhóm", "Tiêu chí", "Giá trị", "Số khách"], Rows = groups, AddLabel = "Thêm nhóm", ShowActions = true, Toolbar = false, Entity = "group" },

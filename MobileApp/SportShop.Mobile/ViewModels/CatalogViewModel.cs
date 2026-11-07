@@ -6,6 +6,7 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile.ViewModels;
 
+// Trạng thái và thao tác của trang sản phẩm.
 public sealed class CatalogViewModel : INotifyPropertyChanged
 {
     private readonly ICatalogApi _api;
@@ -18,6 +19,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     private int _page;
     private long _totalItems;
 
+    // Nhận ICatalogApi.
     public CatalogViewModel(ICatalogApi api)
     {
         _api = api;
@@ -98,17 +100,22 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         LoadMoreCommand.NotifyCanExecuteChanged();
     }
 
+    // Báo giao diện cập nhật thuộc tính.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }
 
+// Command chạy hàm bất đồng bộ cho các nút trong XAML.
 public sealed class AsyncCommand(Func<Task> execute, Func<bool> canExecute) : ICommand
 {
     public event EventHandler? CanExecuteChanged;
+    // Kiểm tra command có chạy được không.
     public bool CanExecute(object? parameter) => canExecute();
+    // Chạy hàm bất đồng bộ.
     public async void Execute(object? parameter)
     {
         if (CanExecute(parameter)) await execute();
     }
+    // Báo giao diện kiểm tra lại trạng thái nút.
     public void NotifyCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }

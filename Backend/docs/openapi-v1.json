@@ -16,7 +16,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Registers a customer. Existing web and mobile users share the same account records.",
+        "summary": "Đăng ký khách qua CustomerStore.Register() rồi cấp token bằng MobileTokenStore.IssueAsync(); web và mobile dùng chung tài khoản.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -143,7 +143,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Signs in with username or email. Five failed attempts lock this username/IP pair for five minutes.",
+        "summary": "Đăng nhập bằng tên hoặc email qua CustomerStore.Login(); sai 5 lần thì LoginThrottle khóa cặp tên/IP 5 phút.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -288,7 +288,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Rotates both tokens. A reused refresh token revokes its entire session.",
+        "summary": "Xoay token qua MobileTokenStore.RefreshAsync(); dùng lại refresh token cũ thì thu hồi cả phiên.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -412,7 +412,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Revokes the current device session and its refresh token.",
+        "summary": "Thu hồi phiên hiện tại qua MobileTokenStore.RevokeAsync().",
         "responses": {
           "204": {
             "description": "No Content"
@@ -493,12 +493,191 @@
         ]
       }
     },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Gửi OTP đặt lại mật khẩu. Luôn trả 202 và gửi mail ở nền, để không dò được email nào có tài khoản.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              },
+              "example": {
+                "email": "customer@example.com"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body, tham số hoặc header không hợp lệ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 400,
+                  "title": "Body, tham số hoặc header không hợp lệ.",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đặt lại mật khẩu bằng OTP; thành công thì mọi phiên mobile cũ hết hiệu lực.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              },
+              "example": {
+                "email": "customer@example.com",
+                "code": "123456",
+                "newPassword": "<new-password>"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cart": {
       "get": {
         "tags": [
           "Cart"
         ],
-        "summary": "Giỏ hàng dùng chung giữa Web và Mobile, giá/tồn lấy từ CSDL.",
+        "summary": "Giỏ hàng dùng chung web và mobile qua ShopStore.CartLines(); giá, tồn kho lấy từ CSDL.",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -648,7 +827,7 @@
         "tags": [
           "Cart"
         ],
-        "summary": "Xóa toàn bộ giỏ của tài khoản đang đăng nhập.",
+        "summary": "Xóa toàn bộ giỏ của tài khoản đang đăng nhập qua ShopStore.ClearCart().",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -783,7 +962,7 @@
         "tags": [
           "Cart"
         ],
-        "summary": "Thêm biến thể vào giỏ, cộng vào số lượng đã có.",
+        "summary": "Thêm biến thể vào giỏ qua ShopStore.AddToCart(), cộng vào số lượng đã có.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -959,7 +1138,7 @@
         "tags": [
           "Cart"
         ],
-        "summary": "Thay số lượng dòng giỏ; không vượt quá tồn kho hoặc 999.",
+        "summary": "Thay số lượng dòng giỏ qua ShopStore.SetQty(); không vượt quá tồn kho hoặc 999.",
         "parameters": [
           {
             "name": "variantId",
@@ -1169,7 +1348,7 @@
         "tags": [
           "Cart"
         ],
-        "summary": "Xóa dòng giỏ của tài khoản đang đăng nhập; gọi lại vẫn thành công.",
+        "summary": "Xóa dòng giỏ của tài khoản đang đăng nhập qua ShopStore.SetQty() với số lượng 0; gọi lại vẫn thành công.",
         "parameters": [
           {
             "name": "variantId",
@@ -1338,7 +1517,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Danh mục và số sản phẩm đang bán còn tồn kho.",
+        "summary": "Danh mục và số sản phẩm đang bán còn tồn kho, đọc qua ICatalogReader.CategoriesAsync().",
         "responses": {
           "503": {
             "description": "Service Unavailable",
@@ -1414,7 +1593,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Voucher đang hiệu lực và còn lượt; chưa xác nhận điều kiện riêng của khách.",
+        "summary": "Voucher đang hiệu lực và còn lượt, đọc qua ICatalogReader.PromotionsAsync(); chưa xác nhận điều kiện riêng của khách.",
         "responses": {
           "503": {
             "description": "Service Unavailable",
@@ -1490,7 +1669,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Danh sách sở thích thể thao dùng cho hồ sơ khách hàng.",
+        "summary": "Danh sách sở thích thể thao cho hồ sơ khách hàng, đọc qua ICatalogReader.InterestsAsync().",
         "responses": {
           "503": {
             "description": "Service Unavailable",
@@ -1566,7 +1745,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Các phương thức thanh toán đang hoạt động, cùng lựa chọn với Web User (thanh toán mô phỏng).",
+        "summary": "Các phương thức thanh toán đang hoạt động, đọc qua ICatalogReader.PaymentMethodsAsync() (thanh toán mô phỏng như web).",
         "responses": {
           "503": {
             "description": "Service Unavailable",
@@ -1642,7 +1821,7 @@
         "tags": [
           "Checkout"
         ],
-        "summary": "Tải người nhận mặc định, giỏ, phương thức giả lập và voucher phù hợp.",
+        "summary": "Tải người nhận mặc định, giỏ, phương thức giả lập và voucher phù hợp qua Build().",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -1794,7 +1973,7 @@
         "tags": [
           "Checkout"
         ],
-        "summary": "Tính lại giá, phí giao hàng và voucher từ giỏ trên máy chủ, không tạo đơn.",
+        "summary": "Tính lại giá, phí giao hàng và voucher từ giỏ trên máy chủ qua Build(), không tạo đơn.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1969,7 +2148,7 @@
         "tags": [
           "Checkout"
         ],
-        "summary": "Các mã tài khoản có thể dùng với giỏ hiện tại, kèm số tiền giảm.",
+        "summary": "Các mã tài khoản có thể dùng với giỏ hiện tại, kèm số tiền giảm, lấy từ ShopStore.UsablePromos().",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -2130,7 +2309,7 @@
         "tags": [
           "Content"
         ],
-        "summary": "Danh sách các trang hỗ trợ và giới thiệu dùng chung nội dung với Web User.",
+        "summary": "Danh sách trang hỗ trợ và giới thiệu từ InfoPages.All, dùng chung nội dung với web khách hàng.",
         "responses": {
           "200": {
             "description": "OK",
@@ -2186,7 +2365,7 @@
         "tags": [
           "Content"
         ],
-        "summary": "Nội dung trang thông tin theo slug: đổi trả, giao hàng, chọn size, liên hệ, giới thiệu, cửa hàng, tuyển dụng.",
+        "summary": "Nội dung một trang trong InfoPages.All theo slug.",
         "parameters": [
           {
             "name": "slug",
@@ -2263,7 +2442,7 @@
         "tags": [
           "Feedback"
         ],
-        "summary": "Lists the customer's feedback and latest store replies.",
+        "summary": "Lịch sử phản hồi của khách kèm trả lời mới nhất, đọc qua CustomerStore.MobileFeedbacks().",
         "parameters": [
           {
             "name": "page",
@@ -2419,7 +2598,7 @@
         "tags": [
           "Feedback"
         ],
-        "summary": "Reviews a received product. Optional orderId must belong to the authenticated customer.",
+        "summary": "Đánh giá sản phẩm đã nhận qua CustomerStore.AddPurchasedFeedback(); orderId nếu có phải thuộc khách đang đăng nhập.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2571,7 +2750,7 @@
         "tags": [
           "Feedback"
         ],
-        "summary": "Lists products eligible for review (purchased in a delivered order).",
+        "summary": "Sản phẩm được đánh giá (đã mua trong đơn đã giao), đọc qua CustomerStore.PurchasedProducts().",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -2701,6 +2880,348 @@
         ]
       }
     },
+    "/api/v1/auth/google/start": {
+      "get": {
+        "tags": [
+          "GoogleAuth"
+        ],
+        "parameters": [
+          {
+            "name": "challenge",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google/callback": {
+      "get": {
+        "tags": [
+          "GoogleAuth"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google/exchange": {
+      "post": {
+        "tags": [
+          "GoogleAuth"
+        ],
+        "summary": "Đổi vé một lần lấy token; cần đúng verifier của app đã mở start.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleExchangeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleExchangeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body, tham số hoặc header không hợp lệ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 400,
+                  "title": "Body, tham số hoặc header không hợp lệ.",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-devices": {
+      "post": {
+        "tags": [
+          "GuestDevices"
+        ],
+        "summary": "Ghi nhận thiết bị vào app với tư cách khách (không cần token) qua GuestDeviceStore.SaveAsync(); Web Admin hiển thị ở trang Quản lý khách hàng.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestDeviceRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestDeviceRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "500": {
+            "description": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 500,
+                  "title": "Lỗi máy chủ; dùng traceId khi yêu cầu hỗ trợ.",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 503,
+                  "title": "Kết nối hoặc schema CSDL chưa sẵn sàng; kiểm tra migrations.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body, tham số hoặc header không hợp lệ.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "status": 400,
+                  "title": "Body, tham số hoặc header không hợp lệ.",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "request-trace-id"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "tags": [
@@ -2753,7 +3274,7 @@
         "tags": [
           "Health"
         ],
-        "summary": "Kiểm tra kết nối và schema API khách hàng, gồm auth/cart migrations, bằng truy vấn chỉ đọc.",
+        "summary": "Kiểm tra kết nối và schema API khách hàng qua IDatabaseReadiness.CheckAsync(), chỉ đọc.",
         "responses": {
           "200": {
             "description": "OK",
@@ -2820,7 +3341,7 @@
         "tags": [
           "Me"
         ],
-        "summary": "Returns the current profile, membership, points and selected sports interests.",
+        "summary": "Hồ sơ, hạng thành viên, điểm và sở thích của khách, đọc qua CustomerStore.GetProfile() và Interests().",
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -2944,7 +3465,7 @@
         "tags": [
           "Me"
         ],
-        "summary": "Replaces profile fields and selected interests. Interest names come from GET /interests.",
+        "summary": "Cập nhật hồ sơ và sở thích qua CustomerStore.UpdateProfile(); tên sở thích lấy từ GET /interests.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3120,7 +3641,7 @@
         "tags": [
           "Me"
         ],
-        "summary": "Changes the password. Every existing mobile session is invalidated, including this session.",
+        "summary": "Đổi mật khẩu qua CustomerStore.ChangePassword(); mọi phiên mobile đều hết hiệu lực, kể cả phiên này.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3253,7 +3774,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "Lịch sử đơn của tài khoản, lọc trạng thái và phân trang tại CSDL.",
+        "summary": "Lịch sử đơn của tài khoản qua ShopStore.Orders(), lọc trạng thái và phân trang tại CSDL.",
         "parameters": [
           {
             "name": "page",
@@ -3463,7 +3984,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "Đặt giỏ hiện tại trong một transaction; Idempotency-Key bảo vệ khi mạng gửi lại.",
+        "summary": "Đặt giỏ hiện tại qua ShopStore.PlaceCartOrder() trong một transaction; Idempotency-Key bảo vệ khi mạng gửi lại.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -3695,7 +4216,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "Đơn thuộc tài khoản, kèm sản phẩm, giao hàng, trạng thái và hóa đơn.",
+        "summary": "Đơn thuộc tài khoản qua ShopStore.Orders(), kèm sản phẩm, giao hàng, trạng thái và hóa đơn.",
         "parameters": [
           {
             "name": "orderId",
@@ -3884,7 +4405,7 @@
         "tags": [
           "Orders"
         ],
-        "summary": "Hủy đơn còn chờ xác nhận; trả lại tồn kho và lượt dùng voucher đúng một lần.",
+        "summary": "Hủy đơn còn chờ xác nhận qua ShopStore.CancelOrder(); trả lại tồn kho và lượt dùng voucher đúng một lần.",
         "parameters": [
           {
             "name": "orderId",
@@ -4073,7 +4594,7 @@
         "tags": [
           "Products"
         ],
-        "summary": "Tìm sản phẩm đang bán, có lọc, sắp xếp và phân trang tại CSDL.",
+        "summary": "Tìm sản phẩm đang bán qua ICatalogReader.ProductsAsync(), có lọc, sắp xếp và phân trang tại CSDL.",
         "parameters": [
           {
             "name": "CategoryId",
@@ -4228,7 +4749,7 @@
         "tags": [
           "Products"
         ],
-        "summary": "Chi tiết sản phẩm và các biến thể đang hiện, gồm cả biến thể hết hàng.",
+        "summary": "Chi tiết sản phẩm và các biến thể đang hiện qua ICatalogReader.ProductAsync(), gồm cả biến thể hết hàng.",
         "parameters": [
           {
             "name": "productId",
@@ -4352,7 +4873,7 @@
         "tags": [
           "Surveys"
         ],
-        "summary": "Lists surveys assigned to the customer, including completion and availability.",
+        "summary": "Khảo sát đã giao cho khách kèm trạng thái hoàn thành, đọc qua CustomerStore.Surveys().",
         "parameters": [
           {
             "name": "page",
@@ -4510,7 +5031,7 @@
         "tags": [
           "Surveys"
         ],
-        "summary": "Loads an assigned survey's questions and choices. Unassigned and draft surveys return 404.",
+        "summary": "Câu hỏi và lựa chọn của khảo sát đã giao, đọc qua CustomerStore.Questions(); khảo sát không được giao hoặc nháp trả 404.",
         "parameters": [
           {
             "name": "id",
@@ -4669,7 +5190,7 @@
         "tags": [
           "Surveys"
         ],
-        "summary": "Submits answers once. Validates ownership, dates, required answers and choice membership atomically.",
+        "summary": "Nộp câu trả lời một lần qua CustomerStore.SubmitSurvey(); kiểm tra quyền, hạn, câu bắt buộc và lựa chọn hợp lệ trong transaction.",
         "parameters": [
           {
             "name": "id",
@@ -5417,6 +5938,59 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "GoogleExchangeRequest": {
+        "required": [
+          "ticket",
+          "verifier"
+        ],
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string"
+          },
+          "verifier": {
+            "type": "string"
+          }
+        }
+      },
+      "GuestDeviceRequest": {
+        "required": [
+          "deviceKey",
+          "deviceName",
+          "model",
+          "platform",
+          "osVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceKey": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "osVersion": {
+            "type": "string"
           }
         }
       },
@@ -6340,6 +6914,25 @@
           }
         }
       },
+      "ResetPasswordRequest": {
+        "required": [
+          "email",
+          "code",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
+        }
+      },
       "SetCartQuantityRequest": {
         "required": [
           "quantity"
@@ -6648,6 +7241,12 @@
     },
     {
       "name": "Feedback"
+    },
+    {
+      "name": "GoogleAuth"
+    },
+    {
+      "name": "GuestDevices"
     },
     {
       "name": "Health"

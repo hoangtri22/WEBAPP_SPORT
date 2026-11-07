@@ -10,10 +10,13 @@ public sealed class SessionStore : ISessionStore
     private const string RefreshKey = "refresh_token";
     private const string ExpiryKey = "access_token_expires_at";
 
+    // Đọc access token.
     public Task<string?> GetAccessTokenAsync() => ReadAsync(AccessKey);
 
+    // Đọc refresh token.
     public Task<string?> GetRefreshTokenAsync() => ReadAsync(RefreshKey);
 
+    // Đọc thời điểm hết hạn của access token.
     public async Task<DateTimeOffset?> GetAccessExpiryAsync()
         => DateTimeOffset.TryParse(await ReadAsync(ExpiryKey), CultureInfo.InvariantCulture, DateTimeStyles.None, out var expiry) ? expiry : null;
 
@@ -32,6 +35,7 @@ public sealed class SessionStore : ISessionStore
         }
     }
 
+    // Xóa token đã lưu.
     public void Clear()
     {
         SecureStorage.Default.Remove(AccessKey);

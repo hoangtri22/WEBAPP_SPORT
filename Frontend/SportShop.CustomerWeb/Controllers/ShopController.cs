@@ -4,6 +4,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
+// Danh sách và chi tiết sản phẩm, đọc qua ShopStore.
 public class ShopController(DbStatus db, ShopStore shop) : Controller
 {
     // Danh sách / tìm kiếm sản phẩm: điều kiện đọc vào ProductQuery (q, cat, min, max, size, color, sort) rồi tìm qua ShopStore.Search(); danh mục lấy từ ShopStore.Categories().

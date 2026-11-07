@@ -1,4 +1,4 @@
-﻿-- Thêm bảng giỏ hàng và đặt đơn mobile; giữ nguyên khách, đơn, tồn kho và bản sao giỏ JSON.
+﻿-- Thêm bảng giỏ hàng và đặt đơn mobile;
 CREATE TABLE IF NOT EXISTS CUSTOMER_CART_STATE (
  customer_id INT NOT NULL PRIMARY KEY,
  legacy_imported TINYINT(1) NOT NULL DEFAULT 1,

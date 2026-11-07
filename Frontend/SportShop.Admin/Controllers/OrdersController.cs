@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý đơn hàng và hóa đơn, xuất Excel; đọc dữ liệu qua ShopData.
 public class OrdersController(ShopData db) : Controller
 {
     // Quản lý đơn hàng: danh sách từ ShopData.Orders; tạo đơn / cập nhật trạng thái qua CrudController với entity "order".

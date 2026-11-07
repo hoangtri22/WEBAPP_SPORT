@@ -5,9 +5,11 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Nghiệp vụ cửa hàng: sản phẩm, giỏ hàng, voucher, đặt và hủy đơn; dùng chung cho web khách và API.
 public class ShopStore(IConfiguration config, CartStore carts, CatalogCache catalog)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
+    // Mở kết nối MySQL qua StoreDatabase.Connection().
     MySqlConnection Open() => StoreDatabase.Connection(_cs);
 
     public const decimal FreeShipFrom = 500_000;
@@ -73,6 +75,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     public (List<string> Sizes, List<string> Colors) FilterOptions()
     {
         var sellable = catalog.Get().Products.SelectMany(p => p.Variants).Where(v => v.Visible && v.Stock > 0).ToList();
+        // Lọc giá trị khác rỗng, gộp giá trị trùng và sắp xếp.
         List<string> Distinct(IEnumerable<string?> values) => values.Where(s => !string.IsNullOrEmpty(s)).Select(s => s!)
             .GroupBy(Fold).Select(g => g.First()).OrderBy(SortKey, StringComparer.Ordinal).ToList();
         return (Distinct(sellable.Select(v => v.Size)), Distinct(sellable.Select(v => v.Color)));
@@ -114,7 +117,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
-    // Mã khách áp dụng được cho đơn hiện tại: lấy voucher đang hiệu lực từ Promos() rồi kiểm tra từng mã bằng ApplyVoucher() (hạng thành viên, lượt mua của mã khách mới, lượt dùng); trả về kèm số tiền giảm, sắp theo số tiền giảm nhiều nhất.
+    // Mã khách áp dụng được cho đơn hiện tại: lấy voucher đang hiệu lực từ Promos() rồi kiểm tra từng mã bằng ApplyVoucher() (hạng thành viên, lượt mua của mã khách mới, tháng sinh của mã sinh nhật, lượt dùng); trả về kèm số tiền giảm, sắp theo số tiền giảm nhiều nhất.
     public List<UsablePromo> UsablePromos(int customerId, decimal subtotal)
     {
         var list = new List<UsablePromo>();
@@ -128,15 +131,21 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     }
 
 
+    // Lấy mã khách từ session, chưa đăng nhập thì trả 0.
     static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
 
+    // Lấy giỏ của khách trong session.
     public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? GetCart(id) : [];
+    // Lấy giỏ của khách qua CartStore.Get().
     public Dictionary<int, int> GetCart(int customerId) => carts.Get(customerId);
+    // Xóa giỏ của khách trong session.
     public void ClearCart(ISession s) { if (CustomerOf(s) > 0) ClearCart(CustomerOf(s)); }
     // Xóa hết giỏ của khách qua CartStore.Save().
     public void ClearCart(int customerId) => carts.Save(customerId, []);
+    // Tổng số lượng trong giỏ.
     public int CartCount(ISession s) => GetCart(s).Values.Sum();
 
+    // Thêm vào giỏ của khách trong session.
     public string? AddToCart(ISession session, int variantId, int qty) => AddToCart(CustomerOf(session), variantId, qty);
 
     // Thêm vào giỏ (web và API cùng gọi): kiểm tra tồn kho trong BIEN_THE_SP, khóa khách qua CartStore.Mutate() để không mất cập nhật.
@@ -160,6 +169,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         });
     }
 
+    // Đổi số lượng dòng giỏ của khách trong session.
     public void SetQty(ISession session, int variantId, int qty)
     {
         if (CustomerOf(session) > 0) SetQty(CustomerOf(session), variantId, qty);
@@ -181,6 +191,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         return null;
     });
 
+    // Lấy các dòng giỏ của khách trong session.
     public List<CartLine> CartLines(ISession session) => CustomerOf(session) > 0 ? CartLines(CustomerOf(session)) : [];
 
     // Dòng giỏ: số lượng từ CartStore, giá và tồn kho từ BIEN_THE_SP; giữ dòng hết hàng đến khi checkout từ chối hoặc khách xóa.
@@ -221,7 +232,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         return new ReceiverInfo(k == null ? "" : S(k, "ten"), k == null ? "" : S(k, "so_dien_thoai"), "");
     }
 
-    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), còn lượt và chưa vượt giới hạn mỗi khách (Catalog.VoucherUseLimit()); trả về mã CTKM và số tiền giảm.
+    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), mã sinh nhật chỉ dùng trong tháng sinh (Catalog.IsBirthdayMonth()), còn lượt và chưa vượt giới hạn mỗi khách (Catalog.VoucherUseLimit()); trả về mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
         // Đang đặt hàng (có giao dịch): khóa dòng chương trình để nhiều khách đặt cùng lúc lần lượt kiểm tra lượt dùng, không vượt giới hạn
@@ -229,12 +240,14 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         var km = c.Query($"""
             SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang
             FROM KM_THEO_VOUCHER k JOIN CTKM ct ON ct.ma_ctkm = k.ma_ctkm
-            WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
+            WHERE k.ma_voucher = @code AND ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc{lockRow}
             """, new { code }, tx).Cast<IDictionary<string, object?>>().FirstOrDefault()
             ?? throw new OrderError("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
         var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
         string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
         string? needTier = NS(km, "hang_ap_dung");
+        if (Catalog.IsBirthdayPromo(S(km, "ten_ctkm")) && !Catalog.IsBirthdayMonth(c.ExecuteScalar<DateTime?>("SELECT ngay_sinh FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx), DateTime.Today))
+            throw new OrderError("Mã sinh nhật chỉ dùng được trong tháng sinh của bạn. Vui lòng kiểm tra ngày sinh trong hồ sơ.");
         if (needTier is { Length: > 0 } && needTier != tier) throw new OrderError($"Mã này chỉ áp dụng cho thành viên hạng {needTier}.");
         bool newCustomerOnly = Catalog.IsNewCustomerPromo(S(km, "ten_ctkm"));
         if (newCustomerOnly && c.ExecuteScalar<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@customerId AND trang_thai_don_hang <> 'da_huy'", new { customerId }, tx) > 0)
@@ -257,11 +270,66 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         catch (OrderError e) { return (0, e.Message); }
     }
 
+    // Mức giảm theo đơn còn dùng được cho khách: KM_THEO_DH JOIN CTKM, lọc còn hạn, còn lượt, đúng hạng và chưa vượt giới hạn mỗi khách; đang đặt hàng thì khóa dòng chương trình.
+    List<OrderPromo> OrderPromos(MySqlConnection c, MySqlTransaction? tx, int customerId)
+    {
+        var member = c.Query("SELECT hang_thanh_vien, tong_chi_tieu FROM KHACH_HANG WHERE ma_khach_hang=@customerId", new { customerId }, tx).Cast<IDictionary<string, object?>>().First();
+        string tier = MemberTier.Effective(S(member, "hang_thanh_vien"), D(member, "tong_chi_tieu"));
+        string lockRow = tx != null ? " FOR UPDATE OF ct" : "";
+        return c.Query($"""
+            SELECT d.ma_ctkm, ct.ten_ctkm, d.muc_tien_don_hang, d.phan_tram_giam, ct.gia_tri_giam_toi_da
+            FROM KM_THEO_DH d JOIN CTKM ct ON ct.ma_ctkm = d.ma_ctkm
+            WHERE ct.trang_thai = 'hoat_dong' AND NOW() BETWEEN ct.ngay_bat_dau AND ct.ngay_ket_thuc
+              AND (ct.so_luong_gioi_han IS NULL OR ct.so_luot_da_dung < ct.so_luong_gioi_han)
+              AND (ct.hang_ap_dung IS NULL OR ct.hang_ap_dung = @tier)
+              AND (ct.gioi_han_khach_hang IS NULL OR ct.gioi_han_khach_hang >
+                   (SELECT COUNT(*) FROM LUOT_SU_DUNG_KHUYEN_MAI l WHERE l.ma_ctkm = ct.ma_ctkm AND l.ma_khach_hang = @customerId))
+            ORDER BY d.muc_tien_don_hang{lockRow}
+            """, new { tier, customerId }, tx).Cast<IDictionary<string, object?>>()
+            .Select(r => new OrderPromo(I(r, "ma_ctkm"), S(r, "ten_ctkm"), D(r, "muc_tien_don_hang"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"))).ToList();
+    }
+
+    // Tính tiền giảm của một mức giảm theo đơn, không vượt mức giảm tối đa.
+    static decimal PromoDiscount(OrderPromo p, decimal subtotal)
+    {
+        decimal discount = Math.Round(subtotal * p.Percent / 100, 0);
+        return p.MaxDiscount is decimal max ? Math.Min(discount, max) : discount;
+    }
+
+    // Mức giảm lớn nhất mà tạm tính hiện tại đã đạt; gọi từ BestOrderPromo(), OrderUpsell() và WriteOrder().
+    static AppliedOrderPromo? BestOf(List<OrderPromo> promos, decimal subtotal) => promos.Where(p => p.Threshold <= subtotal)
+        .Select(p => new AppliedOrderPromo(p.CtkmId, p.Name, PromoDiscount(p, subtotal))).MaxBy(x => x.Discount);
+
+    // Mức giảm theo đơn đang đạt cho trang giỏ hàng và thanh toán (CartController), không ghi CSDL.
+    public AppliedOrderPromo? BestOrderPromo(int customerId, decimal subtotal)
+    {
+        using var c = Open();
+        return BestOf(OrderPromos(c, null, customerId), subtotal);
+    }
+
+    // Gợi ý mua thêm ở giỏ hàng: tìm mức giảm gần nhất chưa đạt (cao hơn mức đang có), rồi chọn tối đa 4 sản phẩm còn hàng từ CatalogCache, ưu tiên món rẻ nhất đủ bù phần thiếu. Sản phẩm chỉ có một biến thể bán được thì thêm thẳng vào giỏ.
+    public CartUpsell? OrderUpsell(int customerId, List<CartLine> lines, decimal subtotal)
+    {
+        using var c = Open();
+        var promos = OrderPromos(c, null, customerId);
+        decimal current = BestOf(promos, subtotal)?.Discount ?? 0;
+        var next = promos.Where(p => p.Threshold > subtotal && PromoDiscount(p, p.Threshold) > current).OrderBy(p => p.Threshold).FirstOrDefault();
+        if (next == null) return null;
+        decimal missing = next.Threshold - subtotal;
+        var inCart = lines.Select(l => l.ProductId).ToHashSet();
+        var items = catalog.Get().Products.Where(p => !inCart.Contains(p.Id)).Select(p => (Product: p, Sellable: p.Variants.Where(v => v.Visible && v.Stock > 0).ToList()))
+            .Where(x => x.Sellable.Count > 0)
+            .Select(x => new UpsellItem(x.Product.Id, x.Product.Name, x.Product.Variants.FirstOrDefault(v => v.Image != null)?.Image, x.Sellable.Min(v => v.Price), x.Sellable.Count == 1 ? x.Sellable[0].Id : null))
+            .ToList();
+        var chosen = items.Where(i => i.Price >= missing).OrderBy(i => i.Price).Concat(items.Where(i => i.Price < missing).OrderByDescending(i => i.Price)).Take(4).ToList();
+        return new CartUpsell(next.Name, missing, next.Percent, PromoDiscount(next, next.Threshold), chosen);
+    }
+
     // Phí vận chuyển: miễn phí từ FreeShipFrom (500.000đ), còn lại ShipFee (30.000đ).
     public static decimal ShippingFor(decimal subtotal) => subtotal >= FreeShipFrom || subtotal == 0 ? 0 : ShipFee;
 
     // Đặt đơn từ giỏ cho mobile trong một transaction: gửi lại cùng Idempotency-Key thì trả đơn cũ, không đọc hay xóa giỏ mới hơn.
-    public (int? OrderId, string? Error, bool Replayed) PlaceCartOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, string requestKey)
+    public (int? OrderId, string? Error, bool Replayed) PlaceCartOrder(int customerId, ReceiverInfo to, int payMethod, string? voucher, string requestKey, bool orderPromo = false)
     {
         if (string.IsNullOrWhiteSpace(requestKey) || requestKey.Length > 128 || requestKey.Any(ch => ch < 33 || ch > 126))
             return (null, "Idempotency-Key phải gồm 1–128 ký tự ASCII hiển thị.", false);
@@ -279,7 +347,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             if (prior is { } old)
                 return old.Hash == hash ? (old.Id, null, true) : (null, "Idempotency-Key đã được sử dụng với nội dung khác.", false);
             var cart = carts.ReadLocked(c, tx, customerId);
-            var orderId = WriteOrder(c, tx, customerId, to, payMethod, voucher, cart);
+            var orderId = WriteOrder(c, tx, customerId, to, payMethod, voucher, cart, orderPromo);
             c.Execute("INSERT INTO MOBILE_ORDER_REQUEST(customer_id,request_key,request_hash,order_id) VALUES (@customerId,@requestKey,@hash,@orderId)",
                 new { customerId, requestKey, hash, orderId }, tx);
             CartStore.WriteLocked(c, tx, customerId, []);
@@ -307,8 +375,8 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         catch (OrderError error) { return (null, error.Message); }
     }
 
-    // Ghi đơn trong transaction: kiểm tra giỏ và người nhận, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, SO_DIA_CHI và trừ tồn kho.
-    int WriteOrder(MySqlConnection c, MySqlTransaction tx, int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart)
+    // Ghi đơn trong transaction: kiểm tra giỏ và người nhận, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, SO_DIA_CHI và trừ tồn kho; orderPromo = true (web) thì đơn không dùng mã được áp mức giảm theo đơn.
+    int WriteOrder(MySqlConnection c, MySqlTransaction tx, int customerId, ReceiverInfo to, int payMethod, string? voucher, Dictionary<int, int> cart, bool orderPromo = false)
     {
         if (cart.Count == 0) throw new OrderError("Giỏ hàng đang trống.");
         if (cart.Any(x => x.Key <= 0 || x.Value is <= 0 or > 999)) throw new OrderError("Số lượng không hợp lệ.");
@@ -338,6 +406,10 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         {
             var promotion = ApplyVoucher(c,tx,voucher.Trim(),customerId,subtotal);
             ctkm = promotion.CtkmId; discount = Math.Clamp(promotion.Discount,0,subtotal);
+        }
+        else if (orderPromo && BestOf(OrderPromos(c,tx,customerId),subtotal) is { } auto)
+        {
+            ctkm = auto.CtkmId; discount = Math.Clamp(auto.Discount,0,subtotal);
         }
         decimal ship = ShippingFor(subtotal), total = Math.Max(0,subtotal-discount)+ship;
         int order = c.ExecuteScalar<int>("""
@@ -442,21 +514,31 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     }
 
 
+    // Dòng yêu cầu đặt đơn đọc từ MOBILE_ORDER_REQUEST bằng Dapper.
     sealed class OrderRequestRow
     {
         public string Hash { get; set; } = "";
         public int Id { get; set; }
     }
 
+    // Đổi một dòng truy vấn thành ShopProduct.
     static ShopProduct ToProduct(IDictionary<string, object?> r) =>
         new(I(r, "ma_san_pham"), S(r, "ten_san_pham"), S(r, "ten_loai"), S(r, "don_vi_tinh"), NS(r, "mo_ta"), NS(r, "hinh_anh"), ND(r, "gia_min"), ND(r, "gia_max"), I(r, "ton"));
 
+    // Kiểm tra giá trị CSDL là null.
     static bool IsNull(object? v) => v is null or DBNull;
+    // Đọc cột dạng số nguyên.
     static int I(IDictionary<string, object?> r, string k) => Convert.ToInt32(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng số nguyên, cho phép null.
     static int? NI(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToInt32(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng tiền, null thì trả 0.
     static decimal D(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? 0 : Convert.ToDecimal(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng tiền, cho phép null.
     static decimal? ND(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToDecimal(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng chuỗi, null thì trả chuỗi rỗng.
     static string S(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? "" : Convert.ToString(r[k], CultureInfo.InvariantCulture)!;
+    // Đọc cột dạng chuỗi, cho phép null.
     static string? NS(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToString(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng ngày giờ.
     static DateTime T(IDictionary<string, object?> r, string k) => Convert.ToDateTime(r[k], CultureInfo.InvariantCulture);
 }

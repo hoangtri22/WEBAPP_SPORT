@@ -16,9 +16,11 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test tài khoản, hồ sơ, khảo sát, phản hồi với CSDL thật.
 [Trait("Category", "MySql")]
 public sealed class MySqlCustomerTests
 {
+    // Kiểm tra xoay token, từ chối token hết hạn, phát lại và đăng xuất.
     [MySqlFact]
     public async Task Tokens_RotateRejectExpiredReplayRevokesAndLogoutPersists()
     {
@@ -50,6 +52,7 @@ public sealed class MySqlCustomerTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest(token.RefreshToken))).StatusCode);
     }
 
+    // Kiểm tra hồ sơ, mật khẩu, tài khoản trùng dùng chung store với web.
     [MySqlFact]
     public async Task ProfilePasswordAndDuplicateAccount_WorkWithSharedWebStore()
     {
@@ -78,6 +81,7 @@ public sealed class MySqlCustomerTests
         Assert.DoesNotContain(register.Password, stored);
     }
 
+    // Kiểm tra tài khoản khóa, đã xóa và nhân viên không dùng được token khách.
     [MySqlFact]
     public async Task LockedDeletedAndEmployeeAccountsCannotUseCustomerTokens()
     {
@@ -100,6 +104,7 @@ public sealed class MySqlCustomerTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(employee, "staff-test-password"))).StatusCode);
     }
 
+    // Kiểm tra sai 5 lần bị khóa tạm và mật khẩu cũ được nâng cấp.
     [MySqlFact]
     public async Task Login_FiveFailuresThrottleAndLegacyPasswordUpgrades()
     {
@@ -118,6 +123,7 @@ public sealed class MySqlCustomerTests
         Assert.NotNull(throttled.Headers.RetryAfter);
     }
 
+    // Kiểm tra khảo sát: quyền, câu bắt buộc, hạn và chỉ nộp một lần.
     [MySqlFact]
     public async Task Surveys_ValidateOwnershipRequiredAnswersDeadlineAndSingleSubmission()
     {
@@ -156,6 +162,7 @@ public sealed class MySqlCustomerTests
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/me/surveys/{surveyId}")).StatusCode);
     }
 
+    // Kiểm tra phản hồi cần đơn đã giao của chính khách và trả về câu trả lời của cửa hàng.
     [MySqlFact]
     public async Task Feedback_RequiresDeliveredOwnedPurchaseAndReturnsStoreReply()
     {
@@ -189,17 +196,22 @@ public sealed class MySqlCustomerTests
         Assert.Equal(0, empty.GetProperty("totalItems").GetInt32());
     }
 
+    // Tạo tên đăng nhập thử không trùng.
     static string Username() => "apitest_" + Guid.NewGuid().ToString("N")[..18];
+    // Tạo yêu cầu đăng ký thử.
     static RegisterRequest Registration(string username) => new(username, username + "@example.test", "0900000001", "test-password-123");
+    // Đăng ký qua API và đọc token.
     static async Task<TokenResponse> RegisterAsync(HttpClient client, RegisterRequest? request = null)
     {
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", request ?? Registration(Username()));
         Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<TokenResponse>())!;
     }
+    // Gắn access token vào client.
     static void Authenticate(HttpClient client, TokenResponse response) => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", response.AccessToken);
 }
 
+// Dựng API test với CSDL thật và đồng hồ giả.
 internal sealed class CustomerApiFactory : WebApplicationFactory<SportShop.Api.Controllers.ProductsController>
 {
     public MutableClock Clock { get; } = new();
@@ -209,6 +221,7 @@ internal sealed class CustomerApiFactory : WebApplicationFactory<SportShop.Api.C
         ["Media:PublicBaseUrl"] = "http://localhost:5080"
     }).Build();
 
+    // Cấu hình chuỗi kết nối và đồng hồ test.
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var database = new MySqlConnectionStringBuilder(Configuration.GetConnectionString("Default") ?? "").Database;
@@ -218,6 +231,7 @@ internal sealed class CustomerApiFactory : WebApplicationFactory<SportShop.Api.C
         builder.ConfigureTestServices(services => { services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(Clock); });
     }
 
+    // Mở kết nối CSDL test.
     public async Task<MySqlConnection> OpenAsync()
     {
         var c = new MySqlConnection(Configuration.GetConnectionString("Default"));
@@ -226,9 +240,12 @@ internal sealed class CustomerApiFactory : WebApplicationFactory<SportShop.Api.C
     }
 }
 
+// Đồng hồ giả có thể tua tới.
 internal sealed class MutableClock : TimeProvider
 {
     DateTimeOffset _now = DateTimeOffset.UtcNow;
+    // Trả thời gian giả.
     public override DateTimeOffset GetUtcNow() => _now;
+    // Tua thời gian tới.
     public void Advance(TimeSpan elapsed) => _now += elapsed;
 }

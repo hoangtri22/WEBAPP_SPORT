@@ -149,7 +149,7 @@ kbd { font-family: inherit; font-size: 11px; color: var(--muted); background: va
 
 .pager-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .pager-bar .count { color: var(--muted); font-size: 13px; }
-.pager { display: flex; gap: 8px; }
+.pager { display: flex; gap: 8px; flex-wrap: wrap; }
 .pager button { min-width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 600; color: #55616d; }
 .pager button.on { background: var(--teal); border-color: var(--teal); color: #fff; }
 .pager button:disabled { opacity: .4; cursor: default; }
@@ -461,6 +461,8 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
 .stat-tabs a:hover { background: var(--bg); color: var(--ink); }
 .stat-tabs a.active { background: var(--teal); border-color: var(--teal); color: #fff; }
 .kpis-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.kpis-3 .kpi { min-width: 0; container-type: inline-size; }
+.kpis-3 .kpi-num { font-size: clamp(18px, 10.5cqi, 32px); line-height: 1.2; overflow-wrap: anywhere; }
 .table-scroll { overflow-x: auto; }
 .stat-tbl th.num, .stat-tbl td.num { text-align: right; white-space: nowrap; }
 .stat-tbl tfoot td { font-weight: 700; background: #fafbfc; border-top: 2px solid var(--line); padding: 14px 24px; }
@@ -472,8 +474,14 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
     .report-head p { font-size: 13px; color: #444; }
     .range, .stat-tabs, .page-head { display: none !important; }
     .card { box-shadow: none; border: 1px solid #bbb; break-inside: avoid; }
+    .stat-card { break-inside: auto; overflow: visible; }
+    .stat-card .table-scroll { overflow: visible; }
+    .stat-tbl tr { break-inside: avoid; }
+    .stat-tbl tfoot { display: table-row-group; }
+    body { background: #fff; }
     .stat-tbl th, .stat-tbl td { padding: 6px 10px; font-size: 12px; }
     .kpi { box-shadow: none; border: 1px solid #bbb; }
+    .pager-bar { display: none; }
+    table.tbl tr[hidden] { display: table-row !important; }
 }
-.stat-note { padding: 0 24px 12px; color: var(--muted); font-size: 13px; }
 .import-form { display: inline-flex; margin: 0; }

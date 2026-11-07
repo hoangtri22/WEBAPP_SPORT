@@ -7,6 +7,7 @@ using SportShop.Contracts.Common;
 
 namespace SportShop.Mobile.Services;
 
+// Các API giỏ hàng, thanh toán và đơn hàng.
 public interface ICommerceApi
 {
     Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default);
@@ -25,6 +26,7 @@ public interface ICommerceApi
     Task<OrderDto> CancelOrderAsync(int orderId, CancellationToken cancellationToken = default);
 }
 
+// Cài đặt ICommerceApi bằng HttpClient, kèm token hoặc mã thiết bị khách.
 public sealed class CommerceApi(
     HttpClient http,
     ISessionManager session,
@@ -33,9 +35,11 @@ public sealed class CommerceApi(
 {
     public const string GuestDeviceHeader = "X-Guest-Device-Key";
 
+    // Lấy giỏ hàng.
     public Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/cart"), cancellationToken);
 
+    // Thêm biến thể vào giỏ.
     public async Task<CartDto> AddCartItemAsync(int variantId, int quantity, CancellationToken cancellationToken = default)
     {
         var cart = await SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Post, "api/v1/cart/items")
@@ -46,6 +50,7 @@ public sealed class CommerceApi(
         return cart;
     }
 
+    // Đổi số lượng một dòng giỏ.
     public async Task<CartDto> SetCartItemQuantityAsync(int variantId, int quantity, CancellationToken cancellationToken = default)
     {
         var cart = await SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Put, $"api/v1/cart/items/{variantId}")
@@ -56,6 +61,7 @@ public sealed class CommerceApi(
         return cart;
     }
 
+    // Xóa một dòng giỏ.
     public async Task<CartDto> RemoveCartItemAsync(int variantId, CancellationToken cancellationToken = default)
     {
         var cart = await SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Delete, $"api/v1/cart/items/{variantId}"), cancellationToken);
@@ -63,24 +69,29 @@ public sealed class CommerceApi(
         return cart;
     }
 
+    // Xóa hết giỏ.
     public async Task ClearCartAsync(CancellationToken cancellationToken = default)
     {
         await SendAuthenticatedNoContentAsync(() => new HttpRequestMessage(HttpMethod.Delete, "api/v1/cart"), cancellationToken);
         cache?.InvalidateCommerce();
     }
 
+    // Lấy dữ liệu trang thanh toán.
     public Task<CheckoutDto> GetCheckoutAsync(CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/checkout"), cancellationToken);
 
+    // Lấy các voucher dùng được.
     public Task<IReadOnlyList<EligibleVoucherDto>> GetEligibleVouchersAsync(CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<IReadOnlyList<EligibleVoucherDto>>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/checkout/vouchers"), cancellationToken);
 
+    // Tính thử voucher.
     public Task<CheckoutDto> QuoteCheckoutAsync(string? voucherCode, CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Post, "api/v1/checkout/quote")
         {
             Content = JsonContent.Create(new CheckoutQuoteRequest(string.IsNullOrWhiteSpace(voucherCode) ? null : voucherCode.Trim()))
         }, cancellationToken);
 
+    // Lấy danh sách đơn hàng có phân trang.
     public Task<PagedResponse<OrderDto>> GetOrdersAsync(
         int page = 1,
         int pageSize = 20,
@@ -93,9 +104,11 @@ public sealed class CommerceApi(
         return SendAuthenticatedAsync<PagedResponse<OrderDto>>(() => new HttpRequestMessage(HttpMethod.Get, url), cancellationToken);
     }
 
+    // Lấy chi tiết đơn hàng.
     public Task<OrderDto> GetOrderDetailAsync(int orderId, CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<OrderDto>(() => new HttpRequestMessage(HttpMethod.Get, $"api/v1/orders/{orderId}"), cancellationToken);
 
+    // Đặt đơn hàng kèm Idempotency-Key.
     public async Task<OrderDto> PlaceOrderAsync(
         PlaceOrderRequest request,
         string idempotencyKey,
@@ -114,6 +127,7 @@ public sealed class CommerceApi(
         return order;
     }
 
+    // Hủy đơn hàng.
     public async Task<OrderDto> CancelOrderAsync(int orderId, CancellationToken cancellationToken = default)
     {
         var order = await SendAuthenticatedAsync<OrderDto>(() => new HttpRequestMessage(HttpMethod.Post, $"api/v1/orders/{orderId}/cancel"), cancellationToken);
@@ -121,6 +135,7 @@ public sealed class CommerceApi(
         return order;
     }
 
+    // Gửi request có xác thực và đọc kết quả; bị từ chối 401 thì làm mới token và gửi lại.
     private async Task<T> SendAuthenticatedAsync<T>(Func<HttpRequestMessage> requestFactory, CancellationToken cancellationToken)
     {
         var token = await TryGetValidAccessTokenAsync(cancellationToken);
@@ -149,6 +164,7 @@ public sealed class CommerceApi(
         }
     }
 
+    // Gửi request có xác thực, không đọc nội dung trả về.
     private async Task SendAuthenticatedNoContentAsync(Func<HttpRequestMessage> requestFactory, CancellationToken cancellationToken)
     {
         var token = await TryGetValidAccessTokenAsync(cancellationToken);
@@ -180,6 +196,7 @@ public sealed class CommerceApi(
         }
     }
 
+    // Gắn Bearer token, chưa đăng nhập thì gắn mã thiết bị khách.
     private void AttachAuthOrGuestHeader(HttpRequestMessage req, string? token)
     {
         if (!string.IsNullOrWhiteSpace(token))
@@ -194,6 +211,7 @@ public sealed class CommerceApi(
 
     private static readonly string FallbackGuestKey = Guid.NewGuid().ToString("N");
 
+    // Lấy mã thiết bị khách, không có thì dùng mã dự phòng.
     private string GetGuestDeviceKey()
     {
         if (deviceIdentity is not null)
@@ -212,6 +230,7 @@ public sealed class CommerceApi(
         catch (AuthException ex) { throw new CommerceException(ex.Message, ex); }
     }
 
+    // Làm mới access token sau khi bị từ chối.
     private async Task<string> RenewAccessTokenAsync(string rejected, CancellationToken cancellationToken)
     {
         try
@@ -222,6 +241,7 @@ public sealed class CommerceApi(
         catch (AuthException ex) { throw new CommerceException(ex.Message, ex); }
     }
 
+    // Đọc kết quả JSON, lỗi thì đổi thành CommerceException.
     private static async Task<T> ReadResponseAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
@@ -237,6 +257,7 @@ public sealed class CommerceApi(
         }
     }
 
+    // Tạo CommerceException từ phản hồi lỗi.
     private static async Task<CommerceException> CreateExceptionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         var detail = await TryReadProblemDetailAsync(response, cancellationToken);
@@ -253,6 +274,7 @@ public sealed class CommerceApi(
         return new CommerceException(msg, statusCode: (int)response.StatusCode);
     }
 
+    // Đọc nội dung lỗi ProblemDetails nếu có.
     private static async Task<string?> TryReadProblemDetailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         try
@@ -280,6 +302,7 @@ public sealed class CommerceApi(
     }
 }
 
+// Lỗi khi gọi API giỏ hàng, thanh toán, đơn hàng.
 public sealed class CommerceException(string message, Exception? innerException = null, int? statusCode = null)
     : Exception(message, innerException)
 {

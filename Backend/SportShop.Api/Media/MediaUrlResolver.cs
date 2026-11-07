@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 
 namespace SportShop.Api.Media;
 
+// Đổi đường dẫn ảnh trong CSDL thành URL đầy đủ và tìm file ảnh trong thư mục cấu hình.
 public sealed class MediaUrlResolver
 {
     private static readonly IReadOnlyDictionary<string, string> ImageTypes =
@@ -56,6 +57,7 @@ public sealed class MediaUrlResolver
         MapDirectory(app, _uploadsDirectory, "/uploads");
     }
 
+    // Đổi thư mục cấu hình thành đường dẫn tuyệt đối theo content root.
     private static string ResolveDirectory(string contentRoot, string directory)
         => Path.GetFullPath(Path.Combine(contentRoot, directory));
 

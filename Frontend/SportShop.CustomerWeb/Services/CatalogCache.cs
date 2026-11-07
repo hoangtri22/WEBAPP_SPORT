@@ -5,10 +5,13 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Biến thể trong bộ nhớ đệm catalog.
 public record CatalogVariant(int Id, string? Size, string? Color, decimal Price, int Stock, bool Visible, string? Image);
 
+// Sản phẩm trong bộ nhớ đệm catalog.
 public record CatalogProduct(int Id, int CategoryId, string Name, string Category, string Unit, string? Description, List<CatalogVariant> Variants);
 
+// Toàn bộ danh mục và sản phẩm trong bộ nhớ đệm.
 public record CatalogSnapshot(List<(int Id, string Name)> Categories, List<CatalogProduct> Products);
 
 // Bộ nhớ đệm danh mục singleton: nạp LOAI_SP, SAN_PHAM, BIEN_THE_SP một lần, giữ 10 phút cho ShopStore.Search / Categories / FilterOptions; đặt / hủy đơn gọi Clear(); trang quản trị ghi file dấu StampFile trong thư mục Uploads dùng chung sau mỗi thay đổi nên danh mục được nạp lại ngay ở lần xem sau (không cần chờ 10 phút).
@@ -65,9 +68,14 @@ public class CatalogCache(IConfiguration config, IWebHostEnvironment? env = null
         return new CatalogSnapshot(categories, products);
     }
 
+    // Kiểm tra giá trị CSDL là null.
     static bool IsNull(object? v) => v is null or DBNull;
+    // Đọc cột dạng số nguyên.
     static int I(IDictionary<string, object?> r, string k) => Convert.ToInt32(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng tiền, null thì trả 0.
     static decimal D(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? 0 : Convert.ToDecimal(r[k], CultureInfo.InvariantCulture);
+    // Đọc cột dạng chuỗi, null thì trả chuỗi rỗng.
     static string S(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? "" : Convert.ToString(r[k], CultureInfo.InvariantCulture)!;
+    // Đọc cột dạng chuỗi, cho phép null.
     static string? NS(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToString(r[k], CultureInfo.InvariantCulture);
 }

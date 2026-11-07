@@ -4,6 +4,8 @@
     ViewData["Title"] = "Thống kê doanh thu";
     string kindText = StatsController.KindList.First(k => k.Key == Model.Kind).Text;
     var query = new { from = Model.From.ToString("yyyy-MM-dd"), to = Model.To.ToString("yyyy-MM-dd"), group = Model.Group };
+    string? linkFrom = Model.DatesChosen ? query.from : null, linkTo = Model.DatesChosen ? query.to : null;
+    // Định dạng ô bảng: cột tiền dùng Fmt.Money(), cột khác dùng số thường.
     string Cell(decimal v, StatCol c) => c.Money ? Fmt.Money(v) : v.ToString("N0");
 }
 <div class="page-head">
@@ -13,8 +15,8 @@
         <p class="page-sub">Tổng tiền hóa đơn theo thời gian, nhân viên, khách hàng và sản phẩm</p>
     </div>
     <div class="head-actions">
-        <a class="btn-outline" asp-action="Export" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Xuất Excel</a>
-        <a class="btn-outline" asp-action="Pdf" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Tải PDF</a>
+        <a class="btn-outline" asp-action="Export" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Xuất Excel</a>
+        <a class="btn-outline" asp-action="Pdf" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Tải PDF</a>
         <button type="button" class="btn-primary" onclick="window.print()">@Icons.Svg("printer", 18) In / Lưu PDF</button>
     </div>
 </div>
@@ -25,13 +27,13 @@
     <p>Ngày lập: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
 </div>
 
-<form class="card range" method="get" asp-action="Index">
+<form class="card range" method="get" asp-action="Index" onsubmit="this.querySelectorAll('input[data-auto=&quot;1&quot;]').forEach(function (i) { if (i.value === i.defaultValue) i.disabled = true; })">
     <input type="hidden" name="kind" value="@Model.Kind" />
     <div class="range-input">
         @Icons.Svg("calendar", 20)
-        <input type="date" name="from" value="@query.from" aria-label="Từ ngày" />
+        <input type="date" name="from" value="@query.from" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Từ ngày" />
         <span>–</span>
-        <input type="date" name="to" value="@query.to" aria-label="Đến ngày" />
+        <input type="date" name="to" value="@query.to" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Đến ngày" />
     </div>
     <div class="select-wrap plain">
         <select name="group" aria-label="Nhóm theo (bảng theo kỳ và theo khách hàng)">
@@ -46,7 +48,7 @@
 <div class="stat-tabs">
     @foreach (var k in StatsController.KindList)
     {
-        <a class="@(k.Key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@k.Key" asp-route-from="@query.from" asp-route-to="@query.to" asp-route-group="@Model.Group">@k.Text</a>
+        <a class="@(k.Key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@k.Key" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-group="@Model.Group">@k.Text</a>
     }
 </div>
 
@@ -60,10 +62,6 @@
 {
     <div class="card stat-card">
         <div class="card-title">@t.Title</div>
-        @if (!string.IsNullOrEmpty(t.Note))
-        {
-            <p class="stat-note">@t.Note</p>
-        }
         <div class="table-scroll">
             <table class="tbl stat-tbl">
                 <thead>

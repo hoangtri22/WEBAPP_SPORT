@@ -5,6 +5,7 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.Api.Controllers;
 
+// Đổi dữ liệu ShopStore sang DTO giỏ hàng, voucher, đơn hàng trả cho app.
 internal static class CommerceMapping
 {
     // Đổi các dòng ShopStore.CartLines() sang CartDto, đường dẫn ảnh qua MediaUrlResolver.Resolve().
@@ -12,6 +13,7 @@ internal static class CommerceMapping
         lines.Select(line => new CartItemDto(line.VariantId, line.ProductId, line.Name, line.Size, line.Color,
             media.Resolve(line.Image), line.Price, line.Qty, line.Stock, line.Amount, line.Enough)).ToArray(),
         lines.Sum(line => line.Qty), lines.Sum(line => line.Amount));
+    // Đổi UsablePromo của ShopStore sang EligibleVoucherDto.
     internal static EligibleVoucherDto Voucher(UsablePromo item, ICatalogClock clock) => new(item.Promo.Code, item.Promo.Name,
         item.Promo.Percent, item.Promo.MaxDiscount, item.Promo.Tier, clock.WithOffset(item.Promo.End), item.Discount);
     // Đổi MyOrder (ShopStore.Orders()) sang OrderDto, đường dẫn ảnh qua MediaUrlResolver.Resolve().

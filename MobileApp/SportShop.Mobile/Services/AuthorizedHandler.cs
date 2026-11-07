@@ -6,6 +6,7 @@ namespace SportShop.Mobile.Services;
 // Gắn access token vào request cần đăng nhập; API trả 401 thì làm mới token và gửi lại đúng một lần.
 public sealed class AuthorizedHandler(ISessionManager session) : DelegatingHandler
 {
+    // Gắn token vào request; bị từ chối 401 thì làm mới token và gửi lại.
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var accessToken = await GetTokenAsync(() => session.GetAccessTokenAsync(cancellationToken));
@@ -20,6 +21,7 @@ public sealed class AuthorizedHandler(ISessionManager session) : DelegatingHandl
         return await base.SendAsync(request, cancellationToken);
     }
 
+    // Gắn hoặc bỏ header Authorization.
     private static void Authorize(HttpRequestMessage request, string? accessToken)
         => request.Headers.Authorization = accessToken is null ? null : new AuthenticationHeaderValue("Bearer", accessToken);
 

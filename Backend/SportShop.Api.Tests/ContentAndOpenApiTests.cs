@@ -4,8 +4,10 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test trang nội dung và tài liệu OpenAPI.
 public sealed class ContentAndOpenApiTests
 {
+    // Kiểm tra mọi trang thông tin của web có trên API với cùng nội dung, không cần CSDL.
     [Fact]
     public async Task EveryWebInformationPageIsAvailableWithTheSameContentWithoutDatabase()
     {
@@ -25,6 +27,7 @@ public sealed class ContentAndOpenApiTests
         await CatalogApiTests.AssertProblem(await client.GetAsync("/api/v1/pages/missing"), HttpStatusCode.NotFound, "RESOURCE_NOT_FOUND");
     }
 
+    // Kiểm tra nhân viên không dùng được API khách.
     [Theory]
     [InlineData("GET", "/api/v1/me")]
     [InlineData("PUT", "/api/v1/me")]
@@ -43,6 +46,7 @@ public sealed class ContentAndOpenApiTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // Kiểm tra OpenAPI có xác thực, kiểu phản hồi và đủ nhóm chức năng của web.
     [Fact]
     public async Task OpenApiDocumentsAuthenticationTypedResponsesAndAllWebFeatureGroups()
     {

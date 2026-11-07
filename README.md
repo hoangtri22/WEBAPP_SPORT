@@ -17,7 +17,7 @@ WEBAPP_SPORT/
 ├── Backend/
 │   ├── Database/
 │   │   ├── sports_shop.sql            # Script MySQL: Schema 35 bảng gốc + dữ liệu demo
-│   │   └── Migrations/                # Các bản vá nâng cấp CSDL (Auth mobile, Giỏ DB, Phương thức TT, Thiết bị khách)
+│   │   └── Migrations/                # Các bản vá nâng cấp CSDL (Auth mobile, Giỏ DB, Phương thức TT, Thiết bị khách, Bỏ hạng VIP, Đơn cho khách chưa có tài khoản)
 │   ├── SportShop.Api/                 # REST Web API v1 cho Mobile App (Port :5080)
 │   ├── SportShop.Application/         # Use cases và interfaces backend
 │   ├── SportShop.Contracts/           # Data Transfer Objects (DTO) cho API
@@ -30,7 +30,6 @@ WEBAPP_SPORT/
 │   ├── SportShop.CustomerWeb/         # Web khách hàng
 │   └── Uploads/                       # Ảnh tải lên từ web quản trị, hai web phục vụ tại /uploads (git bỏ qua)
 ├── MobileApp/                         # App điện thoại cho khách hàng (.NET MAUI), chưa làm
-├── Admin Dashboard for SPORTSHOP/     # Mã nguồn thiết kế Figma (React), chỉ để tham khảo giao diện
 └── SportShop.slnx                     # Solution mở bằng Visual Studio
 ```
 
@@ -123,23 +122,21 @@ Tất cả tài khoản demo đều có mật khẩu: **`123456`**
 
 ---
 
-## 📸 Giao diện các màn hình & Thư viện ảnh chụp
-
-*(Ảnh chụp thực tế nằm trong thư mục `docs/screenshots/`; bấm vào ảnh để xem cỡ lớn).*
+## 📸 Giao diện các màn hình
 
 ### A. Màn hình Web Khách hàng (`SportShop.CustomerWeb`)
 
-| Màn hình | Chức năng nổi bật | Ảnh chụp |
-|---|---|---|
-| **Trang chủ (`/`)** | Banner khuyến mãi, danh mục thể thao trực quan, 8 sản phẩm nổi bật mới nhất. | <a href="docs/screenshots/customer_home.png"><img src="docs/screenshots/customer_home.png" width="280" alt="customer_home"></a> |
-| **Cửa hàng (`/Shop`)** | Lưới sản phẩm, bộ lọc theo danh mục, sắp xếp theo giá và tên, phân trang. | <a href="docs/screenshots/customer_shop.png"><img src="docs/screenshots/customer_shop.png" width="280" alt="customer_shop"></a> |
-| **Tìm kiếm nâng cao** | Lọc chi tiết sản phẩm theo khoảng giá (Min - Max), kích cỡ (Size) và màu sắc. | <a href="docs/screenshots/customer_search_adv.png"><img src="docs/screenshots/customer_search_adv.png" width="280" alt="customer_search_adv"></a> |
-| **Chi tiết sản phẩm** | Đổi ảnh theo màu sắc được chọn, kiểm tra tồn kho theo từng size, mua ngay / thêm giỏ. | <a href="docs/screenshots/customer_product_detail.png"><img src="docs/screenshots/customer_product_detail.png" width="280" alt="customer_product_detail"></a> |
-| **Đơn hàng của tôi** | Luồng 4 bước theo dõi trạng thái đơn hàng, nút tự hủy đơn chờ, xem chi tiết đơn. | <a href="docs/screenshots/customer_orders.png"><img src="docs/screenshots/customer_orders.png" width="280" alt="customer_orders"></a> |
-| **Đánh giá & Phản hồi** | Đánh giá sao (1 - 5⭐) cho sản phẩm đã mua thành công, xem phản hồi của cửa hàng. | <a href="docs/screenshots/customer_feedback.png"><img src="docs/screenshots/customer_feedback.png" width="280" alt="customer_feedback"></a> |
-| **Khảo sát khách hàng** | Giao diện làm khảo sát trải nghiệm dịch vụ (câu hỏi trắc nghiệm & ý kiến tự luận). | <a href="docs/screenshots/customer_surveys.png"><img src="docs/screenshots/customer_surveys.png" width="280" alt="customer_surveys"></a> |
-| **Hồ sơ cá nhân** | Quản lý thông tin, cập nhật sở thích thể thao, đổi mật khẩu bảo mật (khóa 5p nếu sai 5 lần). | <a href="docs/screenshots/customer_profile.png"><img src="docs/screenshots/customer_profile.png" width="280" alt="customer_profile"></a> |
-| **Đăng nhập / Đăng ký** | Giao diện đăng thực hiện đại, hỗ trợ chuyển đổi giữa đăng ký mới và đăng nhập. | <a href="docs/screenshots/customer_auth.png"><img src="docs/screenshots/customer_auth.png" width="280" alt="customer_auth"></a> |
+| Màn hình | Chức năng nổi bật |
+|---|---|
+| **Trang chủ (`/`)** | Banner khuyến mãi, danh mục thể thao trực quan, 8 sản phẩm nổi bật mới nhất. |
+| **Cửa hàng (`/Shop`)** | Lưới sản phẩm, bộ lọc theo danh mục, sắp xếp theo giá và tên, phân trang. |
+| **Tìm kiếm nâng cao** | Lọc chi tiết sản phẩm theo khoảng giá (Min - Max), kích cỡ (Size) và màu sắc. |
+| **Chi tiết sản phẩm** | Đổi ảnh theo màu sắc được chọn, kiểm tra tồn kho theo từng size, mua ngay / thêm giỏ. |
+| **Đơn hàng của tôi** | Luồng 4 bước theo dõi trạng thái đơn hàng, nút tự hủy đơn chờ, xem chi tiết đơn. |
+| **Đánh giá & Phản hồi** | Đánh giá sao (1 - 5⭐) cho sản phẩm đã mua thành công, xem phản hồi của cửa hàng. |
+| **Khảo sát khách hàng** | Giao diện làm khảo sát trải nghiệm dịch vụ (câu hỏi trắc nghiệm & ý kiến tự luận). |
+| **Hồ sơ cá nhân** | Quản lý thông tin, cập nhật sở thích thể thao, đổi mật khẩu bảo mật (khóa 5p nếu sai 5 lần). |
+| **Đăng nhập / Đăng ký** | Giao diện đăng thực hiện đại, hỗ trợ chuyển đổi giữa đăng ký mới và đăng nhập. |
 
 ---
 
@@ -147,21 +144,21 @@ Tất cả tài khoản demo đều có mật khẩu: **`123456`**
 
 Quy trình mua hàng từ khi chọn sản phẩm tới khi hoàn tất thanh toán:
 
-| Bước quy trình | Mô tả trải nghiệm | Ảnh chụp |
-|---|---|---|
-| **1. Thêm vào giỏ** | Popup thông báo thêm sản phẩm thành công, cập nhật số lượng tồn kho tức thì. | <a href="docs/screenshots/order_step1_add_cart.png"><img src="docs/screenshots/order_step1_add_cart.png" width="280" alt="order_step1_add_cart"></a> |
-| **2. Xem Giỏ hàng (`/Cart`)** | Bảng danh sách món hàng, nút tăng giảm số lượng, cảnh báo vượt quá tồn kho, tạm tính tiền. | <a href="docs/screenshots/order_step2_cart_view.png"><img src="docs/screenshots/order_step2_cart_view.png" width="280" alt="order_step2_cart_view"></a> |
-| **3. Thanh toán: Thông tin nhận** | Tự động điền người nhận từ sổ địa chỉ, sửa tên, số điện thoại và địa chỉ giao hàng. | <a href="docs/screenshots/order_step3_checkout_info.png"><img src="docs/screenshots/order_step3_checkout_info.png" width="280" alt="order_step3_checkout_info"></a> |
-| **4. Thanh toán: Chọn Phương thức** | Lựa chọn phương thức thanh toán: COD, Chuyển khoản ngân hàng, Ví điện tử, Thẻ ATM/Visa. | <a href="docs/screenshots/order_step4_checkout_payment.png"><img src="docs/screenshots/order_step4_checkout_payment.png" width="280" alt="order_step4_checkout_payment"></a> |
-| **5. Áp dụng Mã giảm giá** | Danh sách voucher khả dụng theo hạng thành viên kèm số tiền giảm giá chi tiết, tính phí ship. | <a href="docs/screenshots/order_step5_apply_voucher.png"><img src="docs/screenshots/order_step5_apply_voucher.png" width="280" alt="order_step5_apply_voucher"></a> |
-| **6. Đặt hàng thành công (`/Done`)** | Màn hình xác nhận hoàn tất đơn hàng, hiển thị mã đơn hàng `DHxxxxx` và hướng dẫn theo dõi. | <a href="docs/screenshots/order_step6_order_done.png"><img src="docs/screenshots/order_step6_order_done.png" width="280" alt="order_step6_order_done"></a> |
+| Bước quy trình | Mô tả trải nghiệm |
+|---|---|
+| **1. Thêm vào giỏ** | Popup thông báo thêm sản phẩm thành công, cập nhật số lượng tồn kho tức thì. |
+| **2. Xem Giỏ hàng (`/Cart`)** | Bảng danh sách món hàng, nút tăng giảm số lượng, cảnh báo vượt quá tồn kho, tạm tính tiền. |
+| **3. Thanh toán: Thông tin nhận** | Tự động điền người nhận từ sổ địa chỉ, sửa tên, số điện thoại và địa chỉ giao hàng. |
+| **4. Thanh toán: Chọn Phương thức** | Lựa chọn phương thức thanh toán: COD, Chuyển khoản ngân hàng, Ví điện tử, Thẻ ATM/Visa. |
+| **5. Áp dụng Mã giảm giá** | Danh sách voucher khả dụng theo hạng thành viên kèm số tiền giảm giá chi tiết, tính phí ship. |
+| **6. Đặt hàng thành công (`/Done`)** | Màn hình xác nhận hoàn tất đơn hàng, hiển thị mã đơn hàng `DHxxxxx` và hướng dẫn theo dõi. |
 
 ---
 
 ### C. Màn hình Web Quản trị (`SportShop.Admin`)
 
-| Màn hình | Chức năng nổi bật | Ảnh chụp |
-|---|---|---|
+| Màn hình | Chức năng nổi bật |
+|---|---|
 | Quản trị | `Models/ShopData.cs` (nạp từng danh sách khi cần, mỗi request một bản) | `Models/ShopCommands.cs` qua `Controllers/CrudController.cs` (Form, Save, Delete, Act) |
 | Khách hàng | `Services/ShopStore.cs`, `Services/CustomerStore.cs` | Cùng hai lớp trên |
 
@@ -218,6 +215,6 @@ Verifier cuối trên instance MySQL sạch: **142/142 PASS, 0 FAIL, 0 SKIP**, b
 ## ❓ Xử lý lỗi thường gặp
 
 1. **Lỗi `Lỗi kết nối CSDL`:** Kiểm tra dịch vụ MySQL đang chạy trong `services.msc`, kiểm tra đúng cổng (3306) và mật khẩu trong `appsettings.json`.
-2. **Lỗi `Table doesn't exist`:** Chạy file `Backend/Database/sports_shop.sql` và cả 3 file trong thư mục `Backend/Database/Migrations/`.
+2. **Lỗi `Table doesn't exist`:** Chạy file `Backend/Database/sports_shop.sql` và tất cả file trong thư mục `Backend/Database/Migrations/`.
 3. **Lỗi file `.dll` / `.exe` bị khóa khi build:** Do tiến trình web cũ đang chạy ngầm. Mở PowerShell gõ: `Stop-Process -Name dotnet -Force` rồi build lại.
 4. **Bị chặn không vào được trang Quản trị:** Kiểm tra xem tài khoản đăng nhập có được liên kết với hồ sơ trong bảng `NHAN_VIEN` chưa.

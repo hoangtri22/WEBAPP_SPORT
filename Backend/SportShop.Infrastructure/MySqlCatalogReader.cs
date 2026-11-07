@@ -8,6 +8,7 @@ using SportShop.Contracts.Common;
 
 namespace SportShop.Infrastructure;
 
+// Cài đặt ICatalogReader: đọc danh mục, sản phẩm, khuyến mãi từ MySQL bằng Dapper.
 public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICatalogClock clock) : ICatalogReader
 {
     private const string ArchivedCategory = "[Đã xóa]";
@@ -176,6 +177,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         "%" + query.Trim().Replace("!", "!!", StringComparison.Ordinal)
             .Replace("%", "!%", StringComparison.Ordinal).Replace("_", "!_", StringComparison.Ordinal) + "%";
 
+    // Tạo CommandDefinition kèm timeout của MySqlConnectionFactory cho các truy vấn trong file.
     private static CommandDefinition Command(string sql, object? parameters, CancellationToken cancellationToken,
         MySqlTransaction? transaction = null) => new(sql, parameters, transaction,
             commandTimeout: MySqlConnectionFactory.CommandTimeoutSeconds, cancellationToken: cancellationToken);
@@ -190,9 +192,11 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         }
     }
 
+    // Đổi ProductRow sang CatalogProduct.
     private static CatalogProduct ToProduct(ProductRow row) => new(row.Id, row.Name, row.CategoryId,
         row.CategoryName, row.Unit, row.Description, row.ImagePath, row.MinPrice, row.MaxPrice, row.Stock);
 
+    // Dòng danh mục đọc bằng Dapper.
     private sealed class CategoryRow
     {
         public int Id { get; set; }
@@ -200,12 +204,14 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         public int ProductCount { get; set; }
     }
 
+    // Dòng mã và tên đọc bằng Dapper.
     private sealed class NamedRow
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
     }
 
+    // Dòng sản phẩm đọc bằng Dapper.
     private sealed class ProductRow
     {
         public int Id { get; set; }
@@ -220,6 +226,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         public long Stock { get; set; }
     }
 
+    // Dòng biến thể đọc bằng Dapper.
     private sealed class VariantRow
     {
         public int Id { get; set; }
@@ -230,6 +237,7 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         public string? ImagePath { get; set; }
     }
 
+    // Dòng khuyến mãi đọc bằng Dapper.
     private sealed class PromotionRow
     {
         public int PromotionId { get; set; }

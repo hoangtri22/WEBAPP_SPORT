@@ -7,8 +7,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test quên mật khẩu.
 public sealed class ForgotPasswordTests
 {
+    // Kiểm tra gửi mã xong chuyển sang bước hai.
     [Fact]
     public async Task SendingCodeMovesToSecondStep()
     {
@@ -20,6 +22,7 @@ public sealed class ForgotPasswordTests
         Assert.True(vm.CodeSent);
     }
 
+    // Kiểm tra email sai không được gửi.
     [Fact]
     public void InvalidEmailIsNotSent()
     {
@@ -31,6 +34,7 @@ public sealed class ForgotPasswordTests
         Assert.True(vm.HasError);
     }
 
+    // Kiểm tra dữ liệu đặt lại sai không được gửi.
     [Theory]
     [InlineData("123", "moi123", "moi123", "6 chữ số")]
     [InlineData("123456", "ngan", "ngan", "6 ký tự")]
@@ -44,6 +48,7 @@ public sealed class ForgotPasswordTests
         Assert.Contains(expected, vm.ErrorMessage);
     }
 
+    // Kiểm tra mã sai hiện thông báo của API và ở lại trang.
     [Fact]
     public void WrongCodeShowsApiMessageAndStaysOnPage()
     {
@@ -56,6 +61,7 @@ public sealed class ForgotPasswordTests
         Assert.Equal("Mã xác nhận không đúng hoặc đã hết hạn.", vm.ErrorMessage);
     }
 
+    // Kiểm tra mã đúng thì hoàn tất và xóa mật khẩu đã nhập.
     [Fact]
     public async Task CorrectCodeCompletesAndClearsPasswords()
     {
@@ -69,6 +75,7 @@ public sealed class ForgotPasswordTests
         Assert.Equal("", vm.NewPassword);
     }
 
+    // Kiểm tra API đọc được title lỗi.
     [Fact]
     public async Task ApiReadsProblemTitle()
     {
@@ -77,12 +84,15 @@ public sealed class ForgotPasswordTests
         Assert.Equal("Mã xác nhận không đúng hoặc đã hết hạn.", error.Message);
     }
 
+    // HttpMessageHandler giả trả lỗi.
     sealed class Server : HttpMessageHandler
     {
+        // Trả phản hồi giả.
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = JsonContent.Create(new { title = "Mã xác nhận không đúng hoặc đã hết hạn." }) });
     }
 
+    // IPasswordResetApi giả ghi lại lần gọi.
     sealed class FakeApi : IPasswordResetApi
     {
         public string? Email;
@@ -90,6 +100,7 @@ public sealed class ForgotPasswordTests
         public AuthException? Failure;
         public readonly TaskCompletionSource Sent = new();
 
+        // Ghi lại email hoặc ném lỗi đã cài.
         public Task SendCodeAsync(string email, CancellationToken cancellationToken)
         {
             Email = email;
@@ -97,6 +108,7 @@ public sealed class ForgotPasswordTests
             return Task.CompletedTask;
         }
 
+        // Ghi lại yêu cầu hoặc ném lỗi đã cài.
         public Task ResetAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
         {
             if (Failure is not null) return Task.FromException(Failure);

@@ -3,6 +3,7 @@ using MySqlConnector;
 
 namespace SportShop.Admin.Models;
 
+// Đọc mọi dữ liệu của Web Admin từ MySQL bằng Dapper, dùng chung kết quả qua DataCache.
 public class ShopData
 {
     readonly string _cs;
@@ -69,10 +70,15 @@ public class ShopData
     public List<Campaign> Campaigns => _campaigns.Value;
     public List<Survey> Surveys => _surveys.Value;
 
+    // Tìm biến thể theo mã.
     public Variant Variant(int id) => Variants.First(v => v.Id == id);
+    // Tìm sản phẩm theo mã.
     public Product Product(int id) => Products.First(p => p.Id == id);
+    // Tìm khách hàng theo mã.
     public Customer Customer(int id) => Customers.First(c => c.Id == id);
+    // Tìm nhân viên theo mã.
     public Employee Employee(int id) => Employees.First(e => e.Id == id);
+    // Tên đầy đủ của biến thể theo mã.
     public string VariantName(int id) => VariantName(Product(Variant(id).ProductId), Variant(id));
     // Tên biến thể: tên sản phẩm kèm size / màu.
     public static string VariantName(Product p, Variant v)
@@ -239,7 +245,7 @@ public class ShopData
                 S(r, "chuc_vu"), M(r, "luong_co_ban"), S(r, "trang_thai") == "dang_lam", S(r, "ten_dang_nhap"),
                 S(r, "so_dien_thoai"), S(r, "email"), S(r, "ten_vai_tro"))).ToList();
 
-    // Đọc khách hàng từ KHACH_HANG + TAI_KHOAN kèm sở thích, sổ địa chỉ và nhóm khách.
+    // Đọc khách hàng từ KHACH_HANG + TAI_KHOAN kèm sở thích, sổ địa chỉ và nhóm khách; bỏ khách không tài khoản chưa có đơn.
     List<Customer> LoadCustomers()
     {
         var interests = Query("""
@@ -259,6 +265,7 @@ public class ShopData
         return Query("""
             SELECT kh.*, tk.ten_dang_nhap, tk.mat_khau, tk.email, tk.so_dien_thoai AS tk_sdt, tk.trang_thai AS tk_trang_thai
             FROM KHACH_HANG kh LEFT JOIN TAI_KHOAN tk ON tk.ma_tai_khoan = kh.ma_tai_khoan
+            WHERE kh.ma_tai_khoan IS NOT NULL OR EXISTS (SELECT 1 FROM DON_HANG dh WHERE dh.ma_khach_hang = kh.ma_khach_hang)
             ORDER BY kh.ma_khach_hang
             """).Select(r =>
         {
@@ -520,6 +527,20 @@ public class ShopData
         catch (MySqlException e) when (e.ErrorCode == MySqlErrorCode.NoSuchTable) { return []; }
     }
 
+    // Tên thiết bị của khách không tài khoản đặt đơn trên app: nối MOBILE_GUEST_CUSTOMER (API tạo khi khách vãng lai dùng giỏ, qua GuestDeviceStore) với MOBILE_GUEST_DEVICE; chưa có bảng thì trả rỗng. Gọi từ CustomersController.Index.
+    public Dictionary<int, string> GuestCustomerDevices()
+    {
+        try
+        {
+            return Query("""
+                SELECT gc.customer_id, gd.device_name FROM MOBILE_GUEST_CUSTOMER gc
+                JOIN MOBILE_GUEST_DEVICE gd ON gd.device_key = gc.device_key
+                JOIN KHACH_HANG kh ON kh.ma_khach_hang = gc.customer_id AND kh.ma_tai_khoan IS NULL
+                """).ToDictionary(r => I(r, "customer_id"), r => S(r, "device_name"));
+        }
+        catch (MySqlException e) when (e.ErrorCode == MySqlErrorCode.NoSuchTable) { return []; }
+    }
+
     // Hàm chung: mở kết nối MySQL (ConnectionStrings:Default) và chạy SELECT bằng Dapper; các hàm đọc trong file đều gọi hàm này.
     List<IDictionary<string, object?>> Query(string sql, object? args = null)
     {
@@ -527,19 +548,31 @@ public class ShopData
         return conn.Query(sql, args).Cast<IDictionary<string, object?>>().ToList();
     }
 
+    // Kiểm tra giá trị CSDL là null.
     static bool IsNull(object? v) => v is null || v is DBNull;
+    // Đọc cột dạng số nguyên.
     static int I(IDictionary<string, object?> r, string k) => Convert.ToInt32(r[k]);
+    // Đọc cột dạng số nguyên, cho phép null.
     static int? NI(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToInt32(r[k]);
+    // Đọc cột dạng tiền, null thì trả 0.
     static decimal M(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? 0 : Convert.ToDecimal(r[k]);
+    // Đọc cột dạng tiền, cho phép null.
     static decimal? NM(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToDecimal(r[k]);
+    // Đọc cột dạng chuỗi, null thì trả chuỗi rỗng.
     static string S(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? "" : Convert.ToString(r[k])!;
+    // Đọc cột dạng chuỗi, cho phép null.
     static string? NS(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToString(r[k]);
+    // Đọc cột dạng ngày giờ.
     static DateTime T(IDictionary<string, object?> r, string k) => Convert.ToDateTime(r[k]);
+    // Đọc cột dạng ngày giờ, cho phép null.
     static DateTime? NT(IDictionary<string, object?> r, string k) => IsNull(r[k]) ? null : Convert.ToDateTime(r[k]);
+    // Đọc cột dạng đúng sai.
     static bool B(IDictionary<string, object?> r, string k) => !IsNull(r[k]) && Convert.ToBoolean(r[k]);
 }
 
+// Kết quả đăng nhập quản trị của ShopData.CheckLogin().
 public record LoginResult(bool Ok, string? Error, int EmployeeId, string Username, string FullName, string FirstName, string Role, string Position)
 {
+    // Tạo kết quả đăng nhập thất bại kèm thông báo lỗi.
     public static LoginResult Fail(string error) => new(false, error, 0, "", "", "", "", "");
 }

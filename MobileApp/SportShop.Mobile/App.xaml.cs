@@ -3,6 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Ứng dụng MAUI: giao diện sáng và điều hướng gốc giữa AuthPage và HomePage.
 public partial class App : Application
 {
     private readonly IServiceProvider _services;
@@ -22,6 +23,7 @@ public partial class App : Application
         };
     }
 
+    // Tạo cửa sổ đầu tiên với trang AuthPage.
     protected override Window CreateWindow(IActivationState? activationState) => new(_services.GetRequiredService<AuthPage>());
 
     // Phiên có thể hết hạn trên luồng nền (AuthorizedHandler), nên đổi trang luôn qua luồng giao diện.

@@ -3,11 +3,13 @@ using SportShop.Application.Catalog;
 
 namespace SportShop.Infrastructure;
 
+// Cài đặt ICatalogClock theo múi giờ cấu hình Database:TimeZoneId.
 public sealed class DatabaseCatalogClock : ICatalogClock
 {
     private readonly TimeZoneInfo _databaseZone;
     private readonly TimeProvider _timeProvider;
 
+    // Đọc múi giờ từ cấu hình, mặc định Asia/Ho_Chi_Minh.
     public DatabaseCatalogClock(IConfiguration configuration, TimeProvider timeProvider)
     {
         var zoneId = configuration["Database:TimeZoneId"] ?? "Asia/Ho_Chi_Minh";

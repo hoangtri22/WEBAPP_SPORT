@@ -8,6 +8,7 @@ namespace SportShop.CustomerWeb.Controllers;
 // Chuẩn bị dữ liệu chung cho các layout và header / footer trước khi hiển thị mọi trang: đã kết nối CSDL chưa (DbStatus), khách đang đăng nhập (CustomerStore.Current(), chưa kết nối thì dùng StoreData mẫu), số món trong giỏ (ShopStore.CartCount()) và địa chỉ web quản trị (Links:AdminUrl). Đăng ký trong Program.cs.
 public class LayoutDataFilter(DbStatus db, CustomerStore store, ShopStore shop, IConfiguration config) : IResultFilter
 {
+    // Trước khi trả trang: đưa dữ liệu dùng chung của layout vào ViewBag.
     public void OnResultExecuting(ResultExecutingContext context)
     {
         if (context.Result is not ViewResult view) return;
@@ -19,5 +20,6 @@ public class LayoutDataFilter(DbStatus db, CustomerStore store, ShopStore shop, 
         view.ViewData["AdminUrl"] = config["Links:AdminUrl"] ?? "#";
     }
 
+    // Không cần xử lý sau khi trả trang, khai báo vì interface IResultFilter bắt buộc.
     public void OnResultExecuted(ResultExecutedContext context) { }
 }

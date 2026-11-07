@@ -3,10 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace SportShop.CustomerWeb.Models;
 
-/// <summary>
-/// Điều kiện tìm sản phẩm dùng chung cho mọi chỗ tìm kiếm: ô tìm ở đầu trang, bộ lọc ở trang cửa hàng và tìm kiếm nâng cao.
-/// Đọc thẳng từ chuỗi truy vấn (?q=...&amp;nq=...&amp;cat=...&amp;ncat=...&amp;min=...&amp;max=...&amp;size=...&amp;nsize=...&amp;color=...&amp;ncolor=...&amp;sort=...) và được ShopStore.Search() dùng để dựng câu SQL.
-/// </summary>
+/// <summary>Điều kiện tìm sản phẩm dùng chung cho mọi chỗ tìm kiếm: ô tìm ở đầu trang, bộ lọc ở trang cửa hàng và tìm kiếm nâng cao. Đọc thẳng từ chuỗi truy vấn (?q=...&amp;nq=...&amp;cat=...&amp;ncat=...&amp;min=...&amp;max=...&amp;size=...&amp;nsize=...&amp;color=...&amp;ncolor=...&amp;sort=...) và được ShopStore.Search() dùng để dựng câu SQL.</summary>
 public class ProductQuery
 {
     /// <summary>Từ khóa: mỗi từ phải có trong tên sản phẩm hoặc tên loại (không phân biệt hoa thường và dấu).</summary>
@@ -22,7 +19,7 @@ public class ProductQuery
     [FromQuery(Name = "max")] public decimal? MaxPrice { get; set; }
     [FromQuery(Name = "size")] public string? Size { get; set; }
     [FromQuery(Name = "color")] public string? Color { get; set; }
-    /// <summary>new | price_asc | price_desc | name</summary>
+    /// <summary>Kiểu sắp xếp: new (mới nhất), price_asc (giá tăng), price_desc (giá giảm), name (theo tên).</summary>
     [FromQuery(Name = "sort")] public string Sort { get; set; } = "new";
     [BindNever] public int? Take { get; set; }
     /// <summary>?adv=1: mở sẵn khung tìm kiếm nâng cao (nút "Tìm kiếm nâng cao" ở đầu trang).</summary>

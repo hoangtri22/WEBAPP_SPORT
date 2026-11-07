@@ -3,16 +3,20 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test ticket, state và tách tên của đăng nhập Google.
 public sealed class GoogleLoginTests
 {
     const string Verifier = "verifier-cua-app-dang-nhap-google-du-do-dai-43-ky-tu";
 
+    // Đồng hồ giả để thử hết hạn.
     sealed class Clock : TimeProvider
     {
         public DateTimeOffset Now = new(2026, 11, 7, 0, 0, 0, TimeSpan.Zero);
+        // Trả thời gian giả.
         public override DateTimeOffset GetUtcNow() => Now;
     }
 
+    // Kiểm tra ticket chỉ dùng được một lần với verifier đúng.
     [Fact]
     public void TicketWorksOnceWithMatchingVerifier()
     {
@@ -22,6 +26,7 @@ public sealed class GoogleLoginTests
         Assert.Null(tickets.TakeTicket(ticket, Verifier));
     }
 
+    // Kiểm tra verifier sai làm ticket mất hiệu lực.
     [Fact]
     public void WrongVerifierBurnsTicket()
     {
@@ -31,6 +36,7 @@ public sealed class GoogleLoginTests
         Assert.Null(tickets.TakeTicket(ticket, Verifier));
     }
 
+    // Kiểm tra ticket và state hết hạn.
     [Fact]
     public void TicketAndStateExpire()
     {
@@ -43,6 +49,7 @@ public sealed class GoogleLoginTests
         Assert.Null(tickets.TakeState(state));
     }
 
+    // Kiểm tra state chỉ dùng được một lần.
     [Fact]
     public void StateWorksOnce()
     {
@@ -52,6 +59,7 @@ public sealed class GoogleLoginTests
         Assert.Null(tickets.TakeState(state));
     }
 
+    // Kiểm tra tên đăng nhập tạo ra hợp lệ.
     [Theory]
     [InlineData("nguyen.van-a+shop@gmail.com")]
     [InlineData("a.very.long.address.that.goes.on.and.on.and.on@gmail.com")]
@@ -59,6 +67,7 @@ public sealed class GoogleLoginTests
     public void GeneratedUsernameIsValid(string email)
         => Assert.Matches("^[a-zA-Z0-9_]{3,30}$", GoogleAccountStore.NewUsername(email));
 
+    // Kiểm tra tách tên theo dữ liệu Google.
     [Fact]
     public void NameUsesGoogleParts()
     {
@@ -66,6 +75,7 @@ public sealed class GoogleLoginTests
         Assert.Equal(("Nguyễn Văn", "Minh"), GoogleAccountStore.SplitName(user));
     }
 
+    // Kiểm tra lấy tên từ họ tên đầy đủ, rồi đến email.
     [Fact]
     public void NameFallsBackToFullNameThenEmail()
     {

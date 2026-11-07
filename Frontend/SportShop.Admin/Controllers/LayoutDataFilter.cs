@@ -7,6 +7,7 @@ namespace SportShop.Admin.Controllers;
 // Chuẩn bị dữ liệu chung cho Views/Shared/_Layout.cshtml trước khi hiển thị mọi trang: số phản hồi chưa trả lời (huy hiệu menu) và hồ sơ nhân viên đang đăng nhập (tên ở thanh trên), lấy từ ShopData. Đăng ký trong Program.cs.
 public class LayoutDataFilter(ShopData db) : IResultFilter
 {
+    // Trước khi trả trang: đưa dữ liệu dùng chung của layout vào ViewBag.
     public void OnResultExecuting(ResultExecutingContext context)
     {
         if (context.Result is not ViewResult view || context.Controller is not Controller c) return;
@@ -17,5 +18,6 @@ public class LayoutDataFilter(ShopData db) : IResultFilter
         view.ViewData["Self"] = bare || isAdminAccount ? null : db.Employees.FirstOrDefault(e => e.Id == employeeId);
     }
 
+    // Không cần xử lý sau khi trả trang, khai báo vì interface IResultFilter bắt buộc.
     public void OnResultExecuted(ResultExecutedContext context) { }
 }

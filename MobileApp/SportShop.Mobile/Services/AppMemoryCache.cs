@@ -2,10 +2,7 @@ using System.Collections.Concurrent;
 
 namespace SportShop.Mobile.Services;
 
-// Bộ nhớ đệm dùng chung trên Mobile App (singleton, giới hạn mặc định 10 phút = LongAge):
-// Khi người dùng gõ n từ khóa tìm kiếm trong 1 phút hoặc chuyển đổi các bảng thống kê hóa đơn liên tiếp,
-// ứng dụng tái sử dụng danh sách đã lưu trong RAM mà không tải lại câu truy vấn API / MySQL.
-// Sau 10 phút hoặc khi Đặt đơn / Hủy đơn làm thay đổi dữ liệu thì tự động xóa cache để tải lại.
+// Bộ nhớ đệm dùng chung trên app (singleton, mặc định 10 phút = LongAge): dùng lại danh sách trong RAM thay vì gọi lại API; hết hạn hoặc khi đặt, hủy đơn thì tải lại.
 public sealed class AppMemoryCache(Func<long>? clockMs = null)
 {
     public static readonly TimeSpan DefaultAge = TimeSpan.FromMinutes(10);
@@ -17,6 +14,7 @@ public sealed class AppMemoryCache(Func<long>? clockMs = null)
     public const string ProductsKey = "products_catalog";
     public const string InvoiceStatsPrefix = "invoice_stats:";
 
+    // Lưu dữ liệu vào bộ nhớ đệm theo key và trả lại chính giá trị đó.
     public T Put<T>(string key, T value, TimeSpan? maxAge = null) where T : class
     {
         var ttl = (long)(maxAge ?? DefaultAge).TotalMilliseconds;
@@ -24,6 +22,7 @@ public sealed class AppMemoryCache(Func<long>? clockMs = null)
         return value;
     }
 
+    // Lấy dữ liệu còn hạn, hết hạn hoặc chưa có thì trả null.
     public T? Get<T>(string key) where T : class
     {
         if (!_items.TryGetValue(key, out var entry)) return null;
@@ -36,6 +35,7 @@ public sealed class AppMemoryCache(Func<long>? clockMs = null)
         return entry.Value as T;
     }
 
+    // Thời gian còn lại của dữ liệu, hết hạn hoặc chưa có thì trả null.
     public TimeSpan? Remaining(string key)
     {
         if (!_items.TryGetValue(key, out var entry)) return null;
@@ -43,6 +43,7 @@ public sealed class AppMemoryCache(Func<long>? clockMs = null)
         return rem > 0 ? TimeSpan.FromMilliseconds(rem) : null;
     }
 
+    // Xóa một key.
     public void Remove(string key) => _items.TryRemove(key, out _);
 
     // Xóa bộ nhớ đệm của đơn hàng, sản phẩm và thống kê hóa đơn ngay khi khách Đặt đơn hoặc Hủy đơn.
@@ -54,7 +55,9 @@ public sealed class AppMemoryCache(Func<long>? clockMs = null)
             _items.TryRemove(k, out _);
     }
 
+    // Xóa toàn bộ bộ nhớ đệm.
     public void Clear() => _items.Clear();
 
+    // Một mục trong bộ nhớ đệm.
     private sealed record CacheEntry(long LoadedAtMs, long MaxAgeMs, object Value);
 }

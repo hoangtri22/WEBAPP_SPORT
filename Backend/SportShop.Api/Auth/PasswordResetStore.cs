@@ -18,6 +18,7 @@ public class PasswordResetStore(MySqlConnectionFactory connections, TimeProvider
         WHERE tk.email=@email AND kh.da_xoa=0 AND tk.trang_thai='hoat_dong' AND vt.ten_vai_tro='Khách hàng'
         """;
 
+    // Băm mã 6 số kèm mã tài khoản trước khi lưu MOBILE_PASSWORD_RESET.
     static string Digest(int accountId, string code)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{accountId}:{code}")));
 
@@ -68,12 +69,14 @@ public class PasswordResetStore(MySqlConnectionFactory connections, TimeProvider
         return true;
     }
 
+    // Dòng tài khoản đọc bằng Dapper khi tạo mã đặt lại mật khẩu.
     sealed class AccountRow
     {
         public int AccountId { get; set; }
         public string Email { get; set; } = "";
     }
 
+    // Dòng mã đặt lại mật khẩu đọc từ MOBILE_PASSWORD_RESET bằng Dapper.
     sealed class ResetRow
     {
         public string CodeHash { get; set; } = "";
@@ -82,4 +85,5 @@ public class PasswordResetStore(MySqlConnectionFactory connections, TimeProvider
     }
 }
 
+// Email và mã 6 số vừa tạo, truyền cho IPasswordResetMailer.SendAsync().
 public sealed record PasswordResetCode(string Email, string Code);

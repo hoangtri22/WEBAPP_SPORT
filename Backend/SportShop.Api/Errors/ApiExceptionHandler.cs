@@ -5,6 +5,7 @@ using SportShop.Infrastructure;
 
 namespace SportShop.Api.Errors;
 
+// Bắt exception chưa xử lý của API và trả ProblemDetails.
 internal sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {
     // Đổi exception thành ProblemDetails qua ApiProblems: trùng dữ liệu 409, CSDL lỗi 503, lỗi khác 500 và ghi log.

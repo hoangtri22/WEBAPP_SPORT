@@ -4,8 +4,10 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test API kiểm tra hoạt động, OpenAPI và file ảnh.
 public sealed class OperationalApiTests
 {
+    // Kiểm tra readiness báo thành công khi đủ bảng.
     [Fact]
     public async Task HealthReadiness_ReportsSuccessWhenRequiredSchemaIsAvailable()
     {
@@ -17,6 +19,7 @@ public sealed class OperationalApiTests
         Assert.Equal("ready", payload.GetProperty("status").GetString());
     }
 
+    // Kiểm tra liveness không phụ thuộc CSDL.
     [Fact]
     public async Task HealthLiveness_DoesNotDependOnDatabase()
     {
@@ -29,6 +32,7 @@ public sealed class OperationalApiTests
         Assert.Equal("healthy", payload.GetProperty("status").GetString());
     }
 
+    // Kiểm tra readiness trả JSON đã che thông tin khi CSDL lỗi.
     [Fact]
     public async Task HealthReadiness_ReturnsSanitizedJsonWhenDatabaseUnavailable()
     {
@@ -43,6 +47,7 @@ public sealed class OperationalApiTests
         Assert.DoesNotContain(secret, await response.Content.ReadAsStringAsync());
     }
 
+    // Kiểm tra thiếu cấu hình thì dịch vụ CSDL báo lỗi, không gọi mạng.
     [Fact]
     public async Task MissingConfiguration_RealDatabaseServicesFailClosedWithoutNetworkCalls()
     {
@@ -59,6 +64,7 @@ public sealed class OperationalApiTests
         await CatalogApiTests.AssertProblem(login, HttpStatusCode.ServiceUnavailable, "DATABASE_UNAVAILABLE");
     }
 
+    // Kiểm tra môi trường Development có OpenAPI, không cần CSDL.
     [Fact]
     public async Task DevelopmentOpenApi_DocumentsReadEndpointsWithoutDatabase()
     {
@@ -75,6 +81,7 @@ public sealed class OperationalApiTests
         Assert.True(paths.TryGetProperty("/api/v1/products/{productId}", out _));
     }
 
+    // Kiểm tra môi trường Production không công khai OpenAPI.
     [Fact]
     public async Task ProductionOpenApi_IsNotPubliclyExposed()
     {
@@ -84,6 +91,7 @@ public sealed class OperationalApiTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    // Kiểm tra ảnh có sẵn trả đúng loại nội dung, không cần CSDL.
     [Fact]
     public async Task ExistingImage_IsServedWithImageContentTypeWithoutDatabase()
     {
@@ -99,6 +107,7 @@ public sealed class OperationalApiTests
         Assert.Equal(0xd8, bytes[1]);
     }
 
+    // Kiểm tra không trả file thiếu hoặc file không phải ảnh.
     [Theory]
     [InlineData("/images/unavailable-test-fixture-731a9820.jpg")]
     [InlineData("/uploads/.gitkeep")]

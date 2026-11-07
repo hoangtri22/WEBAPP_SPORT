@@ -3,6 +3,7 @@
     Layout = "_AuthLayout";
     bool reg = Model.IsRegister;
     ViewData["Title"] = reg ? "Đăng ký" : "Đăng nhập";
+    // Lấy thông báo lỗi của một trường.
     string Err(string k) => Model.Errors.TryGetValue(k, out var m) ? m : "";
     bool live = ViewData["DbConnected"] is true;
 }

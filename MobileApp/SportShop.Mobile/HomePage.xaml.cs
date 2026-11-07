@@ -3,6 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Trang chủ của app; chỉ nút sản phẩm, giỏ hàng và tài khoản có điều hướng.
 public partial class HomePage : ContentPage
 {
     private readonly AuthViewModel _auth;
@@ -10,6 +11,7 @@ public partial class HomePage : ContentPage
     private readonly CartPage _cartPage;
     private readonly IServiceProvider _services;
 
+    // Nhận AuthViewModel, các trang liên quan và bộ dịch vụ.
     public HomePage(AuthViewModel auth, MainPage catalog, CartPage cartPage, IServiceProvider services)
     {
         InitializeComponent();

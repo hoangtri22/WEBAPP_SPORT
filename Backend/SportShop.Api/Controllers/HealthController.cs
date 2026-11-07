@@ -3,8 +3,10 @@ using SportShop.Application.Health;
 
 namespace SportShop.Api.Controllers;
 
+// Trạng thái trả về của API kiểm tra hoạt động.
 public sealed record HealthDto(string Status);
 
+// API kiểm tra hoạt động của host và CSDL (IDatabaseReadiness).
 [ApiController, Route("health")]
 public sealed class HealthController(IDatabaseReadiness database) : ControllerBase
 {

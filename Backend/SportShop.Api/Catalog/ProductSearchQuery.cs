@@ -3,6 +3,7 @@ using SportShop.Application.Catalog;
 
 namespace SportShop.Api.Catalog;
 
+// Tham số truy vấn của API tìm sản phẩm (ProductsController).
 public sealed class ProductSearchQuery
 {
     [Range(1, int.MaxValue)]
@@ -22,6 +23,7 @@ public sealed class ProductSearchQuery
     [Range(1, 100)]
     public int PageSize { get; init; } = 20;
 
+    // Đổi tham số truy vấn thành ProductSearch cho ICatalogReader.ProductsAsync().
     public ProductSearch ToSearch() => new(CategoryId,
         string.IsNullOrWhiteSpace(Q) ? null : Q.Trim(), Sort, InStockOnly, Page, PageSize);
 }

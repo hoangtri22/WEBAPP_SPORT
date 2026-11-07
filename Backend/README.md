@@ -20,7 +20,7 @@ API tại [SportShop.Api](SportShop.Api/README.md), cổng dev 5080, có catalog
 giỏ MySQL chung với web, checkout/voucher, đặt đơn chống retry trùng, lịch sử/hủy đơn, feedback, khảo sát được giao, trang hỗ trợ, ảnh và OpenAPI.
 `SportShop.Shared` biên dịch các service/model gốc bằng compile links để web/API dùng một implementation; hai MVC host vẫn giữ giao diện/route.
 
-Trước khi chạy bản mới, áp dụng lần lượt `Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql`, `004_guest_devices.sql`, `005_password_reset.sql`, `006_google_login.sql` vào cùng schema.
+Trước khi chạy bản mới, áp dụng lần lượt `Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql`, `004_guest_devices.sql`, `005_password_reset.sql`, `006_google_login.sql`, `007_remove_vip_tier.sql`, `008_walkin_customer_orders.sql` vào cùng schema.
 Các migration tăng thêm bảng session/refresh-used/cart/idempotency và các phương thức thanh toán mô phỏng mặc định, giữ dữ liệu cũ.
 File giỏ JSON được import một lần theo customer rồi web/API cùng ghi DB. Mật khẩu mới mã hóa AES-GCM (giải mã được để Quản lý xem lại); plaintext demo cũ nâng cấp khi login hợp lệ.
 Khách chỉ tự hủy đơn chờ và chưa thanh toán; đơn đã trả tiền chuyển cửa hàng xử lý để bảo toàn hóa đơn/điểm. Thanh toán vẫn mô phỏng như web.

@@ -1,13 +1,16 @@
 namespace SportShop.Admin.Models;
 
 
+// Khai báo một trường của form thêm, sửa.
 public record Field(
     string Name, string Label, string Type = "text", bool Required = false,
     string? Options = null, string? Hint = null, string Show = "both",
     string? ShowWhen = null, string? Placeholder = null, bool Wide = false);
 
+// Khai báo form của một đối tượng.
 public record EntityDef(string Key, string Title, Field[] Fields, bool AdminOnly = false);
 
+// Danh sách form của mọi đối tượng, CrudController và _Form.cshtml đọc từ đây.
 public static class CrudDefs
 {
     const string Status3 = "hoat_dong|Đang hoạt động;bi_khoa|Đã khóa;da_xoa|Đã xóa";
@@ -35,9 +38,9 @@ public static class CrudDefs
             new("email", "Email", "email", Show: "edit", Hint: "Chỉ lưu khi khách có tài khoản đăng nhập. Mật khẩu do khách tự đổi, admin không sửa."),
             new("dia_chi", "Địa chỉ giao hàng mặc định", Show: "edit", Wide: true),
             new("so_thich", "Sở thích thể thao", "interests", Wide: true),
-            new("ten_dang_nhap", "Tên đăng nhập (không bắt buộc)", Show: "create", Hint: "Điền nếu muốn tạo luôn tài khoản đăng nhập cho khách."),
-            new("email", "Email (nếu tạo tài khoản)", "email", Show: "create"),
-            new("mat_khau", "Mật khẩu (nếu tạo tài khoản)", "password", Show: "create", Hint: "Tối thiểu 6 ký tự."),
+            new("ten_dang_nhap", "Tên đăng nhập", Required: true, Show: "create", Hint: "Khách chưa có tài khoản không thêm ở đây: tạo đơn ở trang Đơn hàng và chọn \"Khách mua trực tiếp\"."),
+            new("email", "Email", "email", true, Show: "create"),
+            new("mat_khau", "Mật khẩu", "password", true, Show: "create", Hint: "Tối thiểu 6 ký tự."),
         ]),
 
         new EntityDef("group", "nhóm khách hàng",
@@ -141,7 +144,7 @@ public static class CrudDefs
             new("ngay_ket_thuc", "Kết thúc", "datetime", true),
             new("chi_tiet", "Mức giảm", "promodetail", Wide: true),
             new("gia_tri_giam_toi_da", "Giảm tối đa (đ)", "number", Hint: "Không bắt buộc."),
-            new("hang_ap_dung", "Hạng áp dụng", "select", false, "|Mọi hạng;thuong|Thường;bac|Bạc;vang|Vàng;VIP|VIP"),
+            new("hang_ap_dung", "Hạng áp dụng", "select", false, "|Mọi hạng;thuong|Thường;bac|Bạc;vang|Vàng"),
             new("so_luong_gioi_han", "Số lượt tối đa", "number", Hint: "Để trống = không giới hạn."),
             new("gioi_han_khach_hang", "Tối đa mỗi khách (lần)", "number", Hint: "Mã khách mới luôn 1 lần, mã hạng Bạc 2 lần, hạng Vàng 3 lần (bỏ qua ô này); mã khác dùng giá trị ở đây."),
         ]),

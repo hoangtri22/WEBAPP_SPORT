@@ -16,6 +16,7 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test xác thực và kiểm tra dữ liệu của API mua hàng.
 public sealed class CommerceApiTests
 {
     public static TheoryData<string, string> ProtectedEndpoints => new()
@@ -28,6 +29,7 @@ public sealed class CommerceApiTests
         { "POST", "/api/v1/orders" }, { "POST", "/api/v1/orders/1/cancel" }
     };
 
+    // Kiểm tra API mua hàng bắt buộc xác thực khách.
     [Theory, MemberData(nameof(ProtectedEndpoints))]
     public async Task CommerceRequiresCustomerAuthentication(string method, string path)
     {
@@ -38,6 +40,7 @@ public sealed class CommerceApiTests
         await CatalogApiTests.AssertProblem(response, HttpStatusCode.Unauthorized, "UNAUTHENTICATED");
     }
 
+    // Kiểm tra nhân viên không dùng được API mua hàng.
     [Theory, MemberData(nameof(ProtectedEndpoints))]
     public async Task StaffRoleCannotUseCustomerCommerce(string method, string path)
     {
@@ -47,6 +50,7 @@ public sealed class CommerceApiTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // Kiểm tra request sai bị từ chối trước khi vào CSDL.
     [Theory]
     [InlineData("POST", "/api/v1/cart/items", "{\"variantId\":1,\"quantity\":0}")]
     [InlineData("POST", "/api/v1/cart/items", "{\"variantId\":0,\"quantity\":1}")]
@@ -69,6 +73,7 @@ public sealed class CommerceApiTests
         await CatalogApiTests.AssertProblem(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR");
     }
 
+    // Kiểm tra phí vận chuyển giống web khách.
     [Theory]
     [InlineData(0, 0)]
     [InlineData(499999, 30000)]
@@ -78,8 +83,10 @@ public sealed class CommerceApiTests
         => Assert.Equal(expected, ShopStore.ShippingFor(subtotal));
 }
 
+// Dựng API test với vai trò đăng nhập giả.
 internal sealed class CommerceValidationFactory(string role, string connectionString = "", int customerId = 1) : WebApplicationFactory<SportShop.Api.Controllers.ProductsController>
 {
+    // Thay xác thực bằng CommerceTestHandler và cấu hình test.
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -101,10 +108,13 @@ internal sealed class CommerceValidationFactory(string role, string connectionSt
     }
 }
 
+// Vai trò và mã khách dùng cho xác thực giả.
 internal sealed record CommerceTestRole(string Value, int CustomerId);
+// Xác thực giả theo CommerceTestRole.
 internal sealed class CommerceTestHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger, UrlEncoder encoder, CommerceTestRole role) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    // Tạo danh tính đăng nhập giả.
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var identity = new ClaimsIdentity([new(ClaimTypes.NameIdentifier,role.CustomerId.ToString()), new(ClaimTypes.Role,role.Value)], Scheme.Name);

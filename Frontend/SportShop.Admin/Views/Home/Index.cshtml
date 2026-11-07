@@ -4,6 +4,7 @@
     var revToday = Model.RevToday; var revYesterday = Model.RevYesterday;
     var ordToday = Model.OrdToday; var ordYesterday = Model.OrdYesterday;
 
+    // Mô tả mức tăng giảm so với hôm qua.
     string VsYesterday(decimal cur, decimal prev) =>
         prev == 0 ? "Hôm qua chưa có dữ liệu" : $"{(cur >= prev ? "+" : "")}{Fmt.Pct(Math.Round((cur - prev) / prev * 100, 1))} so với hôm qua";
 

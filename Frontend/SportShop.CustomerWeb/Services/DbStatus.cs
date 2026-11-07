@@ -2,6 +2,7 @@ using MySqlConnector;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Cho biết web khách có kết nối được CSDL không.
 public class DbStatus
 {
     readonly string _connectionString;
@@ -11,6 +12,7 @@ public class DbStatus
     bool _lastResult;
     long _checkedAtMs = long.MinValue / 2;
 
+    // Đọc chuỗi kết nối từ cấu hình.
     public DbStatus(IConfiguration config)
     {
         _connectionString = config.GetConnectionString("Default") ?? "";

@@ -1,4 +1,4 @@
--- Thêm bảng phiên đăng nhập mobile; chạy lại được, giữ nguyên dữ liệu cũ.
+-- Thêm bảng phiên đăng nhập mobile;
 CREATE TABLE IF NOT EXISTS MOBILE_AUTH_SESSION (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,

@@ -6,8 +6,10 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test đăng nhập, mật khẩu và kiểm tra dữ liệu khách không cần CSDL.
 public sealed class AuthAndCustomerTests
 {
+    // Kiểm tra PasswordStorage dùng salt, nhận mật khẩu cũ và từ chối hash sai định dạng.
     [Fact]
     public void PasswordStorage_UsesSaltAndSupportsLegacyWithoutAcceptingMalformedHashes()
     {
@@ -21,6 +23,7 @@ public sealed class AuthAndCustomerTests
         Assert.False(PasswordStorage.Verify("$sportshop$210000$bad$bad", "sample-test-password"));
     }
 
+    // Kiểm tra API khách bắt buộc Bearer và không chuyển hướng.
     [Theory]
     [InlineData("/api/v1/me")]
     [InlineData("/api/v1/me/feedback")]
@@ -37,6 +40,7 @@ public sealed class AuthAndCustomerTests
         Assert.Contains("Bearer", response.Headers.WwwAuthenticate.ToString());
     }
 
+    // Kiểm tra dữ liệu xác thực sai bị từ chối trước khi mở CSDL.
     [Theory]
     [InlineData("/api/v1/auth/login", "{}")]
     [InlineData("/api/v1/auth/register", "{\"username\":\"bad name\",\"email\":\"invalid\",\"phone\":\"1\",\"password\":\"x\"}")]
@@ -49,6 +53,7 @@ public sealed class AuthAndCustomerTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // Kiểm tra token sai định dạng trả 401 trước khi mở CSDL.
     [Fact]
     public async Task Bearer_MalformedTokenIsUnauthorizedBeforeDatabase()
     {
@@ -59,6 +64,7 @@ public sealed class AuthAndCustomerTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = "invalid" })).StatusCode);
     }
 
+    // Kiểm tra khảo sát từ chối câu trả lời thiếu, lạ, trùng hoặc sai loại.
     [Fact]
     public void SurveyValidation_RejectsMissingForeignDuplicateAndWrongKindAnswers()
     {

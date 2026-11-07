@@ -35,6 +35,7 @@ public sealed class OrderMasterCard : INotifyPropertyChanged
     public OrderDto Dto { get; }
     public IReadOnlyList<OrderSubLineItem> Lines { get; }
 
+    // Tạo thẻ đơn hàng từ OrderDto.
     public OrderMasterCard(OrderDto dto)
     {
         Dto = dto;
@@ -207,6 +208,7 @@ public sealed class SearchConditionRow : INotifyPropertyChanged
         set { _value = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value))); }
     }
 
+    // Đổi dòng điều kiện thành OrderSearchCondition.
     public OrderSearchCondition ToCondition() =>
         new(_logic.Key, _field.Key, _op.Key, _value);
 }
@@ -238,6 +240,7 @@ public sealed class OrderStatusTabItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    // Tạo một tab trạng thái.
     public OrderStatusTabItem(string key, string label, bool isSelected = false)
     {
         Key = key;
@@ -249,7 +252,6 @@ public sealed class OrderStatusTabItem : INotifyPropertyChanged
 // ViewModel cho Đơn hàng của tôi (Views/Customer/Orders.cshtml) — tích hợp bộ nhớ đệm 10 phút, Main-Sub Form, Tìm kiếm nâng cao và Hủy đơn đúng điều kiện.
 public sealed class OrdersViewModel : INotifyPropertyChanged
 {
-    private const string OrdersCacheKey = "orders:all";
     private readonly ICommerceApi _api;
     private readonly AppMemoryCache _cache;
     private IReadOnlyList<OrderDto> _allOrders = [];
@@ -262,6 +264,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
     private string? _errorMessage;
     private string? _statusMessage;
 
+    // Nhận ICommerceApi và AppMemoryCache.
     public OrdersViewModel(ICommerceApi api, AppMemoryCache cache)
     {
         _api = api;
@@ -316,6 +319,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         {
             if (_searchKeyword == value) return;
             _searchKeyword = value;
+            _usedMemoryCache = true;
             ApplyFilter();
         }
     }
@@ -330,6 +334,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
             _selectedStatusFilter = next;
             foreach (var tab in StatusTabs)
                 tab.IsSelected = tab.Key == _selectedStatusFilter;
+            _usedMemoryCache = true;
             ApplyFilter();
         }
     }
@@ -366,7 +371,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
 
         try
         {
-            var cached = !forceReload ? _cache.Get<IReadOnlyList<OrderDto>>(OrdersCacheKey) : null;
+            var cached = !forceReload ? _cache.Get<IReadOnlyList<OrderDto>>(AppMemoryCache.OrdersKey) : null;
             if (cached is not null)
             {
                 _allOrders = cached;
@@ -376,7 +381,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
             {
                 var page = await _api.GetOrdersAsync(page: 1, pageSize: 100, status: null, cancellationToken);
                 _allOrders = page.Items;
-                _cache.Put(OrdersCacheKey, _allOrders);
+                _cache.Put(AppMemoryCache.OrdersKey, _allOrders);
                 _usedMemoryCache = false;
             }
 
@@ -397,6 +402,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
     public async Task<bool> CancelSelectedOrderAsync(CancellationToken cancellationToken = default) =>
         _selectedOrder is not null && await CancelOrderAsync(_selectedOrder, cancellationToken);
 
+    // Hủy đơn nếu đơn còn cho phép và cập nhật lại danh sách.
     public async Task<bool> CancelOrderAsync(OrderMasterCard card, CancellationToken cancellationToken = default)
     {
         if (_isBusy) return false;
@@ -415,7 +421,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         {
             var updated = await _api.CancelOrderAsync(card.Id, cancellationToken);
             _allOrders = _allOrders.Select(o => o.Id == updated.Id ? updated : o).ToList();
-            _cache.Put(OrdersCacheKey, _allOrders);
+            _cache.Put(AppMemoryCache.OrdersKey, _allOrders);
             _statusMessage = $"Đã hủy đơn hàng {updated.Code}.";
             ApplyFilter(keepOrderId: updated.Id);
             return true;
@@ -432,6 +438,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         }
     }
 
+    // Thêm một dòng điều kiện tìm kiếm.
     public void AddSearchCondition()
     {
         var row = new SearchConditionRow { IsFirst = SearchConditions.Count == 0 };
@@ -439,6 +446,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         NotifyAll();
     }
 
+    // Xóa một dòng điều kiện tìm kiếm.
     public void RemoveSearchCondition(SearchConditionRow row)
     {
         SearchConditions.Remove(row);
@@ -447,6 +455,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         ApplyFilter();
     }
 
+    // Xóa hết điều kiện tìm kiếm.
     public void ClearSearchConditions()
     {
         SearchConditions.Clear();
@@ -471,6 +480,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         NotifyAll();
     }
 
+    // Dựng lại danh sách sản phẩm của đơn đang chọn.
     private void SyncSubForm()
     {
         SelectedOrderLines.Clear();
@@ -479,6 +489,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
             SelectedOrderLines.Add(line);
     }
 
+    // Báo giao diện cập nhật các thuộc tính.
     private void NotifyAll()
     {
         foreach (var prop in new[]

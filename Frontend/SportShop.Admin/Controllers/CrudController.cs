@@ -4,8 +4,10 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Mở form và lưu, xóa, thao tác riêng của mọi đối tượng, xử lý qua ShopCommands; admin.js gọi các action này.
 public class CrudController(ShopCommands cmd) : Controller
 {
+    // Lấy mã nhân viên, tên đăng nhập, vai trò từ cookie đăng nhập.
     Ctx Me() => new(int.TryParse(User.FindFirst("employee_id")?.Value, out var id) ? id : 0,
                     User.FindFirst("username")?.Value ?? "", User.FindFirst(ClaimTypes.Role)?.Value ?? "");
 
@@ -37,6 +39,7 @@ public class CrudController(ShopCommands cmd) : Controller
             "promodetail" => "lookup:sanpham",
             _ => f.Options,
         }).Where(s => !string.IsNullOrEmpty(s)).Distinct();
+        // Kiểm tra form có trường thuộc kiểu type không.
         bool has(string type) => def.Fields.Any(f => f.Type == type);
         return PartialView("_Form", new FormModel(def, values, mode, id, parent,
             specs.ToDictionary(s => s!, s => cmd.Options(s)),
@@ -68,11 +71,14 @@ public class CrudController(ShopCommands cmd) : Controller
         => Json(cmd.Act(action, id, new Form(Request.Form), Me()));
 }
 
+// Dữ liệu dựng form Views/Crud/_Form.cshtml.
 public record FormModel(EntityDef Def, Dictionary<string, string> Values, string Mode, int Id, int Parent,
     Dictionary<string, List<Opt>> OptionLists, HashSet<string> Interests, List<(string Name, int Qty, decimal Price, decimal Amount)> ImportLines,
     List<(string Text, string Type, bool Required, string Options)> Questions, bool QuestionsLocked)
 {
+    // Lấy giá trị hiện tại của một trường, không có thì trả chuỗi rỗng.
     public string Val(string name) => Values.TryGetValue(name, out var v) ? v : "";
+    // Lấy danh sách lựa chọn theo khai báo Options của trường.
     public List<Opt> Options(string? spec) => spec != null && OptionLists.TryGetValue(spec, out var l) ? l : [];
     public bool ReadOnly => Mode == "view";
 }

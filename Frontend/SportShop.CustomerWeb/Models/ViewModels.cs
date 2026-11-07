@@ -1,9 +1,12 @@
 namespace SportShop.CustomerWeb.Models;
 
+// Dữ liệu trang chủ.
 public record HomeVm(bool Live, List<ShopCategory> Categories, List<StoreCategory> SampleCategories, List<StoreProduct> Featured);
 
+// Dữ liệu trang hồ sơ.
 public record ProfileVm(bool Live, CustomerProfile Me, List<string> AllInterests, HashSet<string> Chosen);
 
+// Dữ liệu trang phản hồi.
 public record FeedbackPageVm(bool Live, List<(int Id, string Name)> Products, List<FeedbackRow> Feedbacks);
 
 /// <summary>Ô nhập từ khóa tìm sản phẩm dùng lại ở nhiều nơi (thanh tìm kiếm đầu trang, bộ lọc cửa hàng, tìm kiếm nâng cao): Views/Shared/_SearchInput.cshtml.</summary>

@@ -57,6 +57,7 @@
                     </div>
                 }
                 @if (!string.IsNullOrEmpty(Model.VoucherError)) { <small class="field-error">@Model.VoucherError</small> }
+                else if (Model.OrderPromo is { } auto) { <small class="field-ok">Đang áp dụng @auto.Name, giảm @Fmt.Money(Model.Discount). Chọn mã sẽ thay cho mức giảm này.</small> }
                 else if (Model.Discount > 0) { <small class="field-ok">Đã áp dụng mã @chosen, giảm @Fmt.Money(Model.Discount).</small> }
             </div>
         </div>

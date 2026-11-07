@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý nhà cung cấp, đọc dữ liệu qua ShopData.
 public class SuppliersController(ShopData db) : Controller
 {
     // Quản lý nhà cung cấp: danh sách từ ShopData.Suppliers (NHA_CUNG_CAP); nhà cung cấp ngừng hợp tác tách sang bảng riêng có nút Khôi phục.

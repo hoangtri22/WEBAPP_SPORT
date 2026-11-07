@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý khuyến mãi và chiến dịch; đọc qua ShopData, ghi qua ShopCommands.
 public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
 {
     // Khuyến mãi & marketing: chương trình khuyến mãi (ShopData.Promotions, chương trình đã ngừng tách sang bảng riêng có nút Khôi phục) và chiến dịch thông báo (ShopData.Campaigns).
@@ -53,6 +54,7 @@ public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
             db.Promotions.FirstOrDefault(p => p.Name == c.Promotion), db.CustomerGroups.FirstOrDefault(g => g.Name == c.Group)));
     }
 
+    // Nhãn trạng thái chương trình theo ngày bắt đầu, kết thúc và trạng thái đã lưu.
     public static string StatusOf(Promotion p) =>
         p.Status == "ngung" ? "[x]Ngừng" : p.End < DateTime.Today ? "[x]Hết hạn" : p.Start > DateTime.Today ? "[b]Sắp diễn ra" : "[g]Đang diễn ra";
 }

@@ -17,9 +17,11 @@ using AdminAccount = SportShop.Admin.Controllers.AccountController;
 
 namespace SportShop.Api.Tests;
 
+// Test hai web MVC cùng chạy với CSDL thật.
 [Trait("Category", "MySql")]
 public sealed class MvcCompatibilityTests
 {
+    // Kiểm tra web khách hiện trang chủ, cửa hàng và mọi trang thông tin.
     [MySqlFact]
     public async Task CustomerWeb_RendersRealHomeCatalogAndEveryInfoPageAsHtml()
     {
@@ -38,6 +40,7 @@ public sealed class MvcCompatibilityTests
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Customer/Profile")).StatusCode);
     }
 
+    // Kiểm tra tài khoản tạo từ app đăng nhập được web, dùng chung hồ sơ và giỏ hai chiều.
     [MySqlFact]
     public async Task MobileCreatedHashedAccount_CanLoginWebAndSharesProfileAndCartBothWays()
     {
@@ -99,6 +102,7 @@ public sealed class MvcCompatibilityTests
         Assert.Equal(HttpStatusCode.Redirect, (await browser.GetAsync("/Customer/Profile")).StatusCode);
     }
 
+    // Kiểm tra Admin đăng nhập được bằng tài khoản demo và từ chối tài khoản khách.
     [MySqlFact]
     public async Task AdminWeb_DemoLoginStillWorksAndCustomerIsRejected()
     {
@@ -123,6 +127,7 @@ public sealed class MvcCompatibilityTests
         Assert.Equal(HttpStatusCode.Redirect, (await browser.GetAsync("/Home")).StatusCode);
     }
 
+    // Kiểm tra phản hồi là HTML và trả nội dung.
     static async Task<string> AssertHtmlAsync(HttpResponseMessage response)
     {
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -132,19 +137,24 @@ public sealed class MvcCompatibilityTests
         return html;
     }
 
+    // Lấy anti-forgery token của form đăng nhập.
     static async Task<string> LoginFormAsync(HttpClient client) => AntiForgery(await AssertHtmlAsync(await client.GetAsync("/Account/Login")));
+    // Đọc anti-forgery token trong HTML.
     static string AntiForgery(string html)
     {
         var match = Regex.Match(html, "<input[^>]*name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.IgnoreCase);
         Assert.True(match.Success, "The real MVC form must emit an antiforgery token.");
         return WebUtility.HtmlDecode(match.Groups[1].Value);
     }
+    // Dựng form gửi kèm token.
     static FormUrlEncodedContent Form(string token, params (string Name, string Value)[] values)
         => new(values.Append(("__RequestVerificationToken", token)).Select(v => new KeyValuePair<string, string>(v.Item1, v.Item2)));
 }
 
+// Dựng web MVC test theo chuỗi kết nối CSDL test.
 internal sealed class MvcHostFactory<TEntryPoint> : WebApplicationFactory<TEntryPoint> where TEntryPoint : class
 {
+    // Cấu hình chuỗi kết nối và môi trường test.
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var connectionString = Environment.GetEnvironmentVariable("SPORTSHOP_TEST_MYSQL") ?? "";
@@ -164,6 +174,7 @@ internal sealed class MvcHostFactory<TEntryPoint> : WebApplicationFactory<TEntry
         }));
     }
 
+    // Tạo HttpClient không tự chuyển hướng.
     public HttpClient Client() => CreateClient(new WebApplicationFactoryClientOptions
     {
         AllowAutoRedirect = false,

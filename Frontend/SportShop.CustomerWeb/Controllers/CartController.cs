@@ -4,16 +4,21 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
+// Giỏ hàng và thanh toán của web khách, xử lý qua ShopStore.
 public class CartController(DbStatus db, ShopStore shop) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;
     bool LoggedIn => !string.IsNullOrEmpty(HttpContext.Session.GetString("customer")) && CustomerId > 0;
 
-    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở CUSTOMER_CART_ITEM qua CartStore, giá và tồn kho đọc từ BIEN_THE_SP); chưa đăng nhập thì chuyển sang trang đăng nhập.
+    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở CUSTOMER_CART_ITEM qua CartStore, giá và tồn kho đọc từ BIEN_THE_SP), mức giảm đang đạt qua ShopStore.BestOrderPromo() và gợi ý mua thêm qua ShopStore.OrderUpsell(); chưa đăng nhập thì chuyển sang trang đăng nhập.
     public IActionResult Index()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
-        return LoggedIn ? View(shop.CartLines(HttpContext.Session)) : LoginRequired("xem giỏ hàng");
+        if (!LoggedIn) return LoginRequired("xem giỏ hàng");
+        var lines = shop.CartLines(HttpContext.Session);
+        decimal subtotal = lines.Sum(l => l.Amount);
+        return lines.Count == 0 ? View(new CartPageVm(lines, null, null))
+            : View(new CartPageVm(lines, shop.BestOrderPromo(CustomerId, subtotal), shop.OrderUpsell(CustomerId, lines, subtotal)));
     }
 
     // Thêm vào giỏ: gọi ShopStore.AddToCart() kiểm tra tồn kho trong BIEN_THE_SP và lưu giỏ qua CartStore; buyNow = true thì chuyển thẳng sang Checkout.
@@ -85,7 +90,7 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
             TempData["ShopError"] = "Có sản phẩm vượt quá tồn kho, vui lòng chỉnh lại số lượng trong giỏ hàng.";
             return RedirectToAction(nameof(Index));
         }
-        var (orderId, error, _) = shop.PlaceCartOrder(CustomerId, to, payMethod, voucher, Guid.NewGuid().ToString("N"));
+        var (orderId, error, _) = shop.PlaceCartOrder(CustomerId, to, payMethod, voucher, Guid.NewGuid().ToString("N"), orderPromo: true);
         if (orderId == null)
         {
             var vm = BuildCheckout(lines, to, payMethod, voucher);
@@ -111,20 +116,23 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return RedirectToAction("Login", "Account");
     }
 
-    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher()), danh sách mã dùng được (ShopStore.UsablePromos()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
+    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher(); không chọn mã thì dùng ShopStore.BestOrderPromo()), danh sách mã dùng được (ShopStore.UsablePromos()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
     CheckoutVm BuildCheckout(List<CartLine> lines, ReceiverInfo to, int payMethod, string? voucher)
     {
         decimal subtotal = lines.Sum(l => l.Amount), discount = 0; string? voucherError = null;
+        AppliedOrderPromo? orderPromo = null;
         if (!string.IsNullOrWhiteSpace(voucher)) (discount, voucherError) = shop.PreviewVoucher(CustomerId, voucher, subtotal);
+        else if ((orderPromo = shop.BestOrderPromo(CustomerId, subtotal)) != null) discount = orderPromo.Discount;
         return new CheckoutVm
         {
             Lines = lines, To = to, Methods = shop.PaymentMethods(), PayMethod = payMethod, Voucher = voucher,
-            Subtotal = subtotal, Discount = discount, Ship = ShopStore.ShippingFor(subtotal), VoucherError = voucherError,
+            Subtotal = subtotal, Discount = discount, Ship = ShopStore.ShippingFor(subtotal), VoucherError = voucherError, OrderPromo = orderPromo,
             Promos = shop.UsablePromos(CustomerId, subtotal),
         };
     }
 }
 
+// Dữ liệu trang thanh toán (Views/Cart/Checkout.cshtml).
 public class CheckoutVm
 {
     public List<CartLine> Lines { get; init; } = [];
@@ -136,6 +144,7 @@ public class CheckoutVm
     public decimal Discount { get; init; }
     public decimal Ship { get; init; }
     public string? VoucherError { get; init; }
+    public AppliedOrderPromo? OrderPromo { get; init; }
     public List<UsablePromo> Promos { get; init; } = [];
     public string? Error { get; set; }
     public decimal Total => Math.Max(0, Subtotal - Discount) + Ship;

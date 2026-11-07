@@ -9,6 +9,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API dữ liệu trang thanh toán và tính thử voucher, xử lý qua ShopStore.
 [ApiController, Route("api/v1/checkout"), Authorize(Roles = "Customer")]
 [ProducesResponseType<ProblemDetails>(400)]
 [ProducesResponseType<ProblemDetails>(401)]
@@ -65,5 +66,6 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
             lines.Count > 0 && lines.All(line => line.Enough)));
     }
 
+    // Đổi ReceiverInfo của ShopStore sang ReceiverDto.
     static ReceiverDto ToReceiverDto(SportShop.CustomerWeb.Models.ReceiverInfo r) => new(r.Name, r.Phone, r.Address);
 }

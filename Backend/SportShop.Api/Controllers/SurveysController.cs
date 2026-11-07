@@ -10,6 +10,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API xem và nộp khảo sát của khách, xử lý qua CustomerStore.
 [ApiController, Authorize(Roles = "Customer"), Route("api/v1/me/surveys")]
 [ProducesResponseType<ProblemDetails>(400), ProducesResponseType<ProblemDetails>(401)]
 public sealed class SurveysController(CustomerStore customers, ICatalogClock clock) : ControllerBase
@@ -49,8 +50,10 @@ public sealed class SurveysController(CustomerStore customers, ICatalogClock clo
         return error is null ? NoContent() : Error(409, "SURVEY_SUBMISSION_FAILED", error);
     }
 
+    // Trả lỗi dạng ProblemDetails qua ApiProblems.Create().
     IActionResult Error(int status, string code, string title) => StatusCode(status, ApiProblems.Create(HttpContext, status, code, title));
 
+    // Đổi SurveyItem của CustomerStore sang SurveyResponse.
     SurveyResponse Map(SportShop.CustomerWeb.Models.SurveyItem s) => new(s.Id, s.Title, s.Description, clock.WithOffset(s.Deadline),
         s.Status, s.CompletedAt.HasValue ? clock.WithOffset(s.CompletedAt.Value) : null, s.QuestionCount, s.IsOpen, s.Done);
 }

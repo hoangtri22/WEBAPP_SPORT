@@ -2,6 +2,7 @@
 @{
     Layout = "_CustomerLayout";
     ViewData["Title"] = "Gửi phản hồi về sản phẩm";
+    // Đổi tone trạng thái sang lớp CSS.
     string Tone(string t) => t switch { "success" => "p-g", "warning" => "p-o", _ => "p-b" };
     bool live = Model.Live;
     var products = Model.Products;

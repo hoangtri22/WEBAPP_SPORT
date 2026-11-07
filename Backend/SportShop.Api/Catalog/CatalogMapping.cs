@@ -4,6 +4,7 @@ using SportShop.Contracts.Catalog;
 
 namespace SportShop.Api.Catalog;
 
+// Đổi dữ liệu ICatalogReader sang DTO trả cho app.
 internal static class CatalogMapping
 {
     // Đổi CatalogProduct sang ProductSummaryDto, đường dẫn ảnh qua MediaUrlResolver.Resolve().

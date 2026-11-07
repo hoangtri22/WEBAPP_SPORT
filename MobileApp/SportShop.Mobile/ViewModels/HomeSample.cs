@@ -1,5 +1,6 @@
 namespace SportShop.Mobile.ViewModels;
 
+// Sản phẩm mẫu hiển thị ở Trang chủ.
 public sealed record HomeProduct(string Name, string Type, string Price, string OldPrice, string Badge, string Image)
 {
     public bool HasOldPrice => OldPrice.Length > 0;

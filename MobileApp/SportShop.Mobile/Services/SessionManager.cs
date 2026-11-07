@@ -2,6 +2,7 @@ using SportShop.Contracts.Customer;
 
 namespace SportShop.Mobile.Services;
 
+// Quản lý phiên đăng nhập và token, cài đặt ở SessionManager.
 public interface ISessionManager
 {
     bool IsSignedIn { get; }
@@ -34,6 +35,7 @@ public sealed class SessionManager(IAuthApi api, ISessionStore store) : ISession
         return _isSignedIn;
     }
 
+    // Lưu bộ token mới và đánh dấu đã đăng nhập.
     public async Task StartAsync(TokenResponse tokens)
     {
         await _gate.WaitAsync();
@@ -66,6 +68,7 @@ public sealed class SessionManager(IAuthApi api, ISessionStore store) : ISession
         finally { _gate.Release(); }
     }
 
+    // Đọc access token còn hạn, hết hạn hoặc bị từ chối thì làm mới bằng refresh token.
     private async Task<string?> ReadOrRefreshAsync(string? rejected, CancellationToken cancellationToken)
     {
         if (!_isSignedIn) return null;
@@ -99,6 +102,7 @@ public sealed class SessionManager(IAuthApi api, ISessionStore store) : ISession
         }
     }
 
+    // Xóa token đã lưu và đánh dấu chưa đăng nhập.
     private void ClearSession()
     {
         store.Clear();

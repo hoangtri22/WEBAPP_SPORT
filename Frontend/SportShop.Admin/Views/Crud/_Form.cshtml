@@ -11,6 +11,7 @@
         _ => verb + " " + def.Title
     };
     string submit = def.Key == "survey_send" ? "Gửi khảo sát" : "Lưu";
+    // Trường có hiện ở chế độ đang mở (thêm hoặc sửa) không.
     bool Visible(Field f) => f.Show == "both" || (creating ? f.Show == "create" : f.Show == "edit");
     string[] questionTypes = ["mot_lua_chon|Một lựa chọn", "nhieu_lua_chon|Nhiều lựa chọn", "thang_diem|Thang điểm", "van_ban|Văn bản"];
 }

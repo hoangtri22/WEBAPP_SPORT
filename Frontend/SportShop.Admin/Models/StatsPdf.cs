@@ -5,6 +5,7 @@ using SportShop.Admin.Controllers;
 
 namespace SportShop.Admin.Models;
 
+// Dựng file PDF báo cáo doanh thu bằng QuestPDF.
 public static class StatsPdf
 {
     const string HeadColor = "#d6ebe7";
@@ -30,12 +31,11 @@ public static class StatsPdf
         page.Footer().AlignCenter().Text(x => { x.CurrentPageNumber(); x.Span(" / "); x.TotalPages(); });
     })).GeneratePdf();
 
-    // Vẽ một StatTable: tiêu đề, ghi chú, dòng dữ liệu và dòng Tổng cộng nếu có; bảng nhiều cột thì thu nhỏ chữ.
+    // Vẽ một StatTable: tiêu đề, dòng dữ liệu và dòng Tổng cộng nếu có; bảng nhiều cột thì thu nhỏ chữ.
     static void Table(IContainer container, StatTable t) => container.Column(block =>
     {
         float size = t.Cols.Count > 8 ? 6.5f : 9;
         block.Item().PaddingBottom(4).Text(t.Title).FontSize(11).Bold();
-        if (!string.IsNullOrEmpty(t.Note)) block.Item().PaddingBottom(4).Text(t.Note).FontSize(8).FontColor("#6b7a88");
         block.Item().Table(table =>
         {
             table.ColumnsDefinition(c =>

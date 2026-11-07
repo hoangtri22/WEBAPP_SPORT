@@ -7,6 +7,7 @@ namespace SportShop.Api.Auth;
 // Ghi thiết bị khách vào MOBILE_GUEST_DEVICE: lần đầu thêm mới, lần sau theo device_key thì cập nhật tên, thời điểm và tăng số lần vào. Gọi từ GuestDevicesController.Register; Web Admin đọc qua ShopData.GuestDevices().
 public class GuestDeviceStore(MySqlConnectionFactory connections)
 {
+    // Thêm hoặc cập nhật thiết bị khách trong MOBILE_GUEST_DEVICE theo device_key. Gọi từ GuestDevicesController.
     public virtual async Task SaveAsync(GuestDeviceRequest device, CancellationToken cancellationToken)
     {
         await using var c = await connections.OpenAsync(cancellationToken);

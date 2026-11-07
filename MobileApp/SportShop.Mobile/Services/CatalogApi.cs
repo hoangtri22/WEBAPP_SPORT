@@ -6,11 +6,13 @@ using SportShop.Contracts.Common;
 
 namespace SportShop.Mobile.Services;
 
+// Các API đọc sản phẩm.
 public interface ICatalogApi
 {
     Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, CancellationToken cancellationToken);
 }
 
+// Cài đặt ICatalogApi bằng HttpClient.
 public sealed class CatalogApi(HttpClient http) : ICatalogApi
 {
     // Gọi GET api/v1/products (ProductsController của API); không kết nối MySQL hoặc tự dựng dữ liệu sản phẩm trong app.
@@ -46,4 +48,5 @@ public sealed class CatalogApi(HttpClient http) : ICatalogApi
     }
 }
 
+// Lỗi khi tải sản phẩm.
 public sealed class CatalogException(string message) : Exception(message);

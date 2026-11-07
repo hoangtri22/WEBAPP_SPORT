@@ -1,9 +1,12 @@
 namespace SportShop.CustomerWeb.Models;
 
+// Một mục nội dung của trang thông tin.
 public record InfoSection(string Heading, string[] Paragraphs);
 
+// Một trang thông tin.
 public record InfoPage(string Eyebrow, string Title, string Intro, InfoSection[] Sections);
 
+// Nội dung các trang giới thiệu và hỗ trợ, dùng chung cho web khách và API.
 public static class InfoPages
 {
     public static readonly Dictionary<string, InfoPage> All = new()

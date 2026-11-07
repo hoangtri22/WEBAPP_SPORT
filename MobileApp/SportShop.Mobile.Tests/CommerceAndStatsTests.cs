@@ -6,8 +6,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test đơn hàng, tìm kiếm nâng cao, giỏ hàng và thanh toán của app.
 public sealed class CommerceAndStatsTests
 {
+    // Kiểm tra gõ nhiều từ khóa trong 10 phút dùng lại bộ nhớ đệm, không gọi lại CSDL.
     [Fact]
     public async Task TypingMultipleKeywordsWithinTenMinutesReusesMemoryWithoutQueryingDatabaseAgain()
     {
@@ -48,6 +50,24 @@ public sealed class CommerceAndStatsTests
         Assert.Equal(2, fakeApi.OrderListCalls);
     }
 
+    // Kiểm tra danh sách đơn được tải lại ngay sau InvalidateCommerce(), là lệnh CommerceApi gọi khi đặt hoặc hủy đơn.
+    [Fact]
+    public async Task OrdersReloadAfterCommerceCacheIsInvalidated()
+    {
+        var cache = new AppMemoryCache();
+        var fakeApi = new FakeCommerceApi();
+        var vm = new OrdersViewModel(fakeApi, cache);
+
+        await vm.LoadOrdersAsync();
+        await vm.LoadOrdersAsync();
+        Assert.Equal(1, fakeApi.OrderListCalls);
+
+        cache.InvalidateCommerce();
+        await vm.LoadOrdersAsync();
+        Assert.Equal(2, fakeApi.OrderListCalls);
+    }
+
+    // Kiểm tra form Master-Sub đồng bộ dòng đơn và chỉ hủy được đơn đủ điều kiện.
     [Fact]
     public async Task MainSubFormSynchronizesOrderLinesAndSupportsConditionalOrderCancellation()
     {
@@ -79,6 +99,7 @@ public sealed class CommerceAndStatsTests
         Assert.False(vm.SelectedOrder.CanCancel);
     }
 
+    // Kiểm tra tìm kiếm nâng cao với toán tử so sánh, logic và thứ tự ưu tiên.
     [Fact]
     public void AdvancedOrderSearchSupportsRelationalAndLogicalOperatorsWithPrecedence()
     {
@@ -97,6 +118,7 @@ public sealed class CommerceAndStatsTests
         Assert.Contains(matched, o => o.Code == "DH00003");
     }
 
+    // Kiểm tra luồng giỏ, thanh toán, đặt đơn giống web khách.
     [Fact]
     public async Task CartCheckoutAndOrderPlacementFlowMatchesWebCustomerBehavior()
     {
@@ -120,51 +142,65 @@ public sealed class CommerceAndStatsTests
         Assert.Equal("DH00001", cartVm.PlacedOrderCode);
     }
 
+    // ICommerceApi giả dùng dữ liệu mẫu.
     private sealed class FakeCommerceApi : ICommerceApi
     {
         private readonly List<OrderDto> _orders = CreateSampleOrders().ToList();
         public int OrderListCalls { get; private set; }
 
+        // Trả giỏ mẫu.
         public Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCart());
 
+        // Trả giỏ mẫu khi thêm sản phẩm.
         public Task<CartDto> AddCartItemAsync(int variantId, int quantity, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCart());
 
+        // Trả giỏ mẫu khi đổi số lượng.
         public Task<CartDto> SetCartItemQuantityAsync(int variantId, int quantity, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCart());
 
+        // Trả giỏ mẫu khi xóa dòng.
         public Task<CartDto> RemoveCartItemAsync(int variantId, int quantity, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCart());
 
+        // Trả giỏ mẫu khi xóa dòng.
         public Task<CartDto> RemoveCartItemAsync(int variantId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCart());
 
+        // Không làm gì khi xóa giỏ.
         public Task ClearCartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
+        // Trả dữ liệu thanh toán mẫu.
         public Task<CheckoutDto> GetCheckoutAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCheckout(0m));
 
+        // Trả voucher mẫu.
         public Task<IReadOnlyList<EligibleVoucherDto>> GetEligibleVouchersAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<EligibleVoucherDto>>([
                 new EligibleVoucherDto("RUN15", "Giảm 15% đơn chạy bộ", 15m, 200_000m, "Vàng", DateTimeOffset.UtcNow.AddDays(10), 150_000m)
             ]);
 
+        // Trả dữ liệu thanh toán mẫu có giảm giá.
         public Task<CheckoutDto> QuoteCheckoutAsync(string? voucherCode, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSampleCheckout(string.IsNullOrWhiteSpace(voucherCode) ? 0m : 150_000m));
 
+        // Trả danh sách đơn mẫu.
         public Task<PagedResponse<OrderDto>> GetOrdersAsync(int page = 1, int pageSize = 20, string? status = null, CancellationToken cancellationToken = default)
         {
             OrderListCalls++;
             return Task.FromResult(new PagedResponse<OrderDto>(_orders, page, pageSize, _orders.Count));
         }
 
+        // Trả chi tiết đơn mẫu.
         public Task<OrderDto> GetOrderDetailAsync(int orderId, CancellationToken cancellationToken = default) =>
             Task.FromResult(_orders.First(o => o.Id == orderId));
 
+        // Trả đơn mẫu khi đặt hàng.
         public Task<OrderDto> PlaceOrderAsync(PlaceOrderRequest request, string idempotencyKey, CancellationToken cancellationToken = default) =>
             Task.FromResult(_orders[0]);
 
+        // Hủy đơn mẫu.
         public Task<OrderDto> CancelOrderAsync(int orderId, CancellationToken cancellationToken = default)
         {
             var idx = _orders.FindIndex(o => o.Id == orderId);
@@ -180,6 +216,7 @@ public sealed class CommerceAndStatsTests
             return Task.FromResult(cancelled);
         }
 
+        // Tạo giỏ mẫu.
         private static CartDto CreateSampleCart() => new(
             [
                 new CartItemDto(101, 1, "Giày chạy bộ Nike Pegasus 41", "42", "Đen", null, 2_500_000m, 1, 10, 2_500_000m, true),
@@ -188,6 +225,7 @@ public sealed class CommerceAndStatsTests
             3,
             3_400_000m);
 
+        // Tạo dữ liệu thanh toán mẫu.
         private static CheckoutDto CreateSampleCheckout(decimal discount) => new(
             CreateSampleCart(),
             new ReceiverDto("Nguyễn Minh An", "0901234567", "123 Lê Lợi, Quận 1, TP.HCM"),
@@ -198,6 +236,7 @@ public sealed class CommerceAndStatsTests
             3_400_000m - discount,
             true);
 
+        // Tạo danh sách đơn mẫu.
         public static IReadOnlyList<OrderDto> CreateSampleOrders() =>
         [
             new OrderDto(

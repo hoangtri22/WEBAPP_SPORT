@@ -7,11 +7,14 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test SessionManager và AuthorizedHandler.
 public sealed class SessionTests
 {
+    // Tạo bộ token mẫu.
     static TokenResponse Tokens(string name, int minutes = 15) => new("Bearer", "access-" + name, "refresh-" + name, minutes * 60,
         DateTimeOffset.UtcNow.AddMinutes(minutes), DateTimeOffset.UtcNow.AddDays(30), 1);
 
+    // Kiểm tra token còn hạn không bị làm mới.
     [Fact]
     public async Task ValidTokenIsNotRefreshed()
     {
@@ -22,6 +25,7 @@ public sealed class SessionTests
         Assert.Empty(api.RefreshTokens);
     }
 
+    // Kiểm tra token sắp hết hạn được làm mới và lưu lại.
     [Fact]
     public async Task TokenCloseToExpiryIsRefreshedAndSaved()
     {
@@ -33,6 +37,7 @@ public sealed class SessionTests
         Assert.Equal(["refresh-a"], api.RefreshTokens);
     }
 
+    // Kiểm tra gọi đồng thời chỉ làm mới một lần.
     [Fact]
     public async Task ConcurrentCallersShareOneRefresh()
     {
@@ -47,6 +52,7 @@ public sealed class SessionTests
         Assert.Single(api.RefreshTokens);
     }
 
+    // Kiểm tra người gọi hủy không dừng lần làm mới đang chạy.
     [Fact]
     public async Task CallerCancellationDoesNotAbortRunningRefresh()
     {
@@ -62,6 +68,7 @@ public sealed class SessionTests
         Assert.Equal("refresh-1", store.Refresh);
     }
 
+    // Kiểm tra refresh bị từ chối thì xóa phiên và báo hết hạn.
     [Fact]
     public async Task RejectedRefreshClearsSessionAndRaisesExpired()
     {
@@ -78,6 +85,7 @@ public sealed class SessionTests
         Assert.Equal(1, expired);
     }
 
+    // Kiểm tra lỗi mạng vẫn giữ phiên.
     [Fact]
     public async Task NetworkFailureKeepsSession()
     {
@@ -91,6 +99,7 @@ public sealed class SessionTests
         Assert.Equal("refresh-a", store.Refresh);
     }
 
+    // Kiểm tra mất mạng khi khôi phục vẫn vào được app.
     [Fact]
     public async Task RestoreOfflineStillEntersApp()
     {
@@ -104,6 +113,7 @@ public sealed class SessionTests
         Assert.Equal("refresh-a", store.Refresh);
     }
 
+    // Kiểm tra đăng xuất làm mới token hết hạn, thu hồi rồi xóa.
     [Fact]
     public async Task SignOutRefreshesExpiredTokenThenRevokesAndClears()
     {
@@ -117,6 +127,7 @@ public sealed class SessionTests
         Assert.Null(store.Refresh);
     }
 
+    // Kiểm tra đăng xuất khi mất mạng vẫn xóa token.
     [Fact]
     public async Task SignOutClearsTokensWhenOffline()
     {
@@ -128,6 +139,7 @@ public sealed class SessionTests
         Assert.Null(store.Refresh);
     }
 
+    // Kiểm tra phiên hết hạn đưa người dùng về đăng nhập kèm thông báo.
     [Fact]
     public async Task ExpiredSessionReturnsUserToLoginWithMessage()
     {
@@ -145,6 +157,7 @@ public sealed class SessionTests
         Assert.Equal("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", vm.ErrorMessage);
     }
 
+    // Kiểm tra handler gắn Bearer token.
     [Fact]
     public async Task HandlerAttachesBearerToken()
     {
@@ -156,6 +169,7 @@ public sealed class SessionTests
         Assert.Equal(1, server.Calls);
     }
 
+    // Kiểm tra lỗi 401 thì làm mới và thử lại một lần.
     [Fact]
     public async Task Handler401RefreshesAndRetriesOnce()
     {
@@ -169,6 +183,7 @@ public sealed class SessionTests
         Assert.Single(api.RefreshTokens);
     }
 
+    // Kiểm tra lỗi 401 mà refresh bị từ chối thì trả Unauthorized.
     [Fact]
     public async Task Handler401WithRejectedRefreshReturnsUnauthorized()
     {
@@ -182,6 +197,7 @@ public sealed class SessionTests
         Assert.False(session.IsSignedIn);
     }
 
+    // Kiểm tra request của khách không có header Authorization.
     [Fact]
     public async Task GuestRequestHasNoAuthorizationHeader()
     {
@@ -192,6 +208,7 @@ public sealed class SessionTests
         Assert.Null(server.LastAuthorization);
     }
 
+    // Kiểm tra refresh lỗi mạng báo lỗi kết nối.
     [Fact]
     public async Task HandlerReportsOfflineRefreshAsConnectionError()
     {
@@ -205,6 +222,7 @@ public sealed class SessionTests
         Assert.True(session.IsSignedIn);
     }
 
+    // Tạo SessionManager đã khôi phục phiên.
     static async Task<SessionManager> RestoredAsync(IAuthApi api, ISessionStore store)
     {
         var session = new SessionManager(api, store);
@@ -212,14 +230,17 @@ public sealed class SessionTests
         return session;
     }
 
+    // Tạo HttpClient dùng AuthorizedHandler và server giả.
     static HttpClient Client(ISessionManager session, HttpMessageHandler server)
         => new(new AuthorizedHandler(session) { InnerHandler = server }) { BaseAddress = new Uri("http://localhost:5080/") };
 
+    // HttpMessageHandler giả chỉ chấp nhận một token.
     sealed class FakeServer(string acceptedToken) : HttpMessageHandler
     {
         public int Calls;
         public AuthenticationHeaderValue? LastAuthorization;
 
+        // Trả 200 với token đúng, 401 với token sai.
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
@@ -228,6 +249,7 @@ public sealed class SessionTests
         }
     }
 
+    // IAuthApi giả đếm số lần làm mới và đăng xuất.
     sealed class CountingApi : IAuthApi
     {
         public readonly List<string> RefreshTokens = [];
@@ -236,6 +258,7 @@ public sealed class SessionTests
         public AuthException? LogoutFailure;
         public string? LoggedOut;
 
+        // Đếm lần gọi rồi trả token mới hoặc ném lỗi đã cài.
         public async Task<TokenResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
         {
             if (Gate is not null) await Gate.Task;
@@ -245,39 +268,52 @@ public sealed class SessionTests
             return Tokens(RefreshTokens.Count.ToString());
         }
 
+        // Đếm lần đăng xuất.
         public Task LogoutAsync(string accessToken, CancellationToken cancellationToken)
         {
             LoggedOut = accessToken;
             return LogoutFailure is null ? Task.CompletedTask : Task.FromException(LogoutFailure);
         }
 
+        // Không dùng trong test này.
         public Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        // Không dùng trong test này.
         public Task<TokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        // Không làm gì khi gửi thiết bị.
         public Task RegisterGuestAsync(GuestDeviceRequest device, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
+    // ISessionStore giả giữ token trong bộ nhớ.
     sealed class MemoryStore(TokenResponse? tokens) : ISessionStore
     {
         string? _access = tokens?.AccessToken;
         DateTimeOffset? _expiry = tokens?.AccessTokenExpiresAt;
         public string? Refresh { get; private set; } = tokens?.RefreshToken;
 
+        // Đặt token thành hết hạn.
         public void Expire() => _expiry = DateTimeOffset.UtcNow.AddMinutes(-1);
+        // Đọc access token.
         public Task<string?> GetAccessTokenAsync() => Task.FromResult(_access);
+        // Đọc refresh token.
         public Task<string?> GetRefreshTokenAsync() => Task.FromResult(Refresh);
+        // Đọc thời điểm hết hạn.
         public Task<DateTimeOffset?> GetAccessExpiryAsync() => Task.FromResult(_expiry);
 
+        // Lưu bộ token.
         public Task SaveAsync(TokenResponse tokens)
         {
             (_access, Refresh, _expiry) = (tokens.AccessToken, tokens.RefreshToken, tokens.AccessTokenExpiresAt);
             return Task.CompletedTask;
         }
 
+        // Xóa token.
         public void Clear() => (_access, Refresh, _expiry) = (null, null, null);
     }
 
+    // IDeviceIdentity giả.
     sealed class Device : IDeviceIdentity
     {
+        // Trả thiết bị mẫu.
         public GuestDeviceRequest Current() => new("abcd1234", "Điện thoại Minh", "Samsung SM-A52", "Android", "14");
     }
 }

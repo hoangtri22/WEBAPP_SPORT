@@ -10,6 +10,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API phản hồi của khách, xử lý qua CustomerStore.
 [ApiController, Authorize(Roles = "Customer"), Route("api/v1/me/feedback")]
 [ProducesResponseType<ProblemDetails>(400), ProducesResponseType<ProblemDetails>(401)]
 public sealed class FeedbackController(CustomerStore customers, ICatalogClock clock) : ControllerBase

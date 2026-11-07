@@ -1,4 +1,4 @@
--- Thêm bảng thiết bị khách dùng Mobile App để Web Admin hiển thị; chạy lại được, giữ nguyên dữ liệu cũ.
+-- Thêm bảng thiết bị khách dùng Mobile App để Web Admin hiển thị
 CREATE TABLE IF NOT EXISTS MOBILE_GUEST_DEVICE (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     device_key VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,

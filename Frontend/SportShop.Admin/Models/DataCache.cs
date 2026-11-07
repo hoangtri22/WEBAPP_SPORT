@@ -10,14 +10,17 @@ public class DataCache
 
     readonly ConcurrentDictionary<string, (long At, long MaxAgeMs, object Value)> _items = new();
 
+    // Lưu dữ liệu vào bộ nhớ đệm theo key và trả lại chính giá trị đó.
     public T Put<T>(string key, T value, TimeSpan? maxAge = null) where T : class
     {
         _items[key] = (Environment.TickCount64, (long)(maxAge ?? DefaultAge).TotalMilliseconds, value);
         return value;
     }
 
+    // Lấy dữ liệu còn hạn, hết hạn hoặc chưa có thì trả null.
     public T? Get<T>(string key) where T : class =>
         _items.TryGetValue(key, out var e) && Environment.TickCount64 - e.At < e.MaxAgeMs ? e.Value as T : null;
 
+    // Xóa toàn bộ bộ nhớ đệm, ShopCommands gọi sau mỗi lần ghi.
     public void Clear() => _items.Clear();
 }

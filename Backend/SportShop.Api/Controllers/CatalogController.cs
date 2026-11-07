@@ -4,6 +4,7 @@ using SportShop.Contracts.Catalog;
 
 namespace SportShop.Api.Controllers;
 
+// API danh mục, sở thích, phương thức thanh toán, khuyến mãi; đọc qua ICatalogReader.
 [ApiController, Route("api/v1")]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
 public sealed class CatalogController(ICatalogReader reader, ICatalogClock clock) : ControllerBase

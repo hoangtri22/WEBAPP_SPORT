@@ -7,6 +7,7 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile.ViewModels;
 
+// Một dòng giỏ hiển thị trên CartPage.
 public sealed class CartLineItem(CartItemDto dto)
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -33,6 +34,7 @@ public sealed class CartLineItem(CartItemDto dto)
         : $"Chỉ còn {dto.Stock} sản phẩm trong kho";
 }
 
+// Một phương thức thanh toán hiển thị trên CheckoutPage.
 public sealed class PaymentMethodOption(CheckoutPaymentMethodDto dto, bool isSelected)
 {
     public CheckoutPaymentMethodDto Dto => dto;
@@ -44,6 +46,7 @@ public sealed class PaymentMethodOption(CheckoutPaymentMethodDto dto, bool isSel
     public string BgColorHex => isSelected ? "#F0FDFA" : "#FFFFFF";
 }
 
+// Một voucher hiển thị trên CheckoutPage.
 public sealed class VoucherOptionItem
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -61,6 +64,7 @@ public sealed class VoucherOptionItem
     public string BorderColorHex => IsSelected ? "#0F766E" : "#E2E8F0";
     public string BgColorHex => IsSelected ? "#F0FDFA" : "#FFFFFF";
 
+    // Tạo lựa chọn voucher; dto null là lựa chọn không dùng voucher.
     public VoucherOptionItem(EligibleVoucherDto? dto, bool isSelected)
     {
         Dto = dto;
@@ -84,6 +88,7 @@ public sealed class VoucherOptionItem
     }
 }
 
+// Một dòng sản phẩm của đơn vừa đặt.
 public sealed class PlacedOrderLineItem(OrderItemDto dto)
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -356,8 +361,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         _statusMessage = null;
         _voucherError = null;
         _lastPlacedOrder = null;
-        // Mỗi lần vào trang thanh toán bắt đầu "Không dùng mã" như web, tránh giữ lại mã của đơn trước
-        // (vd. mã khách mới đã dùng ở lần mua đầu sẽ chặn đơn tiếp theo).
+        // Mỗi lần vào trang thanh toán bắt đầu "Không dùng mã" như web, tránh giữ lại mã của đơn trước.
         _voucherCodeInput = "";
         _selectedVoucher = null;
         _discount = 0m;
@@ -501,6 +505,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         }
     }
 
+    // Cập nhật danh sách, số lượng và tổng tiền từ CartDto.
     private void ApplyCartDto(CartDto cart)
     {
         Items.Clear();
@@ -513,6 +518,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         _canPlaceOrder = Items.Count > 0 && Items.All(i => i.Available);
     }
 
+    // Cập nhật dữ liệu trang thanh toán từ CheckoutDto.
     private void ApplyCheckoutDto(CheckoutDto checkout, bool overwriteReceiver)
     {
         ApplyCartDto(checkout.Cart);
@@ -557,6 +563,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         _canPlaceOrder = checkout.CanPlaceOrder;
     }
 
+    // Dựng lại danh sách phương thức thanh toán.
     private void RebuildPaymentMethodOptions()
     {
         PaymentMethodOptions.Clear();
@@ -564,6 +571,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             PaymentMethodOptions.Add(new PaymentMethodOption(pm, _selectedPaymentMethod?.Id == pm.Id));
     }
 
+    // Dựng lại danh sách voucher.
     private void RebuildVoucherOptions()
     {
         VoucherOptions.Clear();
@@ -577,12 +585,14 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         }
     }
 
+    // Xóa khóa chống đặt trùng để lần đặt sau tạo khóa mới.
     private void ResetIdempotencyIfChanged()
     {
         _pendingIdempotencyKey = null;
         _pendingSignature = null;
     }
 
+    // Báo giao diện cập nhật các thuộc tính.
     private void NotifyAll()
     {
         foreach (var prop in new[]

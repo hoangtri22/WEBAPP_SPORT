@@ -7,6 +7,7 @@ public sealed class DeviceIdentity : IDeviceIdentity
 {
     private const string KeyName = "guest_device_key";
 
+    // Lấy thông tin thiết bị hiện tại để gửi lên API.
     public GuestDeviceRequest Current()
     {
         var key = Preferences.Default.Get(KeyName, "");
@@ -21,5 +22,6 @@ public sealed class DeviceIdentity : IDeviceIdentity
         return new GuestDeviceRequest(key, name, model, Limit(device.Platform.ToString(), 30), Limit(device.VersionString, 30));
     }
 
+    // Cắt chuỗi theo độ dài tối đa của API.
     private static string Limit(string value, int length) => value.Length <= length ? value : value[..length];
 }

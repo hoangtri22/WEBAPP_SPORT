@@ -6,12 +6,15 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Đọc và ghi dữ liệu tài khoản, hồ sơ, phản hồi, khảo sát của khách vào MySQL; dùng chung cho web khách và API.
 public class CustomerStore(IConfiguration config)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
 
+    // Mở kết nối MySQL qua StoreDatabase.Connection().
     MySqlConnection Open() => StoreDatabase.Connection(_cs);
 
+    // So khớp mật khẩu qua PasswordStorage.Verify().
     static bool SamePassword(string stored, string entered) => PasswordStorage.Verify(stored, entered);
 
 
@@ -380,6 +383,7 @@ public class CustomerStore(IConfiguration config)
             """, new { customerId }).ToList();
     }
 
+    // Một phản hồi của khách trả cho API.
     public sealed class MobileFeedback
     {
         public int Id { get; set; }
@@ -392,10 +396,15 @@ public class CustomerStore(IConfiguration config)
         public string? Reply { get; set; }
     }
 
+    // Dòng trạng thái nộp khảo sát đọc bằng Dapper.
     class SubmissionRow { public string Status { get; set; } = ""; public bool IsOpen { get; set; } }
 
+    // Dòng mật khẩu tài khoản đọc bằng Dapper.
     class PasswordRow { public int AccountId { get; set; } public string Password { get; set; } = ""; }
+    // Dòng thông tin đăng nhập đọc bằng Dapper.
     class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } public bool Deleted { get; set; } }
+    // Dòng hồ sơ khách đọc bằng Dapper.
     class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public decimal Spent { get; set; } public int Points { get; set; } public long Orders { get; set; } }
+    // Dòng phản hồi đọc bằng Dapper.
     class FeedbackDbRow { public int Id { get; set; } public string Product { get; set; } = ""; public string Text { get; set; } = ""; public DateTime SentAt { get; set; } public string Status { get; set; } = ""; public string? Reply { get; set; } }
 }

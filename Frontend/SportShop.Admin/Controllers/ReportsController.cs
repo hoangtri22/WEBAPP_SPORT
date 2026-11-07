@@ -4,14 +4,19 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Mức tăng giảm so với kỳ trước, hiện trên thẻ số liệu.
 public record Delta(string Text, bool Up);
 
+// Một cột của biểu đồ sản phẩm bán chạy.
 public record BarCol(string Label, int Qty, int Percent, bool Highlight);
 
+// Một phần của biểu đồ tròn nhóm tuổi.
 public record DonutPart(string Label, int Count, decimal Percent, string Color);
 
+// Một dòng hiệu suất nhân viên.
 public record StaffRow(string Initials, string Name, string Detail, int Score);
 
+// Dữ liệu trang Báo cáo thống kê (Views/Reports/Index.cshtml).
 public class ReportsVm
 {
     public DateTime From { get; init; }
@@ -42,9 +47,11 @@ public class ReportsVm
     public List<Row> Interests { get; init; } = [];
 }
 
+// Dựng trang Báo cáo thống kê từ ShopData.
 public class ReportsController(ShopData db) : Controller
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+    // Định dạng số cho tọa độ biểu đồ SVG.
     static string F(double v) => v.ToString("0.##", Inv);
 
     // Báo cáo thống kê from–to (mặc định 30 ngày): nửa tải mới từ MySQL (thẻ số liệu + biểu đồ qua ShopData.ReportOrders(), bán chạy + lợi nhuận qua ShopData.ReportProducts(), khuyến mãi qua ShopData.PromoStats()), nửa dùng lại dữ liệu trang khác đã nạp qua ShopData.Reused... / DataCache (nhóm tuổi, sở thích, hiệu suất nhân viên, tồn kho nhiều).
@@ -87,6 +94,7 @@ public class ReportsController(ShopData db) : Controller
 
         var cust = db.ReusedCustomers.Where(c => !c.Deleted).ToList();
         int g1 = cust.Count(c => c.Age <= 25), g2 = cust.Count(c => c.Age is >= 26 and <= 35), g3 = cust.Count(c => c.Age > 35);
+        // Tính phần trăm trên tổng số khách.
         decimal P(int x) => cust.Count == 0 ? 0 : Math.Round(x * 100m / cust.Count, 0);
         var donut = new List<DonutPart>
         {
@@ -171,6 +179,7 @@ public class ReportsController(ShopData db) : Controller
         return new($"{(pct >= 0 ? "+" : "")}{Fmt.Pct(Math.Round(pct, 1))} so với kỳ trước", pct >= 0);
     }
 
+    // Lấy chữ cái đầu của tên và họ.
     static string Initials(string first, string last) =>
         (first.Length > 0 ? first[..1] : "") + (last.Length > 0 ? last[..1] : "");
 }

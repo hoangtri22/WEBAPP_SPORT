@@ -16,6 +16,7 @@ public sealed class MySqlCatalogTests
 {
     private static readonly DateTimeOffset FrozenNow = new(2026, 10, 15, 3, 0, 0, TimeSpan.Zero);
 
+    // Kiểm tra readiness không làm đổi số dòng dữ liệu.
     [MySqlFact]
     public async Task Readiness_VerifiesCatalogSchemaWithoutChangingRowCounts()
     {
@@ -26,6 +27,7 @@ public sealed class MySqlCatalogTests
         Assert.Equal(before.RowCounts, after.RowCounts);
     }
 
+    // Kiểm tra danh mục bỏ loại lưu trữ và chỉ đếm sản phẩm công khai còn biến thể.
     [MySqlFact]
     public async Task Categories_ExcludeArchivedAndCountOnlyPublicProductsWithAvailableVariants()
     {
@@ -42,6 +44,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra trang mặc định và tổng số khớp dữ liệu đọc trực tiếp.
     [MySqlFact]
     public async Task Products_DefaultPageAndCountMatchIndependentRawCatalog()
     {
@@ -62,6 +65,7 @@ public sealed class MySqlCatalogTests
         Assert.All(filtered.Items, product => Assert.Equal(categoryId, product.CategoryId));
     }
 
+    // Kiểm tra mọi kiểu sắp xếp ổn định qua các trang, giá null xếp cuối.
     [MySqlFact]
     public async Task Products_AllSortOrdersAreStableAcrossPagesAndNullPricesRemainLast()
     {
@@ -93,6 +97,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra ký tự đặc biệt và chuỗi tấn công được tìm như văn bản thường.
     [MySqlFact]
     public async Task Products_PercentUnderscoreEscapeAndInjectionTextAreLiteralSearches()
     {
@@ -116,6 +121,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra chi tiết khớp biến thể đang hiện, kể cả hết hàng, không dùng ảnh biến thể ẩn.
     [MySqlFact]
     public async Task Details_MatchVisibleVariantsIncludingSoldOutAndNeverUseHiddenVariantImages()
     {
@@ -145,6 +151,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra chi tiết từ chối sản phẩm ẩn và loại lưu trữ.
     [MySqlFact]
     public async Task Details_RejectHiddenParentsAndArchivedCategories()
     {
@@ -156,6 +163,7 @@ public sealed class MySqlCatalogTests
         Assert.Null(await context.Reader.ProductAsync(int.MaxValue, CancellationToken.None));
     }
 
+    // Kiểm tra sản phẩm không biến thể hoặc hết hàng chỉ hiện khi tắt lọc tồn kho.
     [MySqlFact]
     public async Task Products_EmptyVariantSetsAndSoldOutItemsRequireStockFilterToBeDisabled()
     {
@@ -180,6 +188,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra trang tối đa không tràn số, sort lạ không thành SQL.
     [MySqlFact]
     public async Task Products_MaximumPageDoesNotOverflowAndUnknownSortCannotBecomeSql()
     {
@@ -191,6 +200,7 @@ public sealed class MySqlCatalogTests
             new ProductSearch(Sort: "new; SELECT SLEEP(10)"), CancellationToken.None));
     }
 
+    // Kiểm tra sở thích và phương thức thanh toán dùng mã trong CSDL, không tự thêm dòng.
     [MySqlFact]
     public async Task InterestsAndActivePaymentMethodsUseDatabaseIdsWithoutAddingPaymentRows()
     {
@@ -207,6 +217,7 @@ public sealed class MySqlCatalogTests
         Assert.Equal(raw.Payments.Length, (await LoadRawAsync(context.ConnectionString)).Payments.Length);
     }
 
+    // Kiểm tra thiếu COD vẫn trả các phương thức khác và không tự thêm.
     [MySqlFact("SPORTSHOP_TEST_MYSQL_NO_COD")]
     public async Task PaymentMethods_AbsentActiveExactCodStillReturnsOtherActiveMethodsWithoutSeeding()
     {
@@ -222,6 +233,7 @@ public sealed class MySqlCatalogTests
         await Assert.ThrowsAsync<DatabaseUnavailableException>(() => context.Readiness.CheckAsync(CancellationToken.None));
     }
 
+    // Kiểm tra khuyến mãi dùng đồng hồ CSDL, bỏ chương trình ngừng, hết hạn, hết lượt.
     [MySqlFact]
     public async Task Promotions_UseConfiguredDatabaseClockAndExcludeInactiveExpiredAndExhaustedPrograms()
     {
@@ -249,6 +261,7 @@ public sealed class MySqlCatalogTests
         }
     }
 
+    // Kiểm tra hủy request được truyền ra, không báo thành CSDL lỗi.
     [MySqlFact]
     public async Task Cancellation_PropagatesInsteadOfReportingDatabaseUnavailable()
     {
@@ -258,6 +271,7 @@ public sealed class MySqlCatalogTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => context.Reader.InterestsAsync(cancellation.Token));
     }
 
+    // Mở kết nối CSDL test.
     private static async Task<MySqlConnection> OpenAsync(string connectionString)
     {
         var connection = new MySqlConnection(connectionString);
@@ -265,6 +279,7 @@ public sealed class MySqlCatalogTests
         catch { await connection.DisposeAsync(); throw; }
     }
 
+    // Đọc dữ liệu gốc từ CSDL để so sánh.
     private static async Task<RawCatalog> LoadRawAsync(string connectionString)
     {
         await using var connection = await OpenAsync(connectionString);
@@ -289,6 +304,7 @@ public sealed class MySqlCatalogTests
             (await rows.ReadAsync<PaymentRaw>()).ToArray());
     }
 
+    // Tạo MySqlCatalogReader với cấu hình test.
     private sealed class ReaderContext : IDisposable
     {
         private readonly ServiceProvider _provider;
@@ -298,6 +314,7 @@ public sealed class MySqlCatalogTests
         public ICatalogClock Clock { get; }
         public IDatabaseReadiness Readiness { get; }
 
+        // Dựng dịch vụ theo chuỗi kết nối trong biến môi trường.
         public ReaderContext(string environmentVariable = "SPORTSHOP_TEST_MYSQL")
         {
             ConnectionString = Environment.GetEnvironmentVariable(environmentVariable)
@@ -318,38 +335,55 @@ public sealed class MySqlCatalogTests
             Readiness = _scope.ServiceProvider.GetRequiredService<IDatabaseReadiness>();
         }
 
+        // Giải phóng dịch vụ.
         public void Dispose() { _scope.Dispose(); _provider.Dispose(); }
     }
 
+    // Đồng hồ cố định để thử thời gian.
     private sealed class FrozenTimeProvider : TimeProvider
     {
+        // Trả thời điểm cố định.
         public override DateTimeOffset GetUtcNow() => FrozenNow;
     }
 
+    // Dữ liệu gốc đọc trực tiếp từ CSDL.
     private sealed record RawCatalog(CategoryRaw[] Categories, ProductRaw[] Products, VariantRaw[] Variants,
         PromotionRaw[] Promotions, VoucherRaw[] Vouchers, NamedRaw[] Interests, PaymentRaw[] Payments)
     {
         public int[] RowCounts => [Categories.Length, Products.Length, Variants.Length, Promotions.Length,
             Vouchers.Length, Interests.Length, Payments.Length];
+        // Lọc sản phẩm công khai.
         public IEnumerable<ProductRaw> PublicProducts(bool inStockOnly) => Products.Where(product =>
             product.Status == "hien" && Categories.Any(category => category.Id == product.CategoryId && category.Name != "[Đã xóa]")
             && (!inStockOnly || VisibleVariants(product.Id).Any(variant => variant.Stock > 0)));
+        // Lọc biến thể đang hiện của sản phẩm.
         public IEnumerable<VariantRaw> VisibleVariants(int productId) => Variants.Where(variant => variant.ProductId == productId && variant.Status == "hien");
+        // Giá nhỏ nhất của các biến thể đang hiện.
         public decimal? MinPrice(int productId) => VisibleVariants(productId).Select(variant => (decimal?)variant.Price).Min();
+        // Giá lớn nhất của các biến thể đang hiện.
         public decimal? MaxPrice(int productId) => VisibleVariants(productId).Select(variant => (decimal?)variant.Price).Max();
     }
 
+    // Dòng danh mục đọc bằng Dapper.
     private sealed class CategoryRaw { public int Id { get; set; } public string Name { get; set; } = ""; }
+    // Dòng mã và tên đọc bằng Dapper.
     private sealed class NamedRaw { public int Id { get; set; } public string Name { get; set; } = ""; }
+    // Dòng sản phẩm đọc bằng Dapper.
     private sealed class ProductRaw { public int Id { get; set; } public int CategoryId { get; set; } public string Name { get; set; } = ""; public string Status { get; set; } = ""; }
+    // Dòng biến thể đọc bằng Dapper.
     private sealed class VariantRaw { public int Id { get; set; } public int ProductId { get; set; } public decimal Price { get; set; } public int Stock { get; set; } public string Status { get; set; } = ""; public string? ImagePath { get; set; } }
+    // Dòng khuyến mãi đọc bằng Dapper.
     private sealed class PromotionRaw { public int Id { get; set; } public string Type { get; set; } = ""; public string Status { get; set; } = ""; public DateTime StartsAt { get; set; } public DateTime EndsAt { get; set; } public int? Limit { get; set; } public int Used { get; set; } public string? RequiredTier { get; set; } public int? PerCustomerLimit { get; set; } }
+    // Dòng voucher đọc bằng Dapper.
     private sealed class VoucherRaw { public int PromotionId { get; set; } public string Code { get; set; } = ""; public decimal Percent { get; set; } }
+    // Dòng phương thức thanh toán đọc bằng Dapper.
     private sealed class PaymentRaw { public int Id { get; set; } public string Name { get; set; } = ""; public string Status { get; set; } = ""; }
 }
 
+// Bỏ qua test khi chưa đặt biến môi trường chuỗi kết nối MySQL.
 public sealed class MySqlFactAttribute : FactAttribute
 {
+    // Đặt lý do bỏ qua nếu thiếu biến môi trường.
     public MySqlFactAttribute(string environmentVariable = "SPORTSHOP_TEST_MYSQL")
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(environmentVariable)))

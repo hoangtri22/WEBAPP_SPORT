@@ -5,9 +5,11 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test catalog qua HTTP với CSDL thật.
 [Trait("Category", "MySql")]
 public sealed class MySqlCatalogHttpTests
 {
+    // Kiểm tra API catalog và readiness chạy đúng với CSDL thật.
     [MySqlFact]
     public async Task PublicCatalogAndReadinessUseRealDatabaseThroughHttp()
     {

@@ -5,6 +5,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Khởi tạo app MAUI và đăng ký dịch vụ, ViewModel, trang.
 public static class MauiProgram
 {
     // Cấu hình app: font, HttpClient tới ApiSettings.BaseUri, đăng ký service, ViewModel và các trang.

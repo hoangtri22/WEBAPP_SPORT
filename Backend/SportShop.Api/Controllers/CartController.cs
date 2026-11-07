@@ -9,6 +9,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API giỏ hàng của khách đăng nhập hoặc khách vãng lai, xử lý qua ShopStore.
 [ApiController, Route("api/v1/cart"), Authorize(Roles = "Customer")]
 [ProducesResponseType<ProblemDetails>(400)]
 [ProducesResponseType<ProblemDetails>(401)]

@@ -7,6 +7,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Đăng nhập, đăng xuất và hồ sơ quản trị, kiểm tra tài khoản qua ShopData.
 public class AccountController(ShopData db) : Controller
 {
     // Trang đăng nhập quản trị (Views/Account/Login.cshtml); đã đăng nhập thì về trang Tổng quan.

@@ -3,6 +3,7 @@ using System.Net.Mail;
 
 namespace SportShop.Api.Auth;
 
+// Gửi mã đặt lại mật khẩu, tách interface để test thay bằng bản giả.
 public interface IPasswordResetMailer
 {
     Task SendAsync(string email, string code, CancellationToken cancellationToken);
@@ -12,6 +13,7 @@ public interface IPasswordResetMailer
 public sealed class SmtpPasswordResetMailer(IConfiguration configuration, IHostEnvironment environment,
     ILogger<SmtpPasswordResetMailer> logger) : IPasswordResetMailer
 {
+    // Gửi mã qua SMTP theo cấu hình mục Smtp trong appsettings.
     public async Task SendAsync(string email, string code, CancellationToken cancellationToken)
     {
         var smtp = configuration.GetSection("Smtp");

@@ -6,6 +6,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.CustomerWeb.Controllers;
 
+// Trang cá nhân của khách: hồ sơ, đơn hàng, phản hồi, khảo sát; xử lý qua CustomerStore và ShopStore.
 public class CustomerController(DbStatus db, CustomerStore store, ShopStore shop, LoginThrottle throttle) : Controller
 {
     int CustomerId => HttpContext.Session.GetInt32("customer_id") ?? 0;

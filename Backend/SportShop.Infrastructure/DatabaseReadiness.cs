@@ -6,6 +6,7 @@ using SportShop.Application.Health;
 
 namespace SportShop.Infrastructure;
 
+// Cài đặt IDatabaseReadiness bằng truy vấn thử vào MySQL.
 public sealed class DatabaseReadiness(MySqlConnectionFactory connections) : IDatabaseReadiness
 {
     // LIMIT 0 kiểm tra đủ bảng và cột cần cho catalog, giao dịch khách mà không đọc dữ liệu cá nhân.

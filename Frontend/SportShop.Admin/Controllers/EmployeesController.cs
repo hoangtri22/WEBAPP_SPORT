@@ -4,6 +4,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý nhân viên và tài khoản, đọc dữ liệu qua ShopData.
 public class EmployeesController(ShopData db) : Controller
 {
     // Tài khoản vai trò Nhân viên không vào được trang Quản lý nhân viên (ẩn khỏi menu và chặn cả khi gõ thẳng đường dẫn).

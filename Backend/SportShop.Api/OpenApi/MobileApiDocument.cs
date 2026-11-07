@@ -3,6 +3,7 @@ using Microsoft.OpenApi;
 
 namespace SportShop.Api.OpenApi;
 
+// Tùy chỉnh tài liệu OpenAPI của API mobile.
 internal static class MobileApiDocument
 {
     // Bổ sung tài liệu OpenAPI: khai báo Bearer, gắn bảo mật cho endpoint cần đăng nhập, thêm phản hồi lỗi và ví dụ request. Gọi từ Program.cs.

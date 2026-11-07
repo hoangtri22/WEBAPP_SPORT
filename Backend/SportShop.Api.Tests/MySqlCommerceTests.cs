@@ -15,6 +15,7 @@ namespace SportShop.Api.Tests;
 [Trait("Category", "MySql")]
 public sealed class MySqlCommerceTests
 {
+    // Kiểm tra mua hàng qua HTTP với CSDL thật và không truy cập được đơn của khách khác.
     [MySqlFact]
     public async Task HttpCommerceRoundTripAndCrossCustomerAccessUseRealDatabase()
     {
@@ -72,6 +73,7 @@ public sealed class MySqlCommerceTests
         Assert.Equal(0, fixture.VoucherUses());
     }
 
+    // Kiểm tra giỏ, đặt lại request, quyền sở hữu và hủy đơn giữ đúng tồn kho.
     [MySqlFact]
     public void SharedCartCheckoutReplayOwnershipAndCancellationPreserveStock()
     {
@@ -113,6 +115,7 @@ public sealed class MySqlCommerceTests
         Assert.Empty(web.Orders(fixture.CustomerId, page: 2, pageSize: 1));
     }
 
+    // Kiểm tra gửi lại đồng thời chỉ tạo một đơn và trừ tồn một lần.
     [MySqlFact]
     public async Task ConcurrentRetriesProduceOneOrderAndOneStockDeduction()
     {
@@ -127,6 +130,7 @@ public sealed class MySqlCommerceTests
         Assert.Equal(1, fixture.Shop().OrderCount(fixture.CustomerId));
     }
 
+    // Kiểm tra voucher khách mới: hủy đơn trả lại lượt, không có đơn thứ hai cùng lúc.
     [MySqlFact]
     public void VoucherEligibilityAndCancelRestoreUseWithoutAllowingSecondActiveFirstPurchase()
     {
@@ -147,6 +151,7 @@ public sealed class MySqlCommerceTests
         Assert.Equal(10, fixture.Stock());
     }
 
+    // Kiểm tra giỏ cũ chỉ nhập một lần trên nhiều host, không phá bản sao lưu.
     [MySqlFact]
     public void LegacyCartImportsOnceAcrossHostsWithoutDestroyingBackup()
     {
@@ -160,6 +165,7 @@ public sealed class MySqlCommerceTests
         Assert.Contains(fixture.VariantId.ToString(), File.ReadAllText(fixture.LegacyPath));
     }
 
+    // Kiểm tra Admin xóa được biến thể chưa có đơn dù đang nằm trong giỏ.
     [MySqlFact]
     public void AdminCanDeleteAnUnorderedVariantEvenWhenItIsInACustomerCart()
     {
@@ -169,6 +175,7 @@ public sealed class MySqlCommerceTests
         Assert.Empty(fixture.Shop().GetCart(fixture.CustomerId));
     }
 
+    // Kiểm tra đơn đã trả tiền đang chờ phải do cửa hàng hoàn, khách không tự hủy.
     [MySqlFact]
     public void PaidPendingOrdersRequireStoreRefundInsteadOfCustomerSelfCancellation()
     {
@@ -186,6 +193,7 @@ public sealed class MySqlCommerceTests
         Assert.Equal(9, fixture.Stock());
     }
 
+    // Dữ liệu thử dùng chung cho test mua hàng.
     private sealed class CommerceFixture : IDisposable
     {
         readonly string _connectionString = Environment.GetEnvironmentVariable("SPORTSHOP_TEST_MYSQL")!;
@@ -202,6 +210,7 @@ public sealed class MySqlCommerceTests
         public string VoucherCode => "TEST" + _token;
         public ReceiverInfo Receiver { get; } = new("API Test Customer", "0901234567", "123 Test Street");
 
+        // Tạo khách, biến thể và tồn kho thử.
         public CommerceFixture()
         {
             LegacyPath = Path.Combine(Path.GetTempPath(), "sportshop-cart-" + _token + ".json");
@@ -218,12 +227,19 @@ public sealed class MySqlCommerceTests
             PaymentId = connection.ExecuteScalar<int>("INSERT INTO PHUONG_THUC_THANH_TOAN(ten_phuong_thuc_thanh_toan) VALUES (@name); SELECT LAST_INSERT_ID();", new { name = "API Test " + _token });
         }
 
+        // Mở kết nối CSDL test.
         MySqlConnection Open() { var connection = new MySqlConnection(_connectionString); connection.Open(); return connection; }
+        // Tạo ShopStore cho test.
         public ShopStore Shop() => new(_configuration, new CartStore(_environment, _configuration), new CatalogCache(_configuration));
+        // Đọc tồn kho.
         public int Stock() { using var connection = Open(); return connection.ExecuteScalar<int>("SELECT so_luong_ton FROM BIEN_THE_SP WHERE ma_bien_the=@VariantId", new { VariantId }); }
+        // Xóa biến thể thử.
         public void DeleteVariant() { using var connection = Open(); connection.Execute("DELETE FROM BIEN_THE_SP WHERE ma_bien_the=@VariantId", new { VariantId }); }
+        // Đánh dấu đơn đã thanh toán.
         public void MarkPaid(int orderId) { using var connection = Open(); connection.Execute("UPDATE DON_HANG SET trang_thai_thanh_toan='da_thanh_toan' WHERE ma_don_hang=@orderId", new { orderId }); }
+        // Đọc số lượt đã dùng của voucher.
         public int VoucherUses() { using var connection = Open(); return connection.ExecuteScalar<int>("SELECT so_luot_da_dung FROM CTKM WHERE ma_ctkm=@id", new { id = _promotionId }); }
+        // Tạo voucher thử.
         public void CreateVoucher()
         {
             using var connection = Open();
@@ -235,6 +251,7 @@ public sealed class MySqlCommerceTests
             connection.Execute("INSERT INTO KM_THEO_VOUCHER(ma_ctkm,ma_voucher,phan_tram_giam) VALUES (@id,@code,10)", new { id = _promotionId, code = VoucherCode });
         }
 
+        // Xóa dữ liệu thử.
         public void Dispose()
         {
             using var connection = Open();
@@ -252,6 +269,7 @@ public sealed class MySqlCommerceTests
         }
     }
 
+    // Môi trường web giả cho CartStore.
     private sealed class TestEnvironment : IWebHostEnvironment
     {
         public string ApplicationName { get; set; } = "CommerceTests";

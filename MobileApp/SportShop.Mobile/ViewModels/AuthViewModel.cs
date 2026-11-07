@@ -6,6 +6,7 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile.ViewModels;
 
+// Trạng thái và thao tác của trang đăng nhập, đăng ký, vào bằng tư cách khách.
 public sealed class AuthViewModel : INotifyPropertyChanged
 {
     private readonly IAuthApi _api;
@@ -22,6 +23,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
     private string _password = "";
     private string? _errorMessage;
 
+    // Nhận IAuthApi, ISessionManager, IDeviceIdentity và IGoogleSignIn.
     public AuthViewModel(IAuthApi api, ISessionManager session, IDeviceIdentity device, IGoogleSignIn? google = null)
     {
         _api = api;
@@ -93,6 +95,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         Left?.Invoke();
     }
 
+    // Đánh dấu đã vào app và báo App mở HomePage.
     private void Enter()
     {
         _entered = true;
@@ -172,6 +175,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         return Password.Length < 6 ? "Mật khẩu cần có ít nhất 6 ký tự." : null;
     }
 
+    // Hiện thông báo lỗi.
     private void ShowError(string message)
     {
         _errorMessage = message;
@@ -192,6 +196,7 @@ public sealed class AuthViewModel : INotifyPropertyChanged
         GoogleCommand.NotifyCanExecuteChanged();
     }
 
+    // Báo giao diện cập nhật thuộc tính.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

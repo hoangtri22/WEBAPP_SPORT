@@ -4,20 +4,21 @@ using SportShop.Contracts.Commerce;
 
 namespace SportShop.Mobile.Services;
 
+// Một trường có thể tìm kiếm.
 public sealed record SearchFieldOption(string Key, string Label, string Kind);
+// Một toán tử so sánh.
 public sealed record RelationalOperatorOption(string Key, string Label);
+// Một toán tử nối điều kiện.
 public sealed record LogicalOperatorOption(string Key, string Label);
 
+// Một điều kiện tìm kiếm đơn hàng: Join là and hoặc or, FieldKey là khóa trong Fields, OperatorKey là toán tử so sánh.
 public sealed record OrderSearchCondition(
-    string Join,        // "and" ("Và") hoặc "or" ("Hoặc")
-    string FieldKey,    // "code", "total", "date", "status", "payStatus", "receiver", "product", "itemCount"
-    string OperatorKey, // "contains", "notcontains", "eq", "neq", "starts", "gt", "gte", "lt", "lte"
+    string Join,
+    string FieldKey,
+    string OperatorKey,
     string Value);
 
-// Bộ công cụ Tìm kiếm nâng cao cho Đơn hàng & Hóa đơn trên Mobile App (đồng bộ 100% logic với wwwroot/js/search-kit.js của Web):
-// 1. Bỏ dấu tiếng Việt và không phân biệt hoa thường (Fold).
-// 2. Toán tử quan hệ theo kiểu dữ liệu: chữ (chứa, không chứa, bằng, khác, bắt đầu bằng), số / tiền / ngày (=, ≠, >, ≥, <, ≤).
-// 3. Toán tử logic: nối nhiều điều kiện bằng Và (AND) / Hoặc (OR), trong đó Và được gom nhóm ưu tiên tính trước Hoặc.
+// Tìm kiếm nâng cao đơn hàng và hóa đơn trên app, cùng logic với wwwroot/js/search-kit.js của web: bỏ dấu qua Fold(), toán tử theo kiểu dữ liệu, nối điều kiện bằng Và / Hoặc với Và tính trước.
 public static class AdvancedOrderSearch
 {
     public static readonly IReadOnlyList<SearchFieldOption> Fields =
@@ -57,6 +58,7 @@ public static class AdvancedOrderSearch
         new("lte", "≤ (nhỏ hơn hoặc bằng)")
     ];
 
+    // Danh sách toán tử theo kiểu của trường: số và ngày dùng toán tử so sánh, chữ dùng toán tử văn bản.
     public static IReadOnlyList<RelationalOperatorOption> OperatorsForField(string fieldKey)
     {
         var kind = Fields.FirstOrDefault(f => f.Key == fieldKey)?.Kind ?? "text";
@@ -143,6 +145,7 @@ public static class AdvancedOrderSearch
         return groups.Any(group => group.All(cond => EvaluateSingle(order, cond)));
     }
 
+    // Đánh giá một điều kiện trên một đơn theo kiểu của trường.
     public static bool EvaluateSingle(OrderDto order, OrderSearchCondition cond)
     {
         var kind = Fields.FirstOrDefault(f => f.Key == cond.FieldKey)?.Kind ?? "text";
@@ -177,18 +180,27 @@ public static class AdvancedOrderSearch
             _ => order.Code
         };
 
+        // Ô gộp nhiều giá trị (mã đơn + số hóa đơn, nhãn + mã trạng thái): "bằng" khớp khi đúng một trong các giá trị đó.
+        string[] exact = cond.FieldKey switch
+        {
+            "code" => [order.Code, order.InvoiceNumber ?? ""],
+            "status" => [order.StatusLabel, order.Status],
+            _ => [text]
+        };
         var fText = Fold(text);
         var fVal = Fold(rawVal);
+        bool equal = exact.Any(x => Fold(x) == fVal);
         return op switch
         {
             "notcontains" => !MatchesKeyword(text, rawVal),
-            "eq" => fText == fVal,
-            "neq" => fText != fVal,
+            "eq" => equal,
+            "neq" => !equal,
             "starts" => fText.StartsWith(fVal, StringComparison.Ordinal),
             _ => MatchesKeyword(text, rawVal)
         };
     }
 
+    // So sánh hai giá trị theo toán tử.
     public static bool Compare<T>(string op, T a, T b) where T : IComparable<T>
     {
         int cmp = a.CompareTo(b);
@@ -204,12 +216,14 @@ public static class AdvancedOrderSearch
         };
     }
 
+    // Đọc số tiền từ chuỗi người dùng nhập.
     private static bool TryParseDecimal(string text, out decimal result)
     {
         var cleaned = new string(text.Where(ch => char.IsDigit(ch) || ch == '-' || ch == ',').ToArray()).Replace(',', '.');
         return decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
     }
 
+    // Đọc ngày từ chuỗi người dùng nhập.
     private static bool TryParseDate(string text, out DateTime result)
     {
         string[] formats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy"];

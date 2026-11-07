@@ -17,6 +17,7 @@ public sealed class GoogleAuthController(IGoogleOAuthClient google, GoogleLoginT
 
     string RedirectUri => $"{Request.Scheme}://{Request.Host}/api/v1/auth/google/callback";
 
+    // Kiểm tra challenge rồi chuyển sang trang đăng nhập Google qua IGoogleOAuthClient.AuthorizeUrl().
     [HttpGet("start")]
     [ProducesResponseType(302), ProducesResponseType<ProblemDetails>(400)]
     public IActionResult Start([FromQuery] string challenge)
@@ -25,6 +26,7 @@ public sealed class GoogleAuthController(IGoogleOAuthClient google, GoogleLoginT
         return Redirect(google.IsConfigured ? google.AuthorizeUrl(RedirectUri, tickets.NewState(challenge)) : ToApp("error", "not_configured"));
     }
 
+    // Nhận mã từ Google, đổi lấy GoogleUser, tìm hoặc tạo khách rồi chuyển về app kèm ticket hoặc lỗi.
     [HttpGet("callback")]
     [ProducesResponseType(302)]
     public async Task<IActionResult> Callback([FromQuery] string? code, [FromQuery] string? state, CancellationToken cancellationToken)
@@ -55,7 +57,9 @@ public sealed class GoogleAuthController(IGoogleOAuthClient google, GoogleLoginT
         return result is null ? Error(401, "INVALID_GOOGLE_TICKET", "Tài khoản không đăng nhập được. Vui lòng thử lại.") : Ok(result);
     }
 
+    // Tạo đường dẫn quay về app kèm một tham số.
     static string ToApp(string key, string value) => $"{AppCallback}?{key}={Uri.EscapeDataString(value)}";
 
+    // Trả lỗi dạng ProblemDetails qua ApiProblems.Create().
     IActionResult Error(int status, string code, string title) => StatusCode(status, ApiProblems.Create(HttpContext, status, code, title));
 }

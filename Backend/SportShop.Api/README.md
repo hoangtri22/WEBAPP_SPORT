@@ -48,7 +48,7 @@ Từ thư mục gốc `WEBAPP_SPORT`:
 Copy-Item Backend/SportShop.Api/appsettings.Local.example.json Backend/SportShop.Api/appsettings.Local.json
 ```
 
-Áp dụng lần lượt migration `Backend/Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql`, `004_guest_devices.sql`, `005_password_reset.sql`, `006_google_login.sql` vào schema hiện có;
+Áp dụng lần lượt migration `Backend/Database/Migrations/001_mobile_auth.sql`, `002_commerce.sql`, `003_payment_methods.sql`, `004_guest_devices.sql`, `005_password_reset.sql`, `006_google_login.sql`, `007_remove_vip_tier.sql`, `008_walkin_customer_orders.sql` vào schema hiện có;
 không chạy lại script tạo DB để nâng cấp. Migration tăng thêm bảng session/refresh/cart/idempotency và bổ sung phương thức thanh toán mô phỏng,
 giữ dữ liệu cũ. Sửa `appsettings.Local.json`: điền đúng cổng, DB, user/mật khẩu; runtime cần quyền SELECT/INSERT/UPDATE/DELETE trên các bảng sử dụng,
 migration chạy riêng bằng tài khoản có quyền DDL. File local được Git bỏ qua; API không đọc secret của hai web.

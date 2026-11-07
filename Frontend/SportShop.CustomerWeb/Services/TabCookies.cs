@@ -9,6 +9,7 @@ public class TabCookieMiddleware(RequestDelegate next, string tabCookie)
     static readonly Regex TabIdFormat = new("^[0-9a-f]{32}$", RegexOptions.Compiled);
     static readonly Regex TabSuffix = new(@"\.t[0-9a-f]{32}$", RegexOptions.Compiled);
 
+    // Xử lý cookie theo từng tab trình duyệt rồi chuyển request sang bước tiếp theo.
     public async Task Invoke(HttpContext ctx)
     {
         string tab = TabId(ctx.Request);

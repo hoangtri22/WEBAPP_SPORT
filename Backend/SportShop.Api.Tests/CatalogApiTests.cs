@@ -6,8 +6,10 @@ using Xunit;
 
 namespace SportShop.Api.Tests;
 
+// Test API catalog với dữ liệu giả.
 public sealed class CatalogApiTests
 {
+    // Kiểm tra danh sách sản phẩm có giới hạn mặc định và thông tin phân trang.
     [Fact]
     public async Task ProductList_UsesBoundedDefaultsAndReturnsPaginationMetadata()
     {
@@ -28,6 +30,7 @@ public sealed class CatalogApiTests
         Assert.Null(search.Q);
     }
 
+    // Kiểm tra bộ lọc hợp lệ được chuyển xuống reader và từ khóa được chuẩn hóa.
     [Fact]
     public async Task ProductList_ForwardsValidatedFiltersAndNormalizesSearch()
     {
@@ -44,6 +47,7 @@ public sealed class CatalogApiTests
         Assert.Equal(10, search.PageSize);
     }
 
+    // Kiểm tra truy vấn sai bị từ chối trước khi gọi reader.
     [Theory]
     [InlineData("page=0")]
     [InlineData("page=-1")]
@@ -69,6 +73,7 @@ public sealed class CatalogApiTests
         Assert.Equal(0, factory.Reader.ProductListCalls);
     }
 
+    // Kiểm tra từ khóa dài hơn 100 ký tự bị từ chối.
     [Fact]
     public async Task ProductList_RejectsSearchLongerThanOneHundredCharacters()
     {
@@ -79,6 +84,7 @@ public sealed class CatalogApiTests
         Assert.Equal(0, factory.Reader.ProductListCalls);
     }
 
+    // Kiểm tra từ khóa dài tối đa và trang lớn không bị tràn số.
     [Fact]
     public async Task ProductList_AllowsMaximumSearchLengthAndLargePageWithoutOverflow()
     {
@@ -92,6 +98,7 @@ public sealed class CatalogApiTests
         Assert.Equal(100, factory.Reader.LastSearch!.PageSize);
     }
 
+    // Kiểm tra chi tiết sản phẩm trả đúng trường công khai và giữ biến thể hết hàng.
     [Fact]
     public async Task ProductDetail_MapsPublicFieldsAndKeepsSoldOutVariants()
     {
@@ -113,6 +120,7 @@ public sealed class CatalogApiTests
         AssertNoPrivateFields(payload);
     }
 
+    // Kiểm tra đường dẫn ảnh không an toàn không bị lộ.
     [Theory]
     [InlineData("/images/../private.txt")]
     [InlineData("/images/%2e%2e/private.txt")]
@@ -136,6 +144,7 @@ public sealed class CatalogApiTests
             Assert.Equal(JsonValueKind.Null, variant.GetProperty("imageUrl").ValueKind));
     }
 
+    // Kiểm tra URL ảnh dùng host cấu hình, không theo host của request.
     [Fact]
     public async Task ProductDetail_UsesConfiguredMediaHostWithoutDependingOnRequestHost()
     {
@@ -147,6 +156,7 @@ public sealed class CatalogApiTests
         Assert.Equal("https://media.example.com/images/giay-pegasus.jpg", payload.GetProperty("imageUrl").GetString());
     }
 
+    // Kiểm tra thiếu ảnh thì trả null.
     [Fact]
     public async Task ProductDetail_MissingImageReturnsNullInsteadOfBrokenMediaUrl()
     {
@@ -159,6 +169,7 @@ public sealed class CatalogApiTests
         Assert.Equal(JsonValueKind.Null, payload.GetProperty("imageUrl").ValueKind);
     }
 
+    // Kiểm tra sản phẩm không tồn tại trả 404 dạng JSON.
     [Fact]
     public async Task ProductDetail_UnknownProductReturnsJson404()
     {
@@ -168,6 +179,7 @@ public sealed class CatalogApiTests
         await AssertProblem(response, HttpStatusCode.NotFound, "RESOURCE_NOT_FOUND");
     }
 
+    // Kiểm tra các danh sách công khai trả JSON đúng kiểu.
     [Theory]
     [InlineData("categories", "name")]
     [InlineData("interests", "name")]
@@ -184,6 +196,7 @@ public sealed class CatalogApiTests
         AssertNoPrivateFields(payload);
     }
 
+    // Kiểm tra thời gian khuyến mãi dùng múi giờ CSDL.
     [Fact]
     public async Task Promotions_ReturnTimestampWithConfiguredDatabaseOffset()
     {
@@ -197,6 +210,7 @@ public sealed class CatalogApiTests
         Assert.EndsWith("+07:00", promotion.GetProperty("endsAt").GetString());
     }
 
+    // Kiểm tra lỗi reader trả ProblemDetails đã che thông tin kể cả khi yêu cầu HTML.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -217,6 +231,7 @@ public sealed class CatalogApiTests
         Assert.DoesNotContain(secret, await response.Content.ReadAsStringAsync());
     }
 
+    // Kiểm tra catalog không có API ghi công khai.
     [Theory]
     [InlineData("/api/v1/products")]
     [InlineData("/api/v1/products/7")]
@@ -230,12 +245,14 @@ public sealed class CatalogApiTests
         Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
     }
 
+    // Đọc JSON từ phản hồi.
     internal static async Task<JsonElement> ReadJson(HttpResponseMessage response)
     {
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement.Clone();
     }
 
+    // Kiểm tra phản hồi lỗi đúng dạng ProblemDetails.
     internal static async Task<JsonElement> AssertProblem(HttpResponseMessage response, HttpStatusCode expectedStatus, string code)
     {
         Assert.Equal(expectedStatus, response.StatusCode);
@@ -247,6 +264,7 @@ public sealed class CatalogApiTests
         return payload;
     }
 
+    // Kiểm tra phản hồi không chứa trường riêng tư.
     static void AssertNoPrivateFields(JsonElement payload)
     {
         if (payload.ValueKind == JsonValueKind.Array)

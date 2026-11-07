@@ -57,6 +57,7 @@ public class CartStore(IWebHostEnvironment env, IConfiguration config)
                 new { customerId, variantId = item.Key, quantity = item.Value }, transaction);
     }
 
+    // Lấy bản sao giỏ của khách.
     public Dictionary<int, int> Get(int customerId) => Mutate(customerId, cart => new Dictionary<int, int>(cart));
 
     // Thay toàn bộ giỏ qua Mutate(). Gọi từ ShopStore.

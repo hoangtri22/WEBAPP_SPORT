@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý phiếu nhập hàng, đọc qua ShopData và nhập file qua ShopCommands.
 public class ImportsController(ShopData db, ShopCommands cmd) : Controller
 {
     // Quản lý nhập hàng: danh sách phiếu nhập từ ShopData.ImportSlips; lập phiếu mới qua CrudController → ShopCommands.SaveImport().

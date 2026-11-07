@@ -10,8 +10,10 @@ using SportShop.Infrastructure;
 
 namespace SportShop.Api.Auth;
 
+// Thông tin người dùng Google trả về sau khi đổi mã đăng nhập, dùng ở GoogleLoginStore.FindOrCreateAsync().
 public sealed record GoogleUser(string Sub, string Email, bool EmailVerified, string? GivenName, string? FamilyName, string? Name);
 
+// Giao tiếp với Google OAuth, tách interface để test thay bằng bản giả.
 public interface IGoogleOAuthClient
 {
     bool IsConfigured { get; }
@@ -27,10 +29,12 @@ public sealed class GoogleOAuthClient(HttpClient http, IConfiguration configurat
 
     public bool IsConfigured => ClientId.Length > 0 && ClientSecret.Length > 0;
 
+    // Tạo đường dẫn trang đăng nhập Google từ redirectUri và state.
     public string AuthorizeUrl(string redirectUri, string state)
         => "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=openid%20email%20profile&prompt=select_account" +
            $"&client_id={Uri.EscapeDataString(ClientId)}&redirect_uri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(state)}";
 
+    // Đổi mã code lấy access token ở oauth2.googleapis.com rồi đọc thông tin người dùng thành GoogleUser.
     public async Task<GoogleUser?> ExchangeAsync(string code, string redirectUri, CancellationToken cancellationToken)
     {
         using var tokenResponse = await http.PostAsync("https://oauth2.googleapis.com/token", new FormUrlEncodedContent(new Dictionary<string, string>
@@ -54,8 +58,10 @@ public sealed class GoogleOAuthClient(HttpClient http, IConfiguration configurat
             : new GoogleUser(user.Sub, user.Email, user.EmailVerified, user.GivenName, user.FamilyName, user.Name);
     }
 
+    // Phần access_token trong phản hồi token của Google.
     sealed record TokenBody([property: JsonPropertyName("access_token")] string? AccessToken);
 
+    // Thông tin người dùng trong phản hồi userinfo của Google.
     sealed record UserBody(
         [property: JsonPropertyName("sub")] string? Sub,
         [property: JsonPropertyName("email")] string? Email,
@@ -65,10 +71,7 @@ public sealed class GoogleOAuthClient(HttpClient http, IConfiguration configurat
         [property: JsonPropertyName("name")] string? Name);
 }
 
-/// <summary>
-/// State gửi cho Google và vé một lần trả về app, giữ trong bộ nhớ máy chủ như LoginThrottle.
-/// Vé gắn với code_challenge của app (PKCE): app khác bắt được link sportshop:// cũng không đổi được token.
-/// </summary>
+/// <summary>State gửi cho Google và vé một lần trả về app, giữ trong bộ nhớ máy chủ như LoginThrottle. Vé gắn với code_challenge của app (PKCE): app khác bắt được link sportshop:// cũng không đổi được token.</summary>
 public sealed class GoogleLoginTickets(TimeProvider clock)
 {
     static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
@@ -76,11 +79,14 @@ public sealed class GoogleLoginTickets(TimeProvider clock)
     readonly ConcurrentDictionary<string, (string Challenge, DateTimeOffset Expires)> _states = new();
     readonly ConcurrentDictionary<string, (int CustomerId, string Challenge, DateTimeOffset Expires)> _tickets = new();
 
+    // Tạo khóa ngẫu nhiên dạng base64url cho state và ticket.
     static string NewKey() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
+    // Tính challenge PKCE: SHA-256 của verifier, mã hóa base64url.
     public static string Challenge(string verifier)
         => Convert.ToBase64String(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
+    // Tạo state ngẫu nhiên gắn với challenge, dùng khi mở trang Google. Gọi từ GoogleAuthController.Start().
     public string NewState(string challenge)
     {
         var now = clock.GetUtcNow();
@@ -91,9 +97,11 @@ public sealed class GoogleLoginTickets(TimeProvider clock)
         return state;
     }
 
+    // Lấy và xóa state còn hạn, trả về challenge đã gắn. Gọi từ GoogleAuthController.Callback().
     public string? TakeState(string state)
         => _states.TryRemove(state, out var entry) && entry.Expires > clock.GetUtcNow() ? entry.Challenge : null;
 
+    // Tạo ticket dùng một lần gắn với khách và challenge để app đổi lấy token.
     public string NewTicket(int customerId, string challenge)
     {
         var ticket = NewKey();
@@ -113,6 +121,7 @@ public sealed class GoogleLoginTickets(TimeProvider clock)
 /// <summary>Tìm khách theo liên kết Google, rồi theo email đã xác minh; chưa có thì tạo tài khoản mới.</summary>
 public class GoogleAccountStore(MySqlConnectionFactory connections, TimeProvider clock)
 {
+    // Tìm khách theo tài khoản Google hoặc email đã xác minh trong MOBILE_GOOGLE_LOGIN và TAI_KHOAN; chưa có thì tạo TAI_KHOAN, KHACH_HANG mới.
     public virtual async Task<int?> FindOrCreateAsync(GoogleUser user, CancellationToken cancellationToken)
     {
         // Email chưa xác minh có thể là của người khác, không được gắn vào tài khoản sẵn có.
@@ -156,12 +165,14 @@ public class GoogleAccountStore(MySqlConnectionFactory connections, TimeProvider
         return accountId;
     }
 
+    // Tạo tên đăng nhập từ phần trước @ của email, bỏ ký tự không hợp lệ.
     public static string NewUsername(string email)
     {
         var name = Regex.Replace(email.Split('@')[0], "[^a-zA-Z0-9_]", "");
         return $"gg_{name[..Math.Min(name.Length, 18)]}_{Convert.ToHexString(RandomNumberGenerator.GetBytes(3)).ToLowerInvariant()}";
     }
 
+    // Tách họ và tên từ dữ liệu Google cho KHACH_HANG.
     public static (string LastName, string FirstName) SplitName(GoogleUser user)
     {
         var first = user.GivenName?.Trim();
@@ -175,6 +186,7 @@ public class GoogleAccountStore(MySqlConnectionFactory connections, TimeProvider
         return ((last ?? "")[..Math.Min((last ?? "").Length, 70)], first[..Math.Min(first.Length, 30)]);
     }
 
+    // Dòng tài khoản đã có, đọc bằng Dapper trong FindOrCreateAsync().
     sealed class ExistingRow
     {
         public int AccountId { get; set; }

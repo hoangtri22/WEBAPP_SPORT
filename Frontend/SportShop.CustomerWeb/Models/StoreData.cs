@@ -1,19 +1,25 @@
 namespace SportShop.CustomerWeb.Models;
 
 
+// Sản phẩm mẫu khi chưa kết nối CSDL.
 public record StoreProduct(int Id, string Name, string Type, string Price, string OldPrice, string Badge, string Image);
 
+// Danh mục mẫu khi chưa kết nối CSDL.
 public record StoreCategory(string Name, string Sub, string Css, string Icon);
 
+// Một dòng phản hồi ở trang cá nhân.
 public record FeedbackRow(string Id, string Product, string Text, string Date, string Status, string Tone, string? Reply = null);
 
+// Câu hỏi khảo sát mẫu.
 public record SurveyQuestion(string Title, string Type, string[] Options);
 
+// Hồ sơ khách hiện ở trang cá nhân.
 public record CustomerProfile(string FullName, string Initials, string Username, string Email, string Phone, string Birth, string Gender, string Tier, int Orders, int Points)
 {
     public string ShortName => string.Join(' ', FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2));
 }
 
+// Một khảo sát ở trang cá nhân.
 public class SurveyItem
 {
     public int Id { get; set; }
@@ -28,10 +34,13 @@ public class SurveyItem
     public bool Done => Status == "hoan_thanh";
 }
 
+// Một lựa chọn của câu hỏi khảo sát.
 public record SurveyOption(int Id, string Text);
 
+// Một câu hỏi khảo sát.
 public record SurveyQ(int Id, string Title, string Type, bool Required, List<SurveyOption> Options);
 
+// Dữ liệu trang làm khảo sát.
 public class SurveyPageVm
 {
     public List<SurveyItem> Items { get; init; } = [];
@@ -41,6 +50,7 @@ public class SurveyPageVm
     public string? Error { get; init; }
 }
 
+// Dữ liệu mẫu hiển thị khi chưa kết nối CSDL.
 public static class StoreData
 {
     public const string HeroImage = "https://images.unsplash.com/photo-1739138053507-0f312a938451?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=90&w=1400";

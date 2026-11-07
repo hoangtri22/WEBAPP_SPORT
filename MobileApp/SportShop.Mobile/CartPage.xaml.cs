@@ -3,6 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Trang giỏ hàng, dùng CartViewModel.
 public partial class CartPage : ContentPage
 {
     private readonly CartViewModel _vm;
@@ -11,6 +12,7 @@ public partial class CartPage : ContentPage
 
     public ICommand RefreshCommand { get; }
 
+    // Nhận CartViewModel, AuthViewModel và bộ dịch vụ để mở các trang khác.
     public CartPage(CartViewModel vm, AuthViewModel auth, IServiceProvider services)
     {
         InitializeComponent();
@@ -20,17 +22,20 @@ public partial class CartPage : ContentPage
         RefreshCommand = new Command(async () => await RefreshCartStateAsync());
     }
 
+    // Kéo làm mới: tải lại giỏ hàng.
     private async void OnRefreshing(object? sender, EventArgs e)
     {
         await RefreshCartStateAsync();
     }
 
+    // Tải lại giỏ mỗi khi mở trang.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
         await RefreshCartStateAsync();
     }
 
+    // Tải giỏ qua CartViewModel.LoadCartAsync() rồi ẩn hiện khu vực đăng nhập, giỏ trống và danh sách.
     private async Task RefreshCartStateAsync()
     {
         GuestLoginCard.IsVisible = !_auth.IsSignedIn;
@@ -39,11 +44,13 @@ public partial class CartPage : ContentPage
         CartContentSection.IsVisible = _vm.HasItems;
     }
 
+    // Rời phiên khách để quay về trang đăng nhập qua AuthViewModel.LeaveAsync().
     private async void OnLoginClicked(object? sender, EventArgs e)
     {
         await _auth.LeaveAsync();
     }
 
+    // Quay về trang sản phẩm MainPage.
     private async void OnContinueShoppingClicked(object? sender, EventArgs e)
     {
         var catalogPage = _services.GetRequiredService<MainPage>();
@@ -53,6 +60,7 @@ public partial class CartPage : ContentPage
             await Navigation.PopAsync();
     }
 
+    // Tăng số lượng dòng giỏ.
     private async void OnIncreaseQtyClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: CartLineItem item })
@@ -63,6 +71,7 @@ public partial class CartPage : ContentPage
         }
     }
 
+    // Giảm số lượng dòng giỏ.
     private async void OnDecreaseQtyClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: CartLineItem item })
@@ -73,6 +82,7 @@ public partial class CartPage : ContentPage
         }
     }
 
+    // Xóa dòng giỏ.
     private async void OnRemoveItemClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: CartLineItem item })
@@ -83,6 +93,7 @@ public partial class CartPage : ContentPage
         }
     }
 
+    // Mở trang thanh toán.
     private async void OnProceedCheckoutClicked(object? sender, EventArgs e)
     {
         if (!_vm.CanProceedToCheckout) return;
@@ -90,18 +101,21 @@ public partial class CartPage : ContentPage
         await Navigation.PushAsync(checkoutPage);
     }
 
+    // Mở trang đơn hàng.
     private async void OnOpenOrdersClicked(object? sender, EventArgs e)
     {
         var ordersPage = _services.GetRequiredService<OrdersPage>();
         await Navigation.PushAsync(ordersPage);
     }
 
+    // Thanh điều hướng: về Trang chủ.
     private async void OnHomeNavClicked(object? sender, EventArgs e)
     {
         if (Navigation.NavigationStack.Count > 1)
             await Navigation.PopToRootAsync();
     }
 
+    // Thanh điều hướng: mở trang sản phẩm.
     private async void OnCatalogNavClicked(object? sender, EventArgs e)
     {
         var catalogPage = _services.GetRequiredService<MainPage>();
@@ -111,11 +125,13 @@ public partial class CartPage : ContentPage
             await Navigation.PopAsync();
     }
 
+    // Thanh điều hướng: tải lại giỏ hàng.
     private async void OnCartNavClicked(object? sender, EventArgs e)
     {
         await RefreshCartStateAsync();
     }
 
+    // Thanh điều hướng: đã đăng nhập thì mở hồ sơ, khách thì mời đăng nhập.
     private async void OnAccountNavClicked(object? sender, EventArgs e)
     {
         if (_auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());

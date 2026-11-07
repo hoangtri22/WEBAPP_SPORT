@@ -3,6 +3,7 @@ using SportShop.Contracts.Catalog;
 
 namespace SportShop.Mobile.ViewModels;
 
+// Một thẻ sản phẩm hiển thị trên MainPage.
 public sealed class ProductCard(ProductSummaryDto product)
 {
     public int Id => product.Id;

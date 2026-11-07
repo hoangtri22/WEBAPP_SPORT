@@ -5,6 +5,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Trang Tổng quan và trang lỗi, đọc dữ liệu qua ShopData.
 public class HomeController(ShopData db) : Controller
 {
     // Trang Tổng quan: tính doanh thu, số đơn hôm nay / hôm qua, nhân viên, khách hàng, phản hồi chưa trả lời, lịch hẹn và 5 đơn gần nhất từ ShopData, truyền sang Home/Index.cshtml qua HomeVm.
@@ -13,7 +14,9 @@ public class HomeController(ShopData db) : Controller
         ViewBag.Menu = "home";
         var today = DateTime.Today;
         var yesterday = today.AddDays(-1);
+        // Tổng doanh thu đơn đã xuất hóa đơn trong ngày d.
         decimal Revenue(DateTime d) => db.Orders.Where(o => o.Invoiced && o.Date.Date == d).Sum(o => o.Total);
+        // Số đơn đặt trong ngày d.
         int OrdersOn(DateTime d) => db.Orders.Count(o => o.Date.Date == d);
         var recent = db.Orders.OrderByDescending(o => o.Id).Take(5).ToList();
         return View(new HomeVm(Revenue(today), Revenue(yesterday), OrdersOn(today), OrdersOn(yesterday),
@@ -22,6 +25,7 @@ public class HomeController(ShopData db) : Controller
             recent, recent.Select(o => o.CustomerId).Distinct().ToDictionary(id => id, id => db.Customer(id).FullName)));
     }
 
+    // Trang lỗi chung (Views/Shared/Error.cshtml).
     [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error() => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });

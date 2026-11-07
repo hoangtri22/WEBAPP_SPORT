@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Html;
 
 namespace SportShop.Admin.Models;
 
+// Bộ icon SVG dùng trong giao diện Admin.
 public static class Icons
 {
     static readonly Dictionary<string, string> Paths = new()

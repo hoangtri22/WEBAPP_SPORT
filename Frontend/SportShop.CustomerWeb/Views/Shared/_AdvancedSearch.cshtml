@@ -1,7 +1,4 @@
-@*
-    Tìm kiếm nâng cao ở trang cửa hàng: từ khóa, từ khóa loại trừ, loại, khoảng giá, size, màu (có ô Không) và cách sắp xếp.
-    Gửi bằng GET đến /Shop (ShopController.Index → ProductQuery → ShopStore.Search), tự mở ra khi đang dùng bộ lọc nâng cao.
-*@
+@* Tìm kiếm nâng cao ở trang cửa hàng: gửi GET đến /Shop (ShopController.Index → ProductQuery → ShopStore.Search), tự mở khi đang dùng bộ lọc nâng cao. *@
 @model AdvancedSearchVm
 @{
     var q = Model.Query;

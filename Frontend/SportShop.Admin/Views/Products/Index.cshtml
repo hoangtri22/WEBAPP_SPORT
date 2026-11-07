@@ -1,6 +1,7 @@
 @model ProductsVm
 @{
     ViewData["Title"] = "Quản lý sản phẩm";
+    // Màu thẻ theo loại sản phẩm.
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
     var variantSection = new TableSection

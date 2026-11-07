@@ -3,6 +3,7 @@ using SportShop.Application;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Cấu hình kết nối MySQL dùng chung cho ShopStore và CustomerStore.
 internal static class StoreDatabase
 {
     // Áp cùng cấu hình kết nối có giới hạn cho các thao tác dùng chung web và mobile.

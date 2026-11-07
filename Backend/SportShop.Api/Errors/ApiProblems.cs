@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SportShop.Api.Errors;
 
+// Tạo ProblemDetails thống nhất cho lỗi của API.
 internal static class ApiProblems
 {
     // Gắn instance, traceId và code vào ProblemDetails.

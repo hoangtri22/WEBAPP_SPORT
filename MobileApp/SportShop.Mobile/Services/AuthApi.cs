@@ -6,6 +6,7 @@ using SportShop.Contracts.Customer;
 
 namespace SportShop.Mobile.Services;
 
+// Các API đăng nhập, đăng ký, làm mới token và thiết bị khách.
 public interface IAuthApi
 {
     Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
@@ -15,6 +16,7 @@ public interface IAuthApi
     Task RegisterGuestAsync(GuestDeviceRequest device, CancellationToken cancellationToken);
 }
 
+// Nơi lưu token của phiên, cài đặt ở SessionStore.
 public interface ISessionStore
 {
     Task<string?> GetAccessTokenAsync();
@@ -24,24 +26,30 @@ public interface ISessionStore
     void Clear();
 }
 
+// Đăng nhập Google, cài đặt ở GoogleSignIn.
 public interface IGoogleSignIn
 {
     Task<TokenResponse?> SignInAsync(CancellationToken cancellationToken);
 }
 
+// Thông tin thiết bị, cài đặt ở DeviceIdentity.
 public interface IDeviceIdentity
 {
     GuestDeviceRequest Current();
 }
 
+// Cài đặt IAuthApi bằng HttpClient.
 public sealed class AuthApi(HttpClient http) : IAuthApi
 {
+    // Gọi API đăng nhập.
     public Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
         => PostTokenAsync("api/v1/auth/login", request, cancellationToken);
 
+    // Gọi API đăng ký.
     public Task<TokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
         => PostTokenAsync("api/v1/auth/register", request, cancellationToken);
 
+    // Gọi API làm mới token.
     public Task<TokenResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
         => PostTokenAsync("api/v1/auth/refresh", new RefreshRequest(refreshToken), cancellationToken);
 
@@ -106,9 +114,11 @@ public sealed class AuthApi(HttpClient http) : IAuthApi
         return new AuthException("Máy chủ chưa xử lý được yêu cầu. Vui lòng thử lại.", rejected);
     }
 
+    // Phần title trong lỗi ProblemDetails của API.
     private sealed record Problem(string? Title);
 }
 
+// Lỗi đăng nhập; rejected cho biết máy chủ đã từ chối phiên.
 public sealed class AuthException(string message, bool rejected = false) : Exception(message)
 {
     public bool Rejected => rejected;

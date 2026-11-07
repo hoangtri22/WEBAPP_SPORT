@@ -4,7 +4,9 @@
     var pending = Model.Items.Where(f => !f.Answered).ToList();
     var answered = Model.Items.Where(f => f.Answered).ToList();
 
+    // Lấy chữ cái đầu của họ và tên khách.
     string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
+    // Nhãn trạng thái của phản hồi.
     string StatusPill(FeedbackItem f) => f.Answered ? "[g]Đã trả lời" : f.Status == "dang_xu_ly" ? "[b]Đang xử lý" : "[o]Chưa trả lời";
 }
 <div class="page-head">

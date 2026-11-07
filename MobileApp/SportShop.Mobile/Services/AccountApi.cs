@@ -4,6 +4,7 @@ using SportShop.Contracts.Customer;
 
 namespace SportShop.Mobile.Services;
 
+// Các API hồ sơ và đổi mật khẩu của khách.
 public interface IAccountApi
 {
     Task<CustomerMeResponse?> GetProfileAsync(CancellationToken cancellationToken);
@@ -56,5 +57,6 @@ public sealed class AccountApi(HttpClient http) : IAccountApi
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw ConnectionError(); }
     }
 
+    // Tạo lỗi không kết nối được máy chủ.
     private static AuthException ConnectionError() => new("Không kết nối được cửa hàng. Vui lòng kiểm tra kết nối và thử lại.");
 }

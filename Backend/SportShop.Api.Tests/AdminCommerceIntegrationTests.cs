@@ -19,6 +19,7 @@ namespace SportShop.Api.Tests;
 [Trait("Category", "MySql")]
 public sealed class AdminCommerceIntegrationTests
 {
+    // Kiểm tra đơn từ app được Admin xử lý, giao xong thì hóa đơn và hạng thành viên hiện được trên app.
     [MySqlFact]
     public void MobileOrder_AdminProcessesAndDelivers_InvoiceAndMembershipAreVisibleToMobile()
     {
@@ -59,6 +60,7 @@ public sealed class AdminCommerceIntegrationTests
         Assert.Equal(9, fixture.Stock(fixture.VariantId));
     }
 
+    // Kiểm tra đơn đã trả tiền đang chờ phải do cửa hàng hủy, hoàn hóa đơn, điểm, tồn kho và voucher.
     [MySqlFact]
     public void AdminPaidPendingOrder_RequiresStoreCancellation_RefundsInvoiceLoyaltyStockAndVoucher()
     {
@@ -93,6 +95,7 @@ public sealed class AdminCommerceIntegrationTests
         Assert.Equal("Thường", fixture.Customers().GetProfile(fixture.CustomerId)!.Tier);
     }
 
+    // Kiểm tra Admin và app dùng cùng lúc không vượt quá một lượt voucher chung.
     [MySqlFact]
     public async Task AdminAndMobile_DifferentCustomersAndVariants_CannotExceedOneSharedVoucherUse()
     {
@@ -130,6 +133,7 @@ public sealed class AdminCommerceIntegrationTests
         }
     }
 
+    // Kiểm tra Admin hủy đơn và app đặt đơn cùng lúc không bị deadlock hay mất điểm.
     [MySqlFact]
     public async Task AdminCancellationAndMobileCheckout_ForSameCustomer_BothCompleteWithoutDeadlockOrLostLoyalty()
     {
@@ -161,6 +165,7 @@ public sealed class AdminCommerceIntegrationTests
         Assert.Equal(0, fixture.InvoiceCount(oldOrder));
     }
 
+    // Dữ liệu thử dùng chung cho test tích hợp Admin và app.
     private sealed class AdminCommerceFixture : IDisposable
     {
         readonly string _connectionString = Environment.GetEnvironmentVariable("SPORTSHOP_TEST_MYSQL")!;
@@ -178,6 +183,7 @@ public sealed class AdminCommerceIntegrationTests
         public ReceiverInfo Receiver { get; } = new("Admin Mobile Customer", "0901234567", "123 Integration Street");
         public AdminContext Employee { get; }
 
+        // Tạo khách, biến thể và tồn kho thử trong CSDL test.
         public AdminCommerceFixture(decimal initialSpent = 0, int initialPoints = 0)
         {
             _configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -202,18 +208,30 @@ public sealed class AdminCommerceIntegrationTests
             PaymentId = connection.ExecuteScalar<int>("INSERT INTO PHUONG_THUC_THANH_TOAN(ten_phuong_thuc_thanh_toan) VALUES (@name); SELECT LAST_INSERT_ID();", new { name = "Integration " + _suffix });
         }
 
+        // Mở kết nối CSDL test.
         MySqlConnection Open() { var connection = new MySqlConnection(_connectionString); connection.Open(); return connection; }
+        // Tạo ShopStore như app dùng.
         public ShopStore Mobile() => new(_configuration, new CartStore(_environment, _configuration), new CatalogCache(_configuration));
+        // Tạo CustomerStore.
         public CustomerStore Customers() => new(_configuration);
+        // Tạo ShopCommands như Admin dùng.
         public AdminCommands Admin() => new(_configuration, _environment, new AdminCache());
+        // Đọc tồn kho của biến thể.
         public int Stock(int variant) { using var c = Open(); return c.ExecuteScalar<int>("SELECT so_luong_ton FROM BIEN_THE_SP WHERE ma_bien_the=@variant", new { variant }); }
+        // Đọc đơn mới nhất của khách.
         public int LatestOrder(int customer) { using var c = Open(); return c.ExecuteScalar<int>("SELECT MAX(ma_don_hang) FROM DON_HANG WHERE ma_khach_hang=@customer", new { customer }); }
+        // Đếm tổng số đơn.
         public long TotalOrders() { using var c = Open(); return c.ExecuteScalar<long>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang IN @customers", new { customers = new[] { CustomerId, OtherCustomerId } }); }
+        // Đếm hóa đơn của đơn.
         public int InvoiceCount(int orderId) { using var c = Open(); return c.ExecuteScalar<int>("SELECT COUNT(*) FROM HOA_DON WHERE ma_don_hang=@orderId", new { orderId }); }
+        // Đếm dòng hóa đơn của đơn.
         public int InvoiceLineCount(int orderId) { using var c = Open(); return c.ExecuteScalar<int>("SELECT COUNT(*) FROM CHI_TIET_HOA_DON ct JOIN HOA_DON hd ON hd.ma_hoa_don=ct.ma_hoa_don WHERE hd.ma_don_hang=@orderId", new { orderId }); }
+        // Đọc tổng chi tiêu và điểm của khách.
         public (decimal Spent, int Points) Loyalty() { using var c = Open(); return c.QuerySingle<(decimal, int)>("SELECT tong_chi_tieu,diem_tich_luy FROM KHACH_HANG WHERE ma_khach_hang=@CustomerId", new { CustomerId }); }
+        // Đọc số lượt đã dùng của voucher.
         public int VoucherUses() { using var c = Open(); return c.ExecuteScalar<int>("SELECT so_luot_da_dung FROM CTKM WHERE ma_ctkm=@id", new { id = _promotionId }); }
 
+        // Dựng form tạo đơn của Admin.
         public AdminForm CreateOrder(bool paid, bool useVoucher) => Form(new Dictionary<string, StringValues>
         {
             ["ma_khach_hang"] = CustomerId.ToString(), ["ten_nguoi_nhan"] = Receiver.Name,
@@ -222,12 +240,15 @@ public sealed class AdminCommerceIntegrationTests
             ["trang_thai_don_hang"] = "cho_xac_nhan", ["trang_thai_thanh_toan"] = paid ? "da_thanh_toan" : "chua_thanh_toan",
             ["dong_bien_the"] = VariantId.ToString(), ["dong_so_luong"] = "1", ["ma_voucher"] = useVoucher ? VoucherCode : ""
         });
+        // Dựng form cập nhật đơn của Admin.
         public AdminForm Update(string status, string paid, string? reason = null) => Form(new Dictionary<string, StringValues>
         {
             ["trang_thai_don_hang"] = status, ["trang_thai_thanh_toan"] = paid, ["ly_do_huy"] = reason ?? ""
         });
+        // Đổi dữ liệu thành form Admin.
         static AdminForm Form(Dictionary<string, StringValues> values) => new(new FormCollection(values));
 
+        // Tạo voucher thử.
         public void CreateVoucher()
         {
             using var c = Open();
@@ -239,6 +260,7 @@ public sealed class AdminCommerceIntegrationTests
             c.Execute("INSERT INTO KM_THEO_VOUCHER(ma_ctkm,ma_voucher,phan_tram_giam) VALUES (@id,@code,10)", new { id = _promotionId, code = VoucherCode });
         }
 
+        // Xóa dữ liệu thử.
         public void Dispose()
         {
             using var c = Open();
@@ -258,6 +280,7 @@ public sealed class AdminCommerceIntegrationTests
         }
     }
 
+    // Môi trường web giả cho ShopCommands và CartStore.
     private sealed class TestEnvironment : IWebHostEnvironment
     {
         public string ApplicationName { get; set; } = "AdminCommerceTests";

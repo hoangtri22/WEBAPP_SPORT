@@ -3,6 +3,7 @@ using SportShop.Contracts.Customer;
 
 namespace SportShop.Mobile.Services;
 
+// Các API quên mật khẩu.
 public interface IPasswordResetApi
 {
     Task SendCodeAsync(string email, CancellationToken cancellationToken);
@@ -12,12 +13,15 @@ public interface IPasswordResetApi
 // Quên mật khẩu không cần đăng nhập nên dùng HttpClient thường, không qua AuthorizedHandler.
 public sealed class PasswordResetApi(HttpClient http) : IPasswordResetApi
 {
+    // Gọi API gửi mã về email.
     public Task SendCodeAsync(string email, CancellationToken cancellationToken)
         => PostAsync("api/v1/auth/password/forgot", new ForgotPasswordRequest(email), cancellationToken);
 
+    // Gọi API đặt lại mật khẩu.
     public Task ResetAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
         => PostAsync("api/v1/auth/password/reset", request, cancellationToken);
 
+    // Gửi POST và đổi phản hồi lỗi thành AuthException.
     private async Task PostAsync<T>(string path, T body, CancellationToken cancellationToken)
     {
         try
@@ -29,5 +33,6 @@ public sealed class PasswordResetApi(HttpClient http) : IPasswordResetApi
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw ConnectionError(); }
     }
 
+    // Tạo lỗi không kết nối được máy chủ.
     private static AuthException ConnectionError() => new("Không kết nối được cửa hàng. Vui lòng kiểm tra kết nối và thử lại.");
 }

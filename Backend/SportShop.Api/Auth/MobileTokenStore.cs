@@ -10,7 +10,9 @@ namespace SportShop.Api.Auth;
 public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider clock)
 {
     const int AccessSeconds = 900;
+    // Tạo token ngẫu nhiên dạng base64url.
     static string NewToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    // Băm SHA-256 token trước khi lưu MOBILE_AUTH_SESSION, không lưu token gốc.
     static string Digest(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     // Cấp token mới: kiểm tra khách còn hoạt động (KHACH_HANG, TAI_KHOAN, VAI_TRO), ghi phiên vào MOBILE_AUTH_SESSION. Gọi từ AuthController.
@@ -102,6 +104,7 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
         return new("Bearer", NewToken(), NewToken(), AccessSeconds, now.AddSeconds(AccessSeconds), now.AddDays(30), customerId);
     }
 
+    // Dòng phiên đăng nhập đọc từ MOBILE_AUTH_SESSION bằng Dapper.
     sealed class TokenRow
     {
         public long SessionId { get; set; }
@@ -116,4 +119,5 @@ public class MobileTokenStore(MySqlConnectionFactory connections, TimeProvider c
     }
 }
 
+// Danh tính đọc được từ access token: mã khách và mã phiên.
 public sealed record TokenIdentity(int CustomerId, long SessionId);

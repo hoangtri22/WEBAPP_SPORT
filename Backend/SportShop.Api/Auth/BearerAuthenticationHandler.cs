@@ -6,6 +6,7 @@ using SportShop.Api.Errors;
 
 namespace SportShop.Api.Auth;
 
+// Xác thực mỗi request API: kiểm tra Bearer token qua MobileTokenStore, hoặc nhận khách vãng lai theo X-Guest-Device-Key qua GuestDeviceStore.
 public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger, UrlEncoder encoder, MobileTokenStore tokens, GuestDeviceStore guests) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
@@ -44,6 +45,7 @@ public sealed class BearerAuthenticationHandler(IOptionsMonitor<AuthenticationSc
         return AuthenticateResult.NoResult();
     }
 
+    // Các đường dẫn cho phép khách vãng lai dùng: giỏ hàng, thanh toán, đơn hàng.
     private static bool IsGuestCommercePath(PathString path) =>
         path.StartsWithSegments("/api/v1/cart", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWithSegments("/api/v1/checkout", StringComparison.OrdinalIgnoreCase) ||

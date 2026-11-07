@@ -3,6 +3,7 @@ using SportShop.CustomerWeb.Models;
 
 namespace SportShop.Api.Controllers;
 
+// API trang nội dung hỗ trợ và giới thiệu, lấy từ InfoPages.
 [ApiController, Route("api/v1/pages")]
 public sealed class ContentController : ControllerBase
 {
@@ -20,4 +21,5 @@ public sealed class ContentController : ControllerBase
         ? Ok(page) : NotFound(Errors.ApiProblems.Create(HttpContext, 404, "RESOURCE_NOT_FOUND", "Không tìm thấy trang thông tin."));
 }
 
+// Tóm tắt một trang nội dung trong danh sách của ContentController.
 public sealed record PageSummary(string Slug, string Eyebrow, string Title, string Intro);

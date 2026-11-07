@@ -8,8 +8,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test API và ViewModel của trang sản phẩm.
 public sealed class CatalogTests
 {
+    // Kiểm tra từ khóa được mã hóa URL và giữ nguyên URL ảnh của backend.
     [Fact]
     public async Task QueryIsEscapedAndBackendImageUrlIsPreserved()
     {
@@ -28,6 +30,7 @@ public sealed class CatalogTests
         Assert.Equal("http://localhost:5080/images/product.jpg", Assert.Single(result.Items).ImageUrl);
     }
 
+    // Kiểm tra phản hồi sai thành lỗi có thể thử lại.
     [Theory]
     [InlineData("null")]
     [InlineData("{\"items\":null,\"page\":1,\"pageSize\":20,\"totalItems\":0}")]
@@ -39,6 +42,7 @@ public sealed class CatalogTests
         await Assert.ThrowsAsync<CatalogException>(() => new CatalogApi(http).GetProductsAsync(null, 1, default));
     }
 
+    // Kiểm tra lỗi máy chủ không lộ nội dung gốc.
     [Fact]
     public async Task ServerFailureDoesNotExposeRawErrorBody()
     {
@@ -48,6 +52,7 @@ public sealed class CatalogTests
         Assert.DoesNotContain("database diagnostics", error.Message);
     }
 
+    // Kiểm tra hủy vẫn là hủy, còn timeout thì thử lại được.
     [Fact]
     public async Task CancellationRemainsCancellationAndTimeoutIsRetryable()
     {
@@ -59,6 +64,7 @@ public sealed class CatalogTests
         await Assert.ThrowsAsync<CatalogException>(() => new CatalogApi(timeoutHttp).GetProductsAsync(null, 1, default));
     }
 
+    // Kiểm tra lỗi trang sau giữ sản phẩm và thử lại đúng trang, từ khóa.
     [Fact]
     public async Task FailedNextPageKeepsProductsAndRetriesSamePageAndQuery()
     {
@@ -84,6 +90,7 @@ public sealed class CatalogTests
         Assert.False(vm.HasError);
     }
 
+    // Kiểm tra làm mới đồng thời không gửi trùng request.
     [Fact]
     public async Task ConcurrentRefreshDoesNotSendDuplicateRequests()
     {
@@ -100,6 +107,7 @@ public sealed class CatalogTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra tìm mới thay kết quả cũ.
     [Fact]
     public async Task NewSearchReplacesPreviousResults()
     {
@@ -113,19 +121,26 @@ public sealed class CatalogTests
         Assert.False(vm.HasMore);
     }
 
+    // Tạo HttpClient dùng Handler giả.
     private static HttpClient Client(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)
         => new(new Handler(respond)) { BaseAddress = new Uri("http://localhost:5080/") };
+    // Tạo sản phẩm mẫu.
     private static ProductSummaryDto Product(int id) => new(id, "Sản phẩm", 1, "Giày", "đôi",
         "http://localhost:5080/images/product.jpg", 150000, 150000, true);
+    // Tạo trang kết quả mẫu.
     private static PagedResponse<ProductSummaryDto> Page(int page, int total, params ProductSummaryDto[] products)
         => new(products, page, 1, total);
+    // HttpMessageHandler giả trả phản hồi theo hàm respond.
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
+        // Trả phản hồi giả.
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => respond(request, cancellationToken);
     }
+    // ICatalogApi giả trả kết quả theo hàm get.
     private sealed class FakeApi(Func<string?, int, CancellationToken, Task<PagedResponse<ProductSummaryDto>>> get) : ICatalogApi
     {
+        // Gọi hàm get đã cài.
         public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, CancellationToken token)
             => get(query, page, token);
     }

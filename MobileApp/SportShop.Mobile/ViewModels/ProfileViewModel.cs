@@ -22,6 +22,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
     private DateTime? _birth;
     private CustomerProfileResponse? _profile;
 
+    // Nhận IAccountApi.
     public ProfileViewModel(IAccountApi api)
     {
         _api = api;
@@ -53,6 +54,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
     public string? Gender { get => _gender; set { _gender = value; Notify(); } }
     public DateTime? Birth { get => _birth; set { _birth = value; Notify(); } }
 
+    // Tải hồ sơ qua IAccountApi.
     public async Task LoadAsync()
     {
         SetBusy(true);
@@ -65,6 +67,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         finally { SetBusy(false); }
     }
 
+    // Kiểm tra rồi lưu hồ sơ.
     private async Task SaveAsync()
     {
         var error = Validate();
@@ -80,6 +83,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         finally { SetBusy(false); }
     }
 
+    // Kiểm tra họ tên, email, số điện thoại, giới tính, ngày sinh; trả về thông báo lỗi nếu sai.
     private string? Validate()
     {
         if (FullName.Trim().Length == 0) return "Vui lòng nhập họ và tên.";
@@ -89,6 +93,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         return Birth?.Date > DateTime.Today ? "Ngày sinh không hợp lệ." : null;
     }
 
+    // Đổ dữ liệu hồ sơ vào các ô.
     private void Apply(CustomerMeResponse me)
     {
         _profile = me.Profile;
@@ -102,6 +107,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         foreach (var name in new[] { nameof(IsLoaded), nameof(Username), nameof(Initials), nameof(SummaryText) }) Notify(name);
     }
 
+    // Hiện thông báo lỗi.
     private void ShowError(string message)
     {
         _errorMessage = message;
@@ -109,6 +115,7 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         NotifyMessages();
     }
 
+    // Bật tắt trạng thái đang xử lý.
     private void SetBusy(bool busy)
     {
         _isBusy = busy;
@@ -119,11 +126,13 @@ public sealed class ProfileViewModel : INotifyPropertyChanged
         SaveCommand.NotifyCanExecuteChanged();
     }
 
+    // Báo giao diện cập nhật các thông báo.
     private void NotifyMessages()
     {
         foreach (var name in new[] { nameof(HasError), nameof(ErrorMessage), nameof(HasStatus), nameof(StatusMessage) }) Notify(name);
     }
 
+    // Báo giao diện cập nhật thuộc tính.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }
@@ -139,6 +148,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
     private string _newPassword = "";
     private string _confirmPassword = "";
 
+    // Nhận IAccountApi và AuthViewModel.
     public ChangePasswordViewModel(IAccountApi api, AuthViewModel auth)
     {
         _api = api;
@@ -157,6 +167,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
     public string NewPassword { get => _newPassword; set { _newPassword = value; Notify(); } }
     public string ConfirmPassword { get => _confirmPassword; set { _confirmPassword = value; Notify(); } }
 
+    // Kiểm tra rồi đổi mật khẩu, xong thì rời phiên.
     private async Task SubmitAsync()
     {
         var error = Validate();
@@ -172,6 +183,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
         finally { SetBusy(false); }
     }
 
+    // Kiểm tra mật khẩu hiện tại và mật khẩu mới, trả về thông báo lỗi nếu sai.
     private string? Validate()
     {
         if (CurrentPassword.Length == 0) return "Vui lòng nhập mật khẩu hiện tại.";
@@ -180,6 +192,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
         return NewPassword == CurrentPassword ? "Mật khẩu mới phải khác mật khẩu hiện tại." : null;
     }
 
+    // Hiện thông báo lỗi.
     private void ShowError(string message)
     {
         _errorMessage = message;
@@ -187,6 +200,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
         Notify(nameof(HasError));
     }
 
+    // Bật tắt trạng thái đang xử lý.
     private void SetBusy(bool busy)
     {
         _isBusy = busy;
@@ -195,6 +209,7 @@ public sealed class ChangePasswordViewModel : INotifyPropertyChanged
         SubmitCommand.NotifyCanExecuteChanged();
     }
 
+    // Báo giao diện cập nhật thuộc tính.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

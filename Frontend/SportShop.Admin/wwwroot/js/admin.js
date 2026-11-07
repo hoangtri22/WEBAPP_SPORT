@@ -157,6 +157,7 @@ function initForm(form) {
     if (!form) return;
     var err = form.querySelector('.form-error');
 
+    // Ẩn hiện các trường có điều kiện data-showwhen theo giá trị đang chọn.
     function applyShowWhen() {
         form.querySelectorAll('[data-showwhen]:not([data-showwhen=""])').forEach(function (w) {
             var p = w.dataset.showwhen.split('='), src = form.elements[p[0]];
@@ -171,10 +172,12 @@ function initForm(form) {
     form.querySelectorAll('.lines').forEach(function (box) {
         var kind = box.dataset.kind, body = box.querySelector('.lines-body'),
             tpl = box.querySelector('.line-tpl'), totalEl = box.querySelector('.js-lines-total');
+        // Đọc giá bán, tồn kho, giá vốn của biến thể đang chọn trên một dòng.
         function info(line) {
             var o = line.querySelector('.js-variant').selectedOptions[0], p = ((o && o.dataset.info) || '').split('|');
             return { price: parseFloat(p[0]) || 0, stock: parseInt(p[1], 10) || 0, cost: parseFloat(p[2]) || 0, isNew: p[3] === 'new' };
         }
+        // Tính lại tiền từng dòng và tổng tiền của form.
         function recalc() {
             var total = 0;
             body.querySelectorAll('.line').forEach(function (line) {
@@ -187,6 +190,7 @@ function initForm(form) {
             });
             totalEl.textContent = money(total);
         }
+        // Thêm một dòng sản phẩm mới từ template.
         function add() {
             body.appendChild(tpl.content.cloneNode(true));
             var line = body.lastElementChild;
@@ -213,6 +217,7 @@ function initForm(form) {
 
     form.querySelectorAll('.vlines').forEach(function (box) {
         var body = box.querySelector('.vlines-body'), tpl = box.querySelector('.vline-tpl'), seq = 0;
+        // Thêm một dòng biến thể mới từ template.
         function add() {
             body.appendChild(tpl.content.cloneNode(true));
             var line = body.lastElementChild, no = ++seq;
@@ -241,6 +246,7 @@ function initForm(form) {
 
     var stSel = form.elements['trang_thai_don_hang'], paySel = form.elements['trang_thai_thanh_toan'];
     if (form.dataset.entity === 'order' && stSel && paySel) {
+        // Đồng bộ trạng thái đơn theo trạng thái thanh toán.
         function syncStatus() {
             var unpaid = paySel.value !== 'da_thanh_toan';
             Array.prototype.forEach.call(stSel.options, function (o) { o.disabled = unpaid && (o.value === 'da_giao' || o.value === 'da_huy'); });
@@ -261,6 +267,7 @@ function initForm(form) {
 
     form.querySelectorAll('.questions').forEach(function (qs) {
         var body = qs.querySelector('.q-body'), tpl = qs.querySelector('.q-tpl'), addBtn = qs.querySelector('.js-add-q');
+        // Gắn sự kiện cho một dòng câu hỏi khảo sát.
         function bind(row) {
             row.querySelector('.js-remove-q').addEventListener('click', function () { row.remove(); });
         }
@@ -303,9 +310,50 @@ function initForm(form) {
     });
 }
 
+// Vẽ nút phân trang vào pagerEl; bấm nút thì gọi go(trang), dùng chung cho bảng .dtable và pagePlainTables().
+function drawPager(pagerEl, page, pages, go) {
+    pagerEl.innerHTML = '';
+    // Thêm một nút phân trang.
+    function add(label, target, disabled, on) {
+        var b = document.createElement('button'); b.type = 'button'; b.innerHTML = label; b.disabled = disabled;
+        if (on) b.className = 'on';
+        b.addEventListener('click', function () { go(target); });
+        pagerEl.appendChild(b);
+    }
+    add('&lsaquo;', page - 1, page === 1);
+    for (var p = 1; p <= pages; p++) add(String(p), p, false, p === page);
+    add('&rsaquo;', page + 1, page === pages);
+}
+
+// Phân trang các bảng .tbl không có thanh phân trang sẵn (trang Tổng quan, Báo cáo, Thống kê, trang chi tiết và khung xem nhanh): tối đa 15 hàng mỗi trang, không chạm bảng nhập liệu .mini trong form.
+function pagePlainTables(root) {
+    var pageSize = 15;
+    root.querySelectorAll('table.tbl:not(.mini)').forEach(function (table) {
+        var card = table.closest('.dtable');
+        if (card && card.querySelector('.pager')) return;
+        var body = table.tBodies[0];
+        if (!body || body.rows.length <= pageSize) return;
+        var rows = Array.prototype.slice.call(body.rows);
+        var pages = Math.ceil(rows.length / pageSize);
+        var bar = document.createElement('div');
+        bar.className = 'pager-bar';
+        bar.innerHTML = '<span class="count"></span><div class="pager"></div>';
+        var wrap = table.closest('.table-wrap, .table-scroll') || table;
+        wrap.parentNode.insertBefore(bar, wrap.nextSibling);
+        // Hiện các hàng của trang được chọn và vẽ lại thanh phân trang.
+        function go(page) {
+            var from = (page - 1) * pageSize;
+            rows.forEach(function (tr, i) { tr.hidden = i < from || i >= from + pageSize; });
+            bar.querySelector('.count').textContent = 'Hiển thị ' + (from + 1) + '–' + Math.min(rows.length, from + pageSize) + ' trong ' + rows.length + ' kết quả';
+            drawPager(bar.querySelector('.pager'), page, pages, go);
+        }
+        go(1);
+    });
+}
+
 // Bảng dữ liệu (.dtable): tìm kiếm (SearchKit.matches), tìm kiếm nâng cao theo từng cột (SearchKit.advancedPanel) và phân trang ngay trên trình duyệt, không gọi máy chủ.
 document.querySelectorAll('.dtable').forEach(function (card) {
-    var pageSize = parseInt(card.dataset.pagesize, 10) || 8;
+    var pageSize = parseInt(card.dataset.pagesize, 10) || 15;
     var rows = Array.prototype.slice.call(card.querySelectorAll('tbody tr'));
     var search = card.querySelector('.search input');
     var countEl = card.querySelector('.count');
@@ -317,6 +365,7 @@ document.querySelectorAll('.dtable').forEach(function (card) {
 
     if (search) search.addEventListener('input', function () { state.q = search.value; state.page = 1; render(); });
 
+    // Lọc hàng theo tìm kiếm rồi vẽ trang hiện tại và thanh phân trang.
     function render() {
         var matched = rows.filter(function (tr) {
             var okQ = SearchKit.matches(tr.textContent, state.q);
@@ -332,19 +381,11 @@ document.querySelectorAll('.dtable').forEach(function (card) {
         var shownTo = Math.min(matched.length, from + pageSize);
         countEl.textContent = matched.length === 0 ? 'Không có kết quả' : 'Hiển thị ' + (from + 1) + '–' + shownTo + ' trong ' + matched.length + ' kết quả';
 
-        pagerEl.innerHTML = '';
-        function add(label, page, disabled, on) {
-            var b = document.createElement('button'); b.type = 'button'; b.innerHTML = label; b.disabled = disabled;
-            if (on) b.className = 'on';
-            b.addEventListener('click', function () { state.page = page; render(); });
-            pagerEl.appendChild(b);
-        }
-        add('&lsaquo;', state.page - 1, state.page === 1);
-        for (var p = 1; p <= pages; p++) add(String(p), p, false, p === state.page);
-        add('&rsaquo;', state.page + 1, state.page === pages);
+        drawPager(pagerEl, state.page, pages, function (page) { state.page = page; render(); });
     }
     render();
 });
+pagePlainTables(document);
 
 // Ctrl + K: đưa con trỏ vào ô tìm kiếm của trang.
 document.addEventListener('keydown', function (e) {
@@ -388,6 +429,7 @@ document.addEventListener('click', function (e) {
         return main.innerHTML;
     }
 
+    // Đóng khung xem nhanh, bỏ đánh dấu dòng và trả lại menu trái nếu đã tự thu gọn.
     function close() {
         panel.hidden = true; current = '';
         document.body.classList.remove('peek-open');
@@ -395,12 +437,15 @@ document.addEventListener('click', function (e) {
         rows.forEach(function (r) { r.classList.remove('peek-on'); });
     }
 
+    // Hiện nội dung đã tải trong khung xem nhanh.
     function show(url) {
         panel.innerHTML = cache[url];
+        pagePlainTables(panel);
         panel.scrollTop = 0; panel.hidden = false;
         document.body.classList.add('peek-open');
         if (window.innerWidth < 1600 && !document.body.classList.contains('collapsed')) { document.body.classList.add('collapsed'); autoCollapsed = true; }
     }
+    // Mở chi tiết của dòng tr: dùng bản đã lưu hoặc tải qua fetch.
     function open(tr) {
         var url = tr.getAttribute('data-peek');
         rows.forEach(function (r) { r.classList.toggle('peek-on', r === tr); });
@@ -424,12 +469,12 @@ document.addEventListener('click', function (e) {
             var url = tr.getAttribute('data-peek');
             rows.forEach(function (r) { r.classList.toggle('peek-on', r === tr); });
             current = url;
-            if (cache[url]) { master.innerHTML = cache[url]; master.scrollTop = 0; return; }
+            if (cache[url]) { master.innerHTML = cache[url]; pagePlainTables(master); master.scrollTop = 0; return; }
             fetch(url, { credentials: 'same-origin' })
                 .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
                 .then(function (html) {
                     cache[url] = build(url, html);
-                    if (current === url && cache[url]) { master.innerHTML = cache[url]; master.scrollTop = 0; }
+                    if (current === url && cache[url]) { master.innerHTML = cache[url]; pagePlainTables(master); master.scrollTop = 0; }
                 })
                 .catch(function () { if (current === url) showToast('Không tải được chi tiết hóa đơn, vui lòng thử lại.', true); });
         };

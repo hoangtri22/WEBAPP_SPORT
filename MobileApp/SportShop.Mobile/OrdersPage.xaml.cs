@@ -3,6 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Trang đơn hàng, dùng OrdersViewModel.
 public partial class OrdersPage : ContentPage
 {
     private readonly OrdersViewModel _vm;
@@ -10,6 +11,7 @@ public partial class OrdersPage : ContentPage
 
     public ICommand RefreshCommand { get; }
 
+    // Nhận OrdersViewModel và bộ dịch vụ để mở các trang khác.
     public OrdersPage(OrdersViewModel vm, IServiceProvider services)
     {
         InitializeComponent();
@@ -18,11 +20,13 @@ public partial class OrdersPage : ContentPage
         RefreshCommand = new Command(async () => await _vm.LoadOrdersAsync(forceReload: true));
     }
 
+    // Kéo làm mới: tải lại đơn hàng.
     private async void OnRefreshing(object? sender, EventArgs e)
     {
         await _vm.LoadOrdersAsync(forceReload: true);
     }
 
+    // Tải đơn hàng khi mở trang.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -30,18 +34,21 @@ public partial class OrdersPage : ContentPage
         await _vm.LoadOrdersAsync(forceReload: true);
     }
 
+    // Chọn đơn để xem chi tiết.
     private void OnOrderCardTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is OrderMasterCard card)
             _vm.SelectedOrder = card;
     }
 
+    // Lọc đơn theo tab trạng thái.
     private void OnStatusTabTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is OrderStatusTabItem tab)
             _vm.SelectedStatusFilter = tab.Key;
     }
 
+    // Lọc đơn theo nút trạng thái.
     private void OnStatusFilterClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: string status })
@@ -50,6 +57,7 @@ public partial class OrdersPage : ContentPage
             _vm.SelectedStatusFilter = tab.Key;
     }
 
+    // Mở trang sản phẩm để mua hàng.
     private async void OnShopNowClicked(object? sender, EventArgs e)
     {
         var catalogPage = _services.GetRequiredService<MainPage>();
@@ -59,6 +67,7 @@ public partial class OrdersPage : ContentPage
             await Navigation.PopToRootAsync();
     }
 
+    // Hỏi xác nhận rồi hủy đơn.
     private async void OnCancelOrderCardClicked(object? sender, EventArgs e)
     {
         if (sender is not Button { CommandParameter: OrderMasterCard card } || !card.CanCancel)

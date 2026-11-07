@@ -13,6 +13,7 @@ using SportShop.CustomerWeb.Services;
 
 namespace SportShop.Api.Controllers;
 
+// API đặt, xem và hủy đơn hàng của khách, xử lý qua ShopStore; khách vãng lai cập nhật liên hệ qua GuestDeviceStore.
 [ApiController, Route("api/v1/orders"), Authorize(Roles = "Customer")]
 [ProducesResponseType<ProblemDetails>(400)]
 [ProducesResponseType<ProblemDetails>(401)]

@@ -2,15 +2,18 @@ using System.Collections.Concurrent;
 
 namespace SportShop.CustomerWeb.Services;
 
+// Giới hạn số lần đăng nhập sai trong bộ nhớ, dùng chung cho web khách và API.
 public class LoginThrottle
 {
     const int MaxFailures = 5;
     static readonly long LockForMs = (long)TimeSpan.FromMinutes(5).TotalMilliseconds;
     const long NotLocked = long.MinValue;
 
+    // Số lần sai và thời điểm hết khóa của một khóa đăng nhập.
     record Attempt(int Failures, long LockedUntilMs);
     readonly ConcurrentDictionary<string, Attempt> _attempts = new();
 
+    // Tạo khóa đếm từ tên đăng nhập và IP.
     static string Key(string username, string? ip) => username.Trim().ToLowerInvariant() + "|" + ip;
     static long Now => Environment.TickCount64;
 

@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Quản lý sản phẩm, loại sản phẩm và nhập Excel; đọc qua ShopData, ghi qua ShopCommands.
 public class ProductsController(ShopData db, ShopCommands cmd) : Controller
 {
     // Xuất sản phẩm đang bán và biến thể ra Excel (cột A–I); cũng là file mẫu cho nút "Nhập Excel" (ImportExcel).

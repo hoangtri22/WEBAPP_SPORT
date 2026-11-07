@@ -7,11 +7,14 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test hồ sơ, đổi mật khẩu và xử lý phiên của API.
 public sealed class ProfileTests
 {
+    // Tạo hồ sơ mẫu.
     static CustomerMeResponse Me(string gender = "Nam", string birth = "2000-05-20", string phone = "0901234567") => new(1,
         new CustomerProfileResponse("Nguyễn Minh", "NM", "minh", "minh@example.com", phone, birth, gender, "Bạc", 3, 120), ["Chạy bộ"]);
 
+    // Kiểm tra tải hồ sơ điền vào form.
     [Fact]
     public async Task LoadFillsFormFromApi()
     {
@@ -23,6 +26,7 @@ public sealed class ProfileTests
         Assert.Equal("Nam", vm.Gender);
     }
 
+    // Kiểm tra chưa tải xong thì không lưu được.
     [Fact]
     public async Task CannotSaveBeforeProfileLoads()
     {
@@ -34,6 +38,7 @@ public sealed class ProfileTests
         Assert.False(vm.SaveCommand.CanExecute(null));
     }
 
+    // Kiểm tra lưu giữ sở thích và hiện thông báo.
     [Fact]
     public async Task SaveKeepsInterestsAndShowsStatus()
     {
@@ -48,6 +53,7 @@ public sealed class ProfileTests
         Assert.Equal(new DateTime(2000, 5, 20), account.Update.Birth);
     }
 
+    // Kiểm tra hồ sơ sai không được gửi.
     [Theory]
     [InlineData("", "minh@example.com", "0901234567", "Nam")]
     [InlineData("Minh", "sai-email", "0901234567", "Nam")]
@@ -64,6 +70,7 @@ public sealed class ProfileTests
         Assert.True(vm.HasError);
     }
 
+    // Kiểm tra giới tính lạ phải chọn lại trước khi lưu.
     [Fact]
     public async Task UnknownGenderMustBeChosenBeforeSaving()
     {
@@ -72,6 +79,7 @@ public sealed class ProfileTests
         Assert.Null(vm.Gender);
     }
 
+    // Kiểm tra đổi mật khẩu sai không được gửi.
     [Theory]
     [InlineData("", "moi123", "moi123", "hiện tại")]
     [InlineData("cu1234", "ngan", "ngan", "6 ký tự")]
@@ -87,6 +95,7 @@ public sealed class ProfileTests
         Assert.Contains(expected, vm.ErrorMessage);
     }
 
+    // Kiểm tra đổi mật khẩu xong thì rời phiên và yêu cầu đăng nhập lại.
     [Fact]
     public async Task PasswordChangeSignsOutAndAsksToLoginAgain()
     {
@@ -103,6 +112,7 @@ public sealed class ProfileTests
         Assert.Equal("", vm.NewPassword);
     }
 
+    // Kiểm tra sai mật khẩu hiện tại thì giữ phiên.
     [Fact]
     public void WrongCurrentPasswordKeepsSession()
     {
@@ -115,6 +125,7 @@ public sealed class ProfileTests
         Assert.Equal("Mật khẩu hiện tại không đúng.", vm.ErrorMessage);
     }
 
+    // Kiểm tra API tài khoản đọc được title lỗi.
     [Fact]
     public async Task AccountApiReadsProblemTitle()
     {
@@ -124,6 +135,7 @@ public sealed class ProfileTests
         Assert.Equal("Email đã được sử dụng.", error.Message);
     }
 
+    // Kiểm tra CommerceApi làm mới token qua SessionManager.
     [Fact]
     public async Task CommerceRenewsThroughSessionManager()
     {
@@ -135,6 +147,7 @@ public sealed class ProfileTests
         Assert.Equal(["cu", "moi"], server.Tokens);
     }
 
+    // Kiểm tra CommerceApi dừng khi không làm mới được phiên.
     [Fact]
     public async Task CommerceStopsWhenSessionCannotBeRenewed()
     {
@@ -143,6 +156,7 @@ public sealed class ProfileTests
         Assert.Contains("hết hạn", error.Message);
     }
 
+    // Tạo AuthViewModel và tín hiệu báo rời phiên.
     static (AuthViewModel Vm, TaskCompletionSource Left) Auth(ISessionManager session)
     {
         var left = new TaskCompletionSource();
@@ -151,11 +165,14 @@ public sealed class ProfileTests
         return (vm, left);
     }
 
+    // Tạo HttpClient dùng FixedServer.
     static HttpClient Client(HttpStatusCode status, object body)
         => new(new FixedServer(status, body)) { BaseAddress = new Uri("http://localhost:5080/") };
 
+    // HttpMessageHandler giả trả cố định một phản hồi.
     sealed class FixedServer(HttpStatusCode status, object body) : HttpMessageHandler
     {
+        // Trả phản hồi cố định.
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(new HttpResponseMessage(status) { Content = JsonContent.Create(body) });
     }
@@ -165,6 +182,7 @@ public sealed class ProfileTests
     {
         public readonly List<string?> Tokens = [];
 
+        // Trả phản hồi giả.
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var token = request.Headers.Authorization?.Parameter;
@@ -175,6 +193,7 @@ public sealed class ProfileTests
         }
     }
 
+    // IAccountApi giả ghi lại lần gọi.
     sealed class FakeAccount : IAccountApi
     {
         public CustomerMeResponse? Profile;
@@ -183,8 +202,10 @@ public sealed class ProfileTests
         public AuthException? PasswordFailure;
         public readonly TaskCompletionSource Saved = new();
 
+        // Trả hồ sơ mẫu.
         public Task<CustomerMeResponse?> GetProfileAsync(CancellationToken cancellationToken) => Task.FromResult(Profile);
 
+        // Ghi lại yêu cầu cập nhật hoặc ném lỗi đã cài.
         public Task<CustomerMeResponse> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken)
         {
             Update = request;
@@ -192,6 +213,7 @@ public sealed class ProfileTests
             return Task.FromResult(Profile!);
         }
 
+        // Ghi lại yêu cầu đổi mật khẩu hoặc ném lỗi đã cài.
         public Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken)
         {
             if (PasswordFailure is not null) return Task.FromException(PasswordFailure);
@@ -200,6 +222,7 @@ public sealed class ProfileTests
         }
     }
 
+    // ISessionManager giả ghi lại lần gọi.
     sealed class FakeSession : ISessionManager
     {
         public bool SignedOut;
@@ -207,16 +230,21 @@ public sealed class ProfileTests
         public string? Rejected;
         public bool IsSignedIn => !SignedOut;
         public event Action? Expired { add { } remove { } }
+        // Luôn có phiên để khôi phục.
         public Task<bool> RestoreAsync(CancellationToken cancellationToken) => Task.FromResult(true);
+        // Không làm gì khi bắt đầu phiên.
         public Task StartAsync(TokenResponse tokens) => Task.CompletedTask;
+        // Trả access token giả.
         public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken) => Task.FromResult<string?>("cu");
 
+        // Trả token giả khi làm mới.
         public Task<string?> RenewAsync(string rejectedAccessToken, CancellationToken cancellationToken)
         {
             Rejected = rejectedAccessToken;
             return Task.FromResult(Renewed);
         }
 
+        // Ghi lại lần đăng xuất.
         public Task SignOutAsync()
         {
             SignedOut = true;
@@ -224,17 +252,25 @@ public sealed class ProfileTests
         }
     }
 
+    // IAuthApi giả không dùng tới.
     sealed class NoAuthApi : IAuthApi
     {
+        // Không dùng trong test này.
         public Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        // Không dùng trong test này.
         public Task<TokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        // Không dùng trong test này.
         public Task<TokenResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken) => throw new NotSupportedException();
+        // Không làm gì khi đăng xuất.
         public Task LogoutAsync(string accessToken, CancellationToken cancellationToken) => Task.CompletedTask;
+        // Không làm gì khi gửi thiết bị.
         public Task RegisterGuestAsync(GuestDeviceRequest device, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
+    // IDeviceIdentity giả.
     sealed class FakeDevice : IDeviceIdentity
     {
+        // Trả thiết bị mẫu.
         public GuestDeviceRequest Current() => new("abcd1234", "Điện thoại Minh", "Samsung SM-A52", "Android", "14");
     }
 }

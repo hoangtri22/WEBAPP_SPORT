@@ -6,6 +6,7 @@
     string controller = ViewContext.RouteData.Values["controller"] as string ?? "";
     string action = ViewContext.RouteData.Values["action"] as string ?? "";
     string current = controller == "Home" ? "home" : controller == "Customer" ? action.ToLowerInvariant() : "";
+    // Trả lớp active cho mục đang mở.
     string On(string key) => current == key ? "active" : "";
 }
 <div class="shop-promo">

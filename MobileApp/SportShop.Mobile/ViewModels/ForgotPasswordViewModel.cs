@@ -18,6 +18,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
     private string _newPassword = "";
     private string _confirmPassword = "";
 
+    // Nhận IPasswordResetApi.
     public ForgotPasswordViewModel(IPasswordResetApi api)
     {
         _api = api;
@@ -43,6 +44,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
     public string NewPassword { get => _newPassword; set { _newPassword = value; Notify(); } }
     public string ConfirmPassword { get => _confirmPassword; set { _confirmPassword = value; Notify(); } }
 
+    // Gửi mã về email.
     private async Task SendCodeAsync()
     {
         if (!Regex.IsMatch(Email.Trim(), @"^[^\s@]+@[^\s@]+\.[^\s@]+$")) { ShowError("Email chưa đúng định dạng."); return; }
@@ -57,6 +59,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
         finally { SetBusy(false); }
     }
 
+    // Đặt lại mật khẩu bằng mã.
     private async Task ResetAsync()
     {
         var error = Validate();
@@ -72,6 +75,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
         finally { SetBusy(false); }
     }
 
+    // Kiểm tra mã 6 số và mật khẩu mới, trả về thông báo lỗi nếu sai.
     private string? Validate()
     {
         if (!Regex.IsMatch(Code.Trim(), @"^\d{6}$")) return "Mã xác nhận gồm 6 chữ số.";
@@ -79,6 +83,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
         return NewPassword == ConfirmPassword ? null : "Mật khẩu xác nhận chưa khớp.";
     }
 
+    // Hiện thông báo lỗi.
     private void ShowError(string message)
     {
         _errorMessage = message;
@@ -86,6 +91,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
         Notify(nameof(HasError));
     }
 
+    // Bật tắt trạng thái đang xử lý.
     private void SetBusy(bool busy)
     {
         _isBusy = busy;
@@ -95,6 +101,7 @@ public sealed class ForgotPasswordViewModel : INotifyPropertyChanged
         ResetCommand.NotifyCanExecuteChanged();
     }
 
+    // Báo giao diện cập nhật thuộc tính.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

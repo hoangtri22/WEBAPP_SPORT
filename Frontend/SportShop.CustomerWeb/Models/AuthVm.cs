@@ -1,5 +1,6 @@
 namespace SportShop.CustomerWeb.Models;
 
+// Dữ liệu trang đăng nhập, đăng ký (Views/Account/Auth.cshtml).
 public class AuthVm
 {
     public bool IsRegister { get; init; }

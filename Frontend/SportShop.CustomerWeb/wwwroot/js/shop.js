@@ -28,6 +28,7 @@ document.addEventListener('click', function (e) {
     var bar = document.getElementById('shopSearch');
     if (!bar) return;
     var input = document.getElementById('shopSearchInput');
+    // Bật tắt thanh tìm kiếm.
     function toggle(open) {
         bar.hidden = !(open === undefined ? bar.hidden : open);
         if (!bar.hidden) input.focus();

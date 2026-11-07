@@ -35,6 +35,7 @@ var SearchKit = (function () {
     function columnType(cells) {
         var filled = cells.filter(function (t) { return t && t !== '-'; });
         if (filled.length === 0) return { type: 'text' };
+        // Kiểm tra đa số giá trị của cột thỏa điều kiện test.
         function most(test) { return filled.filter(test).length >= Math.max(1, Math.ceil(filled.length * 0.6)); }
         if (most(function (t) { return parseDate(t) !== null; })) return { type: 'date' };
         if (most(function (t) { return /\d\s*[₫đ]/.test(t); })) return { type: 'money' };
@@ -107,16 +108,22 @@ var SearchKit = (function () {
 
         var conds = [];
 
+        // Thoát ký tự HTML.
         function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+        // Dựng thẻ option từ danh sách cặp giá trị và nhãn.
         function options(pairs) { return pairs.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + '</option>'; }).join(''); }
+        // Điều kiện đã có giá trị lọc chưa.
         function isActive(c) { return c.value.value !== ''; }
+        // Đếm số điều kiện đang có giá trị.
         function count() { return conds.filter(isActive).length; }
+        // Cập nhật số đếm trên nút và lọc lại bảng khi điều kiện đổi.
         function changed() {
             var n = count(), badge = btn.querySelector('.adv-count');
             if (badge) { badge.textContent = n; badge.hidden = n === 0; }
             onChange();
         }
 
+        // Dựng ô nhập giá trị theo kiểu của cột đang chọn.
         function buildValue(c) {
             var f = fields[c.field.selectedIndex], el;
             if (f.type === 'choice') {
@@ -134,10 +141,12 @@ var SearchKit = (function () {
             c.op.innerHTML = options(OPS[f.type]);
         }
 
+        // Sắp xếp nhãn nối của các dòng điều kiện.
         function layout() {
             conds.forEach(function (c, i) { c.join.hidden = i === 0; c.lead.hidden = i !== 0; });
         }
 
+        // Thêm một dòng điều kiện lọc.
         function addCondition() {
             var row = document.createElement('div');
             row.className = 'adv-row';

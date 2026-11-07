@@ -5,6 +5,7 @@ using SportShop.Application.Health;
 
 namespace SportShop.Infrastructure;
 
+// Đăng ký dịch vụ của tầng Infrastructure.
 public static class DependencyInjection
 {
     // Đăng ký các dịch vụ đọc MySQL của API. Gọi từ Program.cs.

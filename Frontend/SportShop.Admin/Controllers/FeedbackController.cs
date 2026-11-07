@@ -3,6 +3,7 @@ using SportShop.Admin.Models;
 
 namespace SportShop.Admin.Controllers;
 
+// Phản hồi khách hàng và khảo sát, đọc dữ liệu qua ShopData.
 public class FeedbackController(ShopData db) : Controller
 {
     // Hộp thư phản hồi từ ShopData.FeedbackItems (PHAN_HOI + TRA_LOI_PHAN_HOI); trả lời gửi qua CrudController.Act với action "feedback_reply".

@@ -40,6 +40,7 @@ public static class PasswordStorage
     public static string? Reveal(string stored)
         => !IsEncoded(stored) ? stored : stored.StartsWith(Reversible, StringComparison.Ordinal) ? Decrypt(stored) : null;
 
+    // Kiểm tra mật khẩu đã lưu ở dạng mã hóa AES-GCM chưa.
     public static bool IsEncoded(string password) => password.StartsWith(Prefix, StringComparison.Ordinal);
 
     // So mật khẩu nhập với bản lưu: bản AES-GCM thì giải mã, bản PBKDF2 cũ thì tính lại, mật khẩu demo thì so trực tiếp.

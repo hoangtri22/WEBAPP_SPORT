@@ -6,6 +6,7 @@ using SportShop.Application;
 
 namespace SportShop.Infrastructure;
 
+// Mở kết nối MySQL theo chuỗi kết nối trong cấu hình.
 public sealed class MySqlConnectionFactory(IConfiguration configuration)
 {
     public const int CommandTimeoutSeconds = 5;

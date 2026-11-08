@@ -443,7 +443,7 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
 .toolbar .js-adv { height: 40px; padding: 0 14px; font-size: 13.5px; }
 .adv-panel { margin: 0 24px 12px; padding: 10px 14px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fafbfc; }
 .adv-rows { display: grid; gap: 8px; }
-.adv-row { display: grid; grid-template-columns: 76px 84px minmax(120px, 1fr) minmax(120px, 1fr) minmax(150px, 1.4fr) 32px; gap: 8px; align-items: center; }
+.adv-row { display: grid; grid-template-columns: 76px 84px minmax(160px, 1fr) minmax(220px, 2fr) 32px; gap: 8px; align-items: center; }
 .adv-row select, .adv-row input { width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; color: var(--ink); }
 .adv-row select:focus, .adv-row input:focus { outline: 0; border-color: var(--teal); box-shadow: 0 0 0 2px rgba(15, 118, 110, .12); }
 .adv-lead { font-size: 12.5px; font-weight: 600; color: var(--muted); padding-left: 4px; }

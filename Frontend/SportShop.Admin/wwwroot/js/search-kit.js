@@ -45,15 +45,10 @@ var SearchKit = (function () {
         return { type: 'text' };
     }
 
-    // Toán tử quan hệ theo kiểu cột: chữ (chứa, không chứa, bằng, khác, bắt đầu bằng), số / tiền / ngày (=, ≠, >, ≥, <, ≤), danh sách chọn (=, ≠).
-    var COMPARE_OPS = [['eq', '= (bằng)'], ['neq', '≠ (khác)'], ['gt', '> (lớn hơn)'], ['gte', '≥ (từ)'], ['lt', '< (nhỏ hơn)'], ['lte', '≤ (đến)']];
-    var OPS = {
-        text: [['contains', 'chứa'], ['notcontains', 'không chứa'], ['eq', 'bằng'], ['neq', 'khác'], ['starts', 'bắt đầu bằng']],
-        number: COMPARE_OPS, money: COMPARE_OPS, date: COMPARE_OPS,
-        choice: [['eq', '= (bằng)'], ['neq', '≠ (khác)']]
-    };
+    // Toán tử quan hệ dùng ngầm theo kiểu cột (không có ô chọn trên giao diện): số / tiền / ngày dùng ≥ (nhập 1.000.000 thì ra mọi dòng từ 1.000.000 trở lên), danh sách chọn dùng = (bằng), chữ dùng "chứa".
+    var DEFAULT_OP = { number: 'gte', money: 'gte', date: 'gte', choice: 'eq', text: 'contains' };
 
-    // So sánh hai giá trị đã quy về số (số, tiền, mốc thời gian) theo toán tử quan hệ.
+    // So sánh hai giá trị đã quy về số (số, tiền, mốc thời gian) theo toán tử quan hệ: =, ≠, >, ≥, <, ≤.
     function compare(op, a, b) {
         switch (op) {
             case 'eq': return a === b;
@@ -84,7 +79,7 @@ var SearchKit = (function () {
         }
     }
 
-    // Dựng bảng tìm kiếm nâng cao cho .dtable: nút .js-adv mở khung .adv-panel, điều kiện "[Không] cột – toán tử – giá trị" nối bằng Và / Hoặc; onChange() báo khi lọc đổi, trả về { matches(tr), count() }.
+    // Dựng bảng tìm kiếm nâng cao cho .dtable: nút .js-adv mở khung .adv-panel, điều kiện "[Không] cột – giá trị" (toán tử quan hệ theo DEFAULT_OP, toán tử logic Không / Và / Hoặc); onChange() báo khi lọc đổi, trả về { matches(tr), count() }.
     function advancedPanel(card, rows, onChange) {
         var btn = card.querySelector('.js-adv'), panel = card.querySelector('.adv-panel');
         if (!btn || !panel) return null;
@@ -110,8 +105,6 @@ var SearchKit = (function () {
 
         // Thoát ký tự HTML.
         function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
-        // Dựng thẻ option từ danh sách cặp giá trị và nhãn.
-        function options(pairs) { return pairs.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + '</option>'; }).join(''); }
         // Điều kiện đã có giá trị lọc chưa.
         function isActive(c) { return c.value.value !== ''; }
         // Đếm số điều kiện đang có giá trị.
@@ -138,7 +131,6 @@ var SearchKit = (function () {
             }
             if (c.value) c.value.replaceWith(el);
             c.value = el;
-            c.op.innerHTML = options(OPS[f.type]);
         }
 
         // Sắp xếp nhãn nối của các dòng điều kiện.
@@ -165,17 +157,15 @@ var SearchKit = (function () {
             c.not.addEventListener('change', changed);
             c.field = document.createElement('select');
             c.field.innerHTML = fields.map(function (f, i) { return '<option value="' + i + '">' + esc(f.label) + '</option>'; }).join('');
-            c.op = document.createElement('select');
             c.del = document.createElement('button');
             c.del.type = 'button'; c.del.className = 'adv-del'; c.del.setAttribute('aria-label', 'Xóa điều kiện'); c.del.textContent = '×';
             buildValue(c);
             c.field.addEventListener('change', function () { buildValue(c); row.insertBefore(c.value, c.del); changed(); });
-            c.op.addEventListener('change', changed);
             c.del.addEventListener('click', function () {
                 if (conds.length === 1) { c.value.value = ''; } else { conds.splice(conds.indexOf(c), 1); row.remove(); layout(); }
                 changed();
             });
-            row.appendChild(c.join); row.appendChild(c.lead); row.appendChild(c.not); row.appendChild(c.field); row.appendChild(c.op); row.appendChild(c.value); row.appendChild(c.del);
+            row.appendChild(c.join); row.appendChild(c.lead); row.appendChild(c.not); row.appendChild(c.field); row.appendChild(c.value); row.appendChild(c.del);
             conds.push(c); list.appendChild(row); layout();
         }
 
@@ -208,7 +198,7 @@ var SearchKit = (function () {
                 return g.every(function (c) {
                     var f = fields[c.field.selectedIndex];
                     var text = tr.children[f.index] ? tr.children[f.index].textContent.trim() : '';
-                    var ok = test(f.type, c.op.value, c.value.value, text);
+                    var ok = test(f.type, DEFAULT_OP[f.type], c.value.value, text);
                     return c.not.value === 'not' ? !ok : ok;
                 });
             });

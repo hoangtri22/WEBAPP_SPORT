@@ -2,171 +2,81 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
-             x:Class="SportShop.Mobile.HomePage"
+             xmlns:catalog="clr-namespace:SportShop.Contracts.Catalog;assembly=SportShop.Contracts"
+             x:Class="SportShop.Mobile.HomePage" x:DataType="vm:HomeViewModel"
              BackgroundColor="{StaticResource Bg}" Title="Trang chủ">
     <Grid RowDefinitions="Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Padding="18,12" BackgroundColor="White">
             <Label Text="SPORTSHOP" VerticalOptions="Center" FontFamily="OpenSansSemibold" FontSize="20" CharacterSpacing="1.5" TextColor="{StaticResource Teal}" />
-            <ImageButton Grid.Column="1" Source="ic_search_ink.png" WidthRequest="40" HeightRequest="40" Padding="9" BackgroundColor="Transparent" SemanticProperties.Description="Tìm kiếm" />
-            <ImageButton Grid.Column="2" Source="ic_shopping_bag_ink.png" WidthRequest="40" HeightRequest="40" Padding="9" BackgroundColor="Transparent" SemanticProperties.Description="Giỏ hàng" Clicked="OnCartClicked" />
+            <ImageButton Grid.Column="1" Source="ic_search_ink.png" WidthRequest="44" HeightRequest="44" Padding="10" BackgroundColor="Transparent" SemanticProperties.Description="Tìm kiếm sản phẩm" Clicked="OnCatalogClicked" />
+            <ImageButton Grid.Column="2" Source="ic_shopping_bag_ink.png" WidthRequest="44" HeightRequest="44" Padding="10" BackgroundColor="Transparent" SemanticProperties.Description="Giỏ hàng" Clicked="OnCartClicked" />
         </Grid>
-
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Spacing="26" Padding="0,0,0,24">
-                <Border BackgroundColor="{StaticResource TealDark}" StrokeThickness="0" StrokeShape="RoundRectangle 0,0,22,22" Padding="18,12,18,14">
-                    <VerticalStackLayout Spacing="9">
-                        <Grid ColumnDefinitions="*,118" ColumnSpacing="10">
-                            <VerticalStackLayout Spacing="4">
-                                <HorizontalStackLayout Spacing="5">
-                                    <Image Source="ic_sparkles_orange.png" WidthRequest="12" HeightRequest="12" />
-                                    <Label Text="BỘ SƯU TẬP MỚI 2025" FontFamily="OpenSansSemibold" FontSize="9" CharacterSpacing="1" TextColor="{StaticResource TealSoft}" />
-                                </HorizontalStackLayout>
-                                <Label Text="Chuyển động&#10;theo cách của bạn." FontFamily="OpenSansSemibold" FontSize="21" LineHeight="1.05" TextColor="White" />
-                                <Label Text="Khám phá những thiết kế mới nhất, tạo ra để bạn vượt qua mọi giới hạn."
-                                       FontSize="11" MaxLines="2" LineBreakMode="TailTruncation" TextColor="{StaticResource TealSoft}" />
-                            </VerticalStackLayout>
-                            <Border Grid.Column="1" BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 14" HeightRequest="100" VerticalOptions="Center">
-                                <Image Source="img_pegasus.jpg" Aspect="AspectFit" Margin="4" SemanticProperties.Description="Giày Nike Pegasus" />
-                            </Border>
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <Button Text="Mua sắm ngay" Clicked="OnCatalogClicked" BackgroundColor="{StaticResource Orange}" TextColor="White"
-                                    FontFamily="OpenSansSemibold" FontSize="13" CornerRadius="12" HeightRequest="40" Padding="0" />
-                            <Button Grid.Column="1" Text="Khám phá ưu đãi ↗" BackgroundColor="Transparent" TextColor="White" FontSize="12" HeightRequest="40" Padding="4,0" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*,*,*">
-                            <VerticalStackLayout>
-                                <Label Text="45+" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                <Label Text="Khách hàng tin chọn" FontSize="9" TextColor="{StaticResource TealSoft}" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1">
-                                <Label Text="65" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                <Label Text="Sản phẩm chính hãng" FontSize="9" TextColor="{StaticResource TealSoft}" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="2">
-                                <Label Text="4.2/5" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                <Label Text="Đánh giá trung bình" FontSize="9" TextColor="{StaticResource TealSoft}" />
-                            </VerticalStackLayout>
-                        </Grid>
+            <VerticalStackLayout Spacing="22" Padding="0,0,0,24">
+                <Border BackgroundColor="{StaticResource TealDark}" StrokeThickness="0" StrokeShape="RoundRectangle 0,0,22,22" Padding="20">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="CÙNG BẠN VẬN ĐỘNG" FontSize="11" CharacterSpacing="1" TextColor="{StaticResource TealSoft}" />
+                        <Label Text="Chuyển động&#10;theo cách của bạn." FontFamily="OpenSansSemibold" FontSize="28" TextColor="White" />
+                        <Label Text="Khám phá sản phẩm thể thao và chọn phiên bản phù hợp với bạn." FontSize="13" TextColor="{StaticResource TealSoft}" />
+                        <Button Text="Mua sắm ngay" Clicked="OnCatalogClicked" BackgroundColor="{StaticResource Orange}" TextColor="White" CornerRadius="12" />
+                        <Button Text="Khám phá ưu đãi →" Clicked="OnPromotionsClicked" BackgroundColor="Transparent" TextColor="White" />
                     </VerticalStackLayout>
                 </Border>
-
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10" Padding="18,0">
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Padding="18,0">
                     <Border Style="{StaticResource Card}" Padding="12">
-                        <VerticalStackLayout Spacing="4">
-                            <Image Source="ic_truck_teal.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Start" />
+                        <VerticalStackLayout Spacing="6">
+                            <Image Source="ic_truck_teal.png" WidthRequest="24" HeightRequest="24" HorizontalOptions="Start" />
                             <Label Text="Giao hàng miễn phí" Style="{StaticResource BenefitTitle}" />
                             <Label Text="Đơn hàng từ 500.000₫" Style="{StaticResource SmallMuted}" />
                         </VerticalStackLayout>
                     </Border>
                     <Border Grid.Column="1" Style="{StaticResource Card}" Padding="12">
-                        <VerticalStackLayout Spacing="4">
-                            <Image Source="ic_shield_check_teal.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Start" />
+                        <VerticalStackLayout Spacing="6">
+                            <Image Source="ic_shield_check_teal.png" WidthRequest="24" HeightRequest="24" HorizontalOptions="Start" />
                             <Label Text="100% chính hãng" Style="{StaticResource BenefitTitle}" />
-                            <Label Text="Cam kết hoàn tiền" Style="{StaticResource SmallMuted}" />
-                        </VerticalStackLayout>
-                    </Border>
-                    <Border Grid.Row="1" Style="{StaticResource Card}" Padding="12">
-                        <VerticalStackLayout Spacing="4">
-                            <Image Source="ic_activity_teal.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Start" />
-                            <Label Text="Đổi trả trong 30 ngày" Style="{StaticResource BenefitTitle}" />
-                            <Label Text="Nhanh chóng, dễ dàng" Style="{StaticResource SmallMuted}" />
-                        </VerticalStackLayout>
-                    </Border>
-                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}" Padding="12">
-                        <VerticalStackLayout Spacing="4">
-                            <Image Source="ic_headphones_teal.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Start" />
-                            <Label Text="Hỗ trợ tận tâm" Style="{StaticResource BenefitTitle}" />
-                            <Label Text="Từ 8:00 đến 22:00" Style="{StaticResource SmallMuted}" />
+                            <Label Text="Đổi trả trong 30 ngày" Style="{StaticResource SmallMuted}" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>
-
-                <VerticalStackLayout Spacing="12" Padding="18,0">
-                    <VerticalStackLayout Spacing="2">
-                        <Label Text="CHỌN THEO NHU CẦU" Style="{StaticResource Eyebrow}" />
-                        <Label Text="Tìm đúng đồ, chơi đúng chất" Style="{StaticResource SectionTitle}" />
-                    </VerticalStackLayout>
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
-                        <Border BackgroundColor="{StaticResource Teal}" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="14">
-                            <VerticalStackLayout Spacing="10">
-                                <Image Source="ic_zap_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
-                                <VerticalStackLayout>
-                                    <Label Text="Giày chạy bộ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="5 sản phẩm" FontSize="11" TextColor="White" />
-                                </VerticalStackLayout>
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Grid.Column="1" BackgroundColor="#305DA2" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="14">
-                            <VerticalStackLayout Spacing="10">
-                                <Image Source="ic_user_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
-                                <VerticalStackLayout>
-                                    <Label Text="Đồ tập nam" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="11 sản phẩm" FontSize="11" TextColor="White" />
-                                </VerticalStackLayout>
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Grid.Row="1" BackgroundColor="#B1446E" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="14">
-                            <VerticalStackLayout Spacing="10">
-                                <Image Source="ic_sparkles_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
-                                <VerticalStackLayout>
-                                    <Label Text="Đồ tập nữ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="8 sản phẩm" FontSize="11" TextColor="White" />
-                                </VerticalStackLayout>
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Grid.Row="1" Grid.Column="1" BackgroundColor="#C65F16" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="14">
-                            <VerticalStackLayout Spacing="10">
-                                <Image Source="ic_activity_white.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Start" />
-                                <VerticalStackLayout>
-                                    <Label Text="Dụng cụ" FontFamily="OpenSansSemibold" FontSize="14" TextColor="White" />
-                                    <Label Text="17 sản phẩm" FontSize="11" TextColor="White" />
-                                </VerticalStackLayout>
-                            </VerticalStackLayout>
-                        </Border>
-                    </Grid>
+                <VerticalStackLayout Spacing="8" Padding="18,0">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                    <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#B91C1C" />
+                    <Button Text="Làm mới sản phẩm" Clicked="OnRefreshClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource OutlineButton}" />
+                    <Label Text="Hiện chưa có sản phẩm. Vui lòng quay lại sau." IsVisible="{Binding ShowEmpty}" Style="{StaticResource SmallMuted}" />
                 </VerticalStackLayout>
-
-                <VerticalStackLayout Spacing="12">
-                    <VerticalStackLayout Spacing="2" Padding="18,0">
-                        <Label Text="ĐƯỢC YÊU THÍCH NHẤT" Style="{StaticResource Eyebrow}" />
-                        <Label Text="Sản phẩm nổi bật" Style="{StaticResource SectionTitle}" />
-                    </VerticalStackLayout>
-                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                        <HorizontalStackLayout Spacing="8" Padding="18,0">
-                            <Button Text="Tất cả" BackgroundColor="{StaticResource Teal}" TextColor="White" FontSize="13" CornerRadius="16" HeightRequest="34" Padding="16,0" />
-                            <Button Text="Giày" BackgroundColor="White" TextColor="{StaticResource Muted}" BorderColor="{StaticResource Line}" BorderWidth="1" FontSize="13" CornerRadius="16" HeightRequest="34" Padding="16,0" />
-                            <Button Text="Quần áo" BackgroundColor="White" TextColor="{StaticResource Muted}" BorderColor="{StaticResource Line}" BorderWidth="1" FontSize="13" CornerRadius="16" HeightRequest="34" Padding="16,0" />
-                            <Button Text="Phụ kiện" BackgroundColor="White" TextColor="{StaticResource Muted}" BorderColor="{StaticResource Line}" BorderWidth="1" FontSize="13" CornerRadius="16" HeightRequest="34" Padding="16,0" />
-                        </HorizontalStackLayout>
-                    </ScrollView>
-                    <FlexLayout Wrap="Wrap" Direction="Row" Padding="13,0" BindableLayout.ItemsSource="{x:Static vm:HomeSample.Products}">
+                <VerticalStackLayout Spacing="12" Padding="18,0">
+                    <Label Text="CHỌN THEO NHU CẦU" Style="{StaticResource Eyebrow}" />
+                    <Label Text="Danh mục sản phẩm" Style="{StaticResource SectionTitle}" />
+                    <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Categories}">
                         <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="vm:HomeProduct">
+                            <DataTemplate x:DataType="catalog:CategoryDto">
+                                <Button Text="{Binding Name}" CommandParameter="{Binding Id}" Clicked="OnCategoryClicked"
+                                        Margin="0,0,8,8" BackgroundColor="White" TextColor="{StaticResource Teal}"
+                                        BorderColor="{StaticResource Line}" BorderWidth="1" CornerRadius="14" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                </VerticalStackLayout>
+                <VerticalStackLayout Spacing="12">
+                    <VerticalStackLayout Spacing="4" Padding="18,0">
+                        <Label Text="TỪ CỬA HÀNG" Style="{StaticResource Eyebrow}" />
+                        <Label Text="Sản phẩm mới nhất" Style="{StaticResource SectionTitle}" />
+                    </VerticalStackLayout>
+                    <FlexLayout Wrap="Wrap" Direction="Row" Padding="13,0" BindableLayout.ItemsSource="{Binding Products}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProductCard">
                                 <ContentView FlexLayout.Basis="50%" Padding="5">
                                     <Border Style="{StaticResource Card}">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnProductTapped" CommandParameter="{Binding Id}" />
+                                        </Border.GestureRecognizers>
                                         <VerticalStackLayout>
-                                            <Grid HeightRequest="140" BackgroundColor="White">
-                                                <Image Source="{Binding Image}" Aspect="AspectFit" Margin="8" SemanticProperties.Description="{Binding Name}" />
-                                                <Border IsVisible="{Binding HasBadge}" BackgroundColor="{StaticResource Orange}" StrokeThickness="0" StrokeShape="RoundRectangle 8"
-                                                        Padding="8,3" Margin="8" HorizontalOptions="Start" VerticalOptions="Start">
-                                                    <Label Text="{Binding Badge}" FontSize="10" FontFamily="OpenSansSemibold" TextColor="White" />
-                                                </Border>
-                                                <ImageButton Source="ic_heart_muted.png" WidthRequest="34" HeightRequest="34" Padding="8" Margin="4"
-                                                             BackgroundColor="Transparent" HorizontalOptions="End" VerticalOptions="Start" SemanticProperties.Description="Yêu thích" />
-                                            </Grid>
-                                            <VerticalStackLayout Padding="12,8,12,12" Spacing="4">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <Label Text="{Binding Type}" Style="{StaticResource SmallMuted}" MaxLines="1" LineBreakMode="TailTruncation" />
-                                                    <HorizontalStackLayout Grid.Column="1" Spacing="2">
-                                                        <Image Source="ic_star_orange.png" WidthRequest="12" HeightRequest="12" />
-                                                        <Label Text="4.9" Style="{StaticResource SmallMuted}" />
-                                                    </HorizontalStackLayout>
-                                                </Grid>
-                                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="{StaticResource Ink}"
-                                                       MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="38" />
-                                                <Label Text="{Binding Price}" FontFamily="OpenSansSemibold" FontSize="15" TextColor="{StaticResource Teal}" />
-                                                <Label Text="{Binding OldPrice}" IsVisible="{Binding HasOldPrice}" FontSize="11" TextDecorations="Strikethrough" TextColor="{StaticResource Muted}" />
+                                            <Image Source="{Binding ImageUrl}" Aspect="AspectFit" HeightRequest="140" Margin="8" SemanticProperties.Description="{Binding Name}" />
+                                            <VerticalStackLayout Padding="12" Spacing="5">
+                                                <Label Text="{Binding CategoryName}" Style="{StaticResource SmallMuted}" MaxLines="1" />
+                                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="{StaticResource Ink}" MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="40" />
+                                                <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="15" TextColor="{StaticResource Teal}" />
+                                                <Label Text="{Binding StockText}" Style="{StaticResource SmallMuted}" />
                                             </VerticalStackLayout>
                                         </VerticalStackLayout>
                                     </Border>
@@ -176,74 +86,25 @@
                     </FlexLayout>
                     <Button Text="Xem tất cả sản phẩm" Clicked="OnCatalogClicked" Style="{StaticResource OutlineButton}" Margin="18,0" />
                 </VerticalStackLayout>
-
                 <Border Margin="18,0" BackgroundColor="{StaticResource Ink}" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="20">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="CHỈ TRONG TUẦN NÀY" FontFamily="OpenSansSemibold" FontSize="11" CharacterSpacing="1.2" TextColor="{StaticResource Orange}" />
-                            <Label Text="Chạy xa hơn.&#10;Tiết kiệm nhiều hơn." FontFamily="OpenSansSemibold" FontSize="20" TextColor="White" />
-                            <Label Text="Giảm đến 40% các sản phẩm chạy bộ chọn lọc." FontSize="12" TextColor="#C7D0D8" />
-                            <Button Text="Mua ngay" BackgroundColor="{StaticResource Orange}" TextColor="White" FontFamily="OpenSansSemibold"
-                                    CornerRadius="12" HeightRequest="42" HorizontalOptions="Start" Padding="20,0" />
-                        </VerticalStackLayout>
-                        <Border Grid.Column="1" BackgroundColor="{StaticResource Teal}" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="12" VerticalOptions="Center">
-                            <VerticalStackLayout HorizontalOptions="Center">
-                                <Label Text="EXTRA" FontSize="10" TextColor="White" HorizontalTextAlignment="Center" />
-                                <Label Text="15%" FontFamily="OpenSansSemibold" FontSize="24" TextColor="White" HorizontalTextAlignment="Center" />
-                                <Label Text="Nhập mã" FontSize="10" TextColor="White" HorizontalTextAlignment="Center" />
-                                <Label Text="RUN15" FontFamily="OpenSansSemibold" FontSize="13" TextColor="White" HorizontalTextAlignment="Center" />
-                            </VerticalStackLayout>
-                        </Border>
-                    </Grid>
-                </Border>
-
-                <Border Margin="18,0" Style="{StaticResource Card}" Padding="16">
-                    <VerticalStackLayout Spacing="12">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Image Source="ic_mail_teal.png" WidthRequest="24" HeightRequest="24" VerticalOptions="Center" />
-                            <VerticalStackLayout Grid.Column="1">
-                                <Label Text="Đăng ký nhận ưu đãi" Style="{StaticResource BenefitTitle}" FontSize="14" />
-                                <Label Text="Nhận ngay voucher 100.000₫ cho đơn hàng đầu tiên." Style="{StaticResource SmallMuted}" />
-                            </VerticalStackLayout>
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Border Style="{StaticResource FieldBox}">
-                                <Entry Placeholder="Email của bạn" Style="{StaticResource FieldEntry}" Keyboard="Email" />
-                            </Border>
-                            <Button Grid.Column="1" Text="Đăng ký" BackgroundColor="{StaticResource Teal}" TextColor="White" CornerRadius="14" Padding="16,0" />
-                        </Grid>
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="ƯU ĐÃI DÀNH CHO BẠN" Style="{StaticResource Eyebrow}" TextColor="{StaticResource Orange}" />
+                        <Label Text="Chọn mã khuyến mãi phù hợp" FontFamily="OpenSansSemibold" FontSize="20" TextColor="White" />
+                        <Label Text="Xem thời hạn và điều kiện áp dụng trước khi dùng mã ở bước thanh toán." FontSize="13" TextColor="#C7D0D8" />
+                        <Button Text="Xem khuyến mãi" Clicked="OnPromotionsClicked" BackgroundColor="{StaticResource Orange}" TextColor="White" />
                     </VerticalStackLayout>
                 </Border>
+                <VerticalStackLayout Padding="18,0" Spacing="10">
+                    <Label Text="SPORTSHOP luôn sẵn sàng hỗ trợ bạn" Style="{StaticResource BenefitTitle}" />
+                    <Button Text="Chính sách, hướng dẫn và liên hệ" Clicked="OnInfoClicked" Style="{StaticResource OutlineButton}" />
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
-
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" BackgroundColor="White">
-            <BoxView Grid.ColumnSpan="4" HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Start" />
-            <VerticalStackLayout Padding="0,9,0,7" Spacing="3">
-                <Image Source="ic_house_teal.png" WidthRequest="22" HeightRequest="22" />
-                <Label Text="Trang chủ" Style="{StaticResource NavLabel}" TextColor="{StaticResource Teal}" />
-            </VerticalStackLayout>
-            <VerticalStackLayout Grid.Column="1" Padding="0,9,0,7" Spacing="3">
-                <VerticalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnCatalogClicked" />
-                </VerticalStackLayout.GestureRecognizers>
-                <Image Source="ic_layout_grid_muted.png" WidthRequest="22" HeightRequest="22" />
-                <Label Text="Sản phẩm" Style="{StaticResource NavLabel}" />
-            </VerticalStackLayout>
-            <VerticalStackLayout Grid.Column="2" Padding="0,9,0,7" Spacing="3">
-                <VerticalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnCartClicked" />
-                </VerticalStackLayout.GestureRecognizers>
-                <Image Source="ic_shopping_bag_muted.png" WidthRequest="22" HeightRequest="22" />
-                <Label Text="Giỏ hàng" Style="{StaticResource NavLabel}" />
-            </VerticalStackLayout>
-            <VerticalStackLayout Grid.Column="3" Padding="0,9,0,7" Spacing="3">
-                <VerticalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnAccountClicked" />
-                </VerticalStackLayout.GestureRecognizers>
-                <Image Source="ic_user_muted.png" WidthRequest="22" HeightRequest="22" />
-                <Label Text="Tài khoản" Style="{StaticResource NavLabel}" />
-            </VerticalStackLayout>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" Padding="8,4" BackgroundColor="White">
+            <Button Text="Trang chủ" BackgroundColor="Transparent" TextColor="{StaticResource Teal}" FontSize="11" Padding="0" />
+            <Button Grid.Column="1" Text="Sản phẩm" Clicked="OnCatalogClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
+            <Button Grid.Column="2" Text="Giỏ hàng" Clicked="OnCartClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
+            <Button Grid.Column="3" Text="Tài khoản" Clicked="OnAccountClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
         </Grid>
     </Grid>
 </ContentPage>

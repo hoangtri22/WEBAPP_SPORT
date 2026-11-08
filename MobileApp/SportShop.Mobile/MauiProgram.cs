@@ -44,15 +44,32 @@ public static class MauiProgram
         }));
         builder.Services.AddSingleton<IDeviceIdentity, DeviceIdentity>();
         builder.Services.AddSingleton<ICommerceApi, CommerceApi>();
+        builder.Services.AddSingleton<IContentApi>(services => new ContentApi(
+            services.GetRequiredService<HttpClient>(),
+            new HttpClient(new AuthorizedHandler(services.GetRequiredService<ISessionManager>())
+            { InnerHandler = new HttpClientHandler() })
+            {
+                BaseAddress = ApiSettings.BaseUri,
+                Timeout = TimeSpan.FromSeconds(20)
+            }));
 
         builder.Services.AddSingleton<AuthViewModel>();
         builder.Services.AddSingleton<CatalogViewModel>();
+        builder.Services.AddTransient<HomeViewModel>();
+        builder.Services.AddTransient<ProductDetailViewModel>();
+        builder.Services.AddTransient<PromotionsViewModel>();
+        builder.Services.AddTransient<InfoPagesViewModel>();
+        builder.Services.AddTransient<ReviewsViewModel>();
         builder.Services.AddSingleton<CartViewModel>();
         builder.Services.AddSingleton<OrdersViewModel>();
 
         builder.Services.AddTransient<AuthPage>();
         builder.Services.AddTransient<HomePage>();
-        builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddTransient<MainPage>();
+        builder.Services.AddTransient<ProductDetailPage>();
+        builder.Services.AddTransient<PromotionsPage>();
+        builder.Services.AddTransient<InfoPagesPage>();
+        builder.Services.AddTransient<ReviewsPage>();
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<CheckoutPage>();
         builder.Services.AddTransient<OrdersPage>();

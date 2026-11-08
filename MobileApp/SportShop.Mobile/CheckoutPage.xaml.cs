@@ -59,10 +59,6 @@ public partial class CheckoutPage : ContentPage
     // Tiếp tục mua sắm sau khi đặt xong.
     private async void OnContinueShoppingFromDoneClicked(object? sender, EventArgs e)
     {
-        var catalogPage = _services.GetRequiredService<MainPage>();
-        if (catalogPage.Parent is null)
-            await Navigation.PushAsync(catalogPage);
-        else
-            await Navigation.PopToRootAsync();
+        await AppNavigation.OpenCatalogAsync(Navigation, _services);
     }
 }

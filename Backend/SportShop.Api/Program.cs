@@ -19,6 +19,7 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddSportShopInfrastructure();
 builder.Services.AddScoped<CustomerStore>();
 builder.Services.AddScoped<ShopStore>();
+builder.Services.AddScoped<ProductReviewStore>();
 builder.Services.AddSingleton<CartStore>();
 builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<LoginThrottle>();

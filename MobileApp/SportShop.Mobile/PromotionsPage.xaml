@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.PromotionsPage" x:DataType="vm:PromotionsViewModel"
+             Title="Khuyến mãi" BackgroundColor="{StaticResource Bg}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="14">
+            <Label Text="Ưu đãi đang diễn ra" FontSize="24" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
+            <Label Text="Sao chép mã và nhập ở bước thanh toán. Điều kiện áp dụng được cửa hàng kiểm tra theo tài khoản và đơn hàng của bạn." Style="{StaticResource SmallMuted}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource Danger}" AutomationId="PromotionsError" />
+            <Button Text="Tải lại ưu đãi" Clicked="OnReloadClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource OutlineButton}" />
+            <Label Text="Hiện chưa có mã khuyến mãi đang hiệu lực." IsVisible="{Binding ShowEmpty}" Style="{StaticResource SmallMuted}" AutomationId="PromotionsEmpty" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Promotions}" Spacing="14">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PromotionCard">
+                        <Border Padding="18" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 14">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="{Binding Code}" FontSize="20" FontFamily="OpenSansSemibold" TextColor="{StaticResource Teal}" />
+                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
+                                <Label Text="{Binding Discount}" TextColor="{StaticResource Ink}" />
+                                <Label Text="{Binding Conditions}" Style="{StaticResource SmallMuted}" />
+                                <Label Text="{Binding Limit}" Style="{StaticResource SmallMuted}" />
+                                <Label Text="{Binding Validity}" Style="{StaticResource SmallMuted}" />
+                                <Button Text="Sao chép mã" Clicked="OnCopyClicked" Style="{StaticResource OutlineButton}" AutomationId="CopyPromotionCode" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

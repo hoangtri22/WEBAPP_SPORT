@@ -53,11 +53,7 @@ public partial class CartPage : ContentPage
     // Quay về trang sản phẩm MainPage.
     private async void OnContinueShoppingClicked(object? sender, EventArgs e)
     {
-        var catalogPage = _services.GetRequiredService<MainPage>();
-        if (catalogPage.Parent is null)
-            await Navigation.PushAsync(catalogPage);
-        else
-            await Navigation.PopAsync();
+        await AppNavigation.OpenCatalogAsync(Navigation, _services);
     }
 
     // Tăng số lượng dòng giỏ.
@@ -118,11 +114,7 @@ public partial class CartPage : ContentPage
     // Thanh điều hướng: mở trang sản phẩm.
     private async void OnCatalogNavClicked(object? sender, EventArgs e)
     {
-        var catalogPage = _services.GetRequiredService<MainPage>();
-        if (catalogPage.Parent is null)
-            await Navigation.PushAsync(catalogPage);
-        else
-            await Navigation.PopAsync();
+        await AppNavigation.OpenCatalogAsync(Navigation, _services);
     }
 
     // Thanh điều hướng: tải lại giỏ hàng.

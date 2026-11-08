@@ -121,6 +121,107 @@ public sealed class CatalogTests
         Assert.False(vm.HasMore);
     }
 
+    // Bộ lọc đang nhập không làm thay đổi điều kiện của trang tải thêm/retry.
+    [Fact]
+    public async Task PagingKeepsAppliedCategorySortAndStockFilterUntilNewSearch()
+    {
+        var api = new FilteringApi();
+        var vm = new CatalogViewModel(api);
+        await vm.OpenCategoryAsync(3);
+        vm.SelectedSort = vm.SortOptions.Single(option => option.Code == "price_desc");
+        vm.InStockOnly = false;
+        vm.SearchText = "áo";
+        await vm.LoadAsync();
+        vm.SelectedCategory = vm.Categories[0];
+        vm.SelectedSort = vm.SortOptions[0];
+        vm.InStockOnly = true;
+        vm.SearchText = "chưa áp dụng";
+        await vm.LoadAsync(append: true);
+        Assert.Equal(("áo", 2, (int?)3, "price_desc", false), api.Calls[^1]);
+        await vm.LoadAsync();
+        Assert.Equal(("chưa áp dụng", 1, (int?)null, "new", true), api.Calls[^1]);
+    }
+
+    // Lỗi danh mục không chặn sản phẩm; bấm áp dụng sẽ tải lại bộ lọc.
+    [Fact]
+    public async Task CategoryFailureKeepsProductsAvailableAndCanBeRetried()
+    {
+        var api = new FilteringApi { FailCategories = true };
+        var vm = new CatalogViewModel(api);
+        await vm.LoadAsync();
+        Assert.True(vm.HasFilterError);
+        Assert.False(vm.HasError);
+        Assert.Single(vm.Products);
+        api.FailCategories = false;
+        await vm.LoadAsync();
+        Assert.False(vm.HasFilterError);
+        Assert.Equal(2, vm.Categories.Count);
+    }
+
+    // Khi tìm mới lỗi, tải thêm vẫn dùng điều kiện của kết quả đang hiện.
+    [Fact]
+    public async Task FailedNewSearchDoesNotMixPreviousResultsWithNewFilter()
+    {
+        var api = new FilteringApi();
+        var vm = new CatalogViewModel(api);
+        await vm.OpenCategoryAsync(3);
+        api.FailQuery = "offline";
+        vm.SearchText = "offline";
+        vm.SelectedCategory = vm.Categories[0];
+        await vm.LoadAsync();
+        Assert.True(vm.HasError);
+        Assert.Single(vm.Products);
+        await vm.LoadAsync(append: true);
+        Assert.Equal(("", 2, (int?)3, "new", true), api.Calls[^1]);
+        Assert.Equal(2, vm.Products.Count);
+    }
+
+    // Chọn danh mục từ Trang chủ trong khi catalog còn tải không làm mất lựa chọn mới.
+    [Fact]
+    public async Task OpeningCategoryWaitsForPreviousRequestThenAppliesRequestedCategory()
+    {
+        var pending = new TaskCompletionSource<PagedResponse<ProductSummaryDto>>();
+        var api = new FilteringApi { Pending = pending.Task };
+        var vm = new CatalogViewModel(api);
+        var initial = vm.LoadAsync();
+        var opening = vm.OpenCategoryAsync(3);
+        Assert.False(opening.IsCompleted);
+        api.Pending = null;
+        pending.SetResult(Page(1, 1, Product(1)));
+        await initial;
+        await opening;
+        Assert.Equal((int?)3, vm.SelectedCategory!.Id);
+        Assert.Equal(("", 1, (int?)3, "new", true), api.Calls[^1]);
+    }
+
+    // Query gửi API thực sự chứa đủ bộ lọc và không làm hỏng từ khóa tiếng Việt.
+    [Fact]
+    public async Task FilteredRequestUsesBackendCategoryAndSortParameters()
+    {
+        Uri? requested = null;
+        using var http = Client((request, _) =>
+        {
+            requested = request.RequestUri;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Page(1, 0)) });
+        });
+        await new CatalogApi(http).GetProductsAsync("áo & giày", 1, 3, "price_asc", false, default);
+        Assert.Contains("categoryId=3", requested!.Query);
+        Assert.Contains("sort=price_asc", requested.Query);
+        Assert.Contains("inStockOnly=false", requested.Query);
+        Assert.Contains("q=%C3%A1o%20%26%20gi%C3%A0y", requested.AbsoluteUri);
+    }
+
+    // API chi tiết không chấp nhận nhầm ID sản phẩm hoặc dữ liệu biến thể thiếu.
+    [Fact]
+    public async Task DetailRejectsMismatchedProductOrMissingVariants()
+    {
+        using var http = Client((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new ProductDetailDto(99, "Sai sản phẩm", 1, "Giày", "đôi", null, null, 10, 10, true, []))
+        }));
+        await Assert.ThrowsAsync<CatalogException>(() => new CatalogApi(http).GetProductAsync(1));
+    }
+
     // Tạo HttpClient dùng Handler giả.
     private static HttpClient Client(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)
         => new(new Handler(respond)) { BaseAddress = new Uri("http://localhost:5080/") };
@@ -143,5 +244,26 @@ public sealed class CatalogTests
         // Gọi hàm get đã cài.
         public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, CancellationToken token)
             => get(query, page, token);
+    }
+
+    private sealed class FilteringApi : ICatalogApi
+    {
+        public bool FailCategories { get; set; }
+        public string? FailQuery { get; set; }
+        public Task<PagedResponse<ProductSummaryDto>>? Pending { get; set; }
+        public List<(string?, int, int?, string, bool)> Calls { get; } = [];
+        public Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken token = default)
+            => FailCategories ? throw new CatalogException("offline")
+                : Task.FromResult<IReadOnlyList<CategoryDto>>([new(3, "Áo", 2)]);
+        public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, CancellationToken token)
+            => GetProductsAsync(query, page, null, "new", true, token);
+        public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, int? categoryId,
+            string sort, bool inStockOnly, CancellationToken token)
+        {
+            Calls.Add((query, page, categoryId, sort, inStockOnly));
+            if (query == FailQuery && FailQuery is not null) throw new CatalogException("offline");
+            if (Pending is not null) return Pending;
+            return Task.FromResult(Page(page, 2, Product(page)));
+        }
     }
 }

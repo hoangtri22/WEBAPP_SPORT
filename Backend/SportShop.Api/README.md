@@ -14,6 +14,7 @@ App MAUI Android đã có catalog đầu tiên; [chạy trên điện thoại th
 | GET | `/api/v1/categories` | Loại sản phẩm và số sản phẩm đang bán còn hàng |
 | GET | `/api/v1/products` | Tìm kiếm, lọc, sắp xếp, phân trang tại DB |
 | GET | `/api/v1/products/{productId}` | Sản phẩm và các biến thể đang hiện, gồm biến thể hết hàng |
+| GET | `/api/v1/products/{productId}/reviews` | Đánh giá công khai, phân trang, tổng số và sao trung bình; không cần đăng nhập |
 | GET | `/api/v1/promotions` | Voucher đang hiệu lực, còn lượt; chưa xác minh điều kiện riêng của khách |
 | GET | `/api/v1/interests` | Danh mục sở thích thể thao |
 | GET | `/api/v1/payment-methods` | Tất cả phương thức thanh toán đang hoạt động, vẫn mô phỏng như web |
@@ -27,7 +28,7 @@ App MAUI Android đã có catalog đầu tiên; [chạy trên điện thoại th
 | POST | `/api/v1/checkout/quote` | Tính lại giảm/ship/tổng; không giữ tồn/giá |
 | GET, POST | `/api/v1/orders` | Lịch sử phân trang/lọc; đặt giỏ với `Idempotency-Key` |
 | GET, POST | `/api/v1/orders/{orderId}`, `/api/v1/orders/{orderId}/cancel` | Chi tiết đơn riêng; tự hủy đơn chờ chưa thanh toán |
-| GET, POST | `/api/v1/me/feedback` | Lịch sử/trả lời và gửi đánh giá sản phẩm đã nhận |
+| GET, POST | `/api/v1/me/feedback` | Lịch sử/trả lời và gửi đánh giá sản phẩm đã nhận; GET hỗ trợ lọc `productId` |
 | GET | `/api/v1/me/feedback/eligible-products` | Sản phẩm khách đã mua và nhận |
 | GET | `/api/v1/me/surveys`, `/api/v1/me/surveys/{id}` | Danh sách và chi tiết khảo sát được giao |
 | POST | `/api/v1/me/surveys/{id}/responses` | Nộp đáp án một lần, validate option/required/ownership |
@@ -93,6 +94,15 @@ GET /api/v1/products?categoryId=1&q=giay&sort=price_asc&inStockOnly=true&page=1&
 - Sản phẩm/biến thể ẩn và loại lưu trữ `[Đã xóa]` không xuất hiện. Giá/tồn/ảnh tổng hợp chỉ từ biến thể đang hiện.
 
 Payload danh sách có `items, page, pageSize, totalItems, totalPages`. Tiền là số JSON decimal theo VND, không chứa chuỗi định dạng hoặc giá vốn.
+
+Đánh giá công khai: `GET /api/v1/products/{productId}/reviews?page=1&pageSize=20` trả
+`items, page, pageSize, totalItems, averageStars`. Mỗi item có `id, author, stars, content, sentAt, reply`;
+`author` được ẩn danh thành "Khách hàng", không kèm mã khách/đơn hoặc thông tin liên hệ.
+Chỉ `danh_gia` được cho hiển thị (`an_hien=1`) và có 1–5 sao xuất hiện; `reply` là trả lời mới nhất của cửa hàng.
+Thứ tự mới nhất theo ngày gửi rồi mã đánh giá. Tổng và sao trung bình tính trên toàn bộ đánh giá công khai của sản phẩm,
+không chỉ trang hiện tại; `averageStars=null` khi chưa có đánh giá. `pageSize` 1–100, `page` từ 1;
+sản phẩm ẩn/thuộc danh mục lưu trữ trả 404. Không cần migration mới.
+Lịch sử riêng `GET /api/v1/me/feedback?productId=1` vẫn cần bearer; bộ lọc sản phẩm áp dụng trước phân trang.
 
 Ảnh phải thuộc `/images` hoặc `/uploads`; ảnh thiếu/đường dẫn không hợp lệ trả `imageUrl: null`. API chỉ phục vụ định dạng ảnh, không tạo thư mục upload hoặc ghi file. Khi publish, cấu hình `Paths:Images` và `Paths:Uploads` tới kho ảnh thực tế; đường dẫn tương đối được tính từ content root của API, không phải thư mục shell.
 

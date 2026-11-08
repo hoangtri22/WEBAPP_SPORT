@@ -27,11 +27,17 @@ Checkout giữ các phương thức thanh toán mô phỏng như web, chưa có 
 API chạy riêng cổng 5080. Backend cần áp dụng migration 001–003 và local connection string trước khi dùng;
 Media:PublicBaseUrl phải truy cập được từ thiết bị. Màn hình ngoài cùng (`AuthPage`) đăng nhập, đăng ký qua API thật và cho dùng với tư cách khách
 (gửi tên thiết bị lên `POST /api/v1/guest-devices`, cần migration 004; Web Admin hiện ở trang Quản lý khách hàng).
-`HomePage` mới là giao diện theo trang chủ web khách hàng, dữ liệu mẫu trong `ViewModels/HomeSample.cs`, chưa nối API.
+`HomePage` đọc danh mục và sản phẩm thật từ API, mở được danh mục, chi tiết, khuyến mãi và thông tin hỗ trợ.
 Tab Tài khoản mở `ProfilePage`: xem, sửa hồ sơ qua `GET/PUT /api/v1/me`, đăng xuất; `ChangePasswordPage` đổi mật khẩu qua `POST /api/v1/me/password`, API thu hồi mọi phiên nên app về màn hình đăng nhập.
 Màn hình đăng nhập có `ForgotPasswordPage`: gửi OTP 6 số qua email (`POST /api/v1/auth/password/forgot`), rồi đặt lại mật khẩu (`POST /api/v1/auth/password/reset`). Cần migration 005 và mục `Smtp` trong `appsettings.Local.json`; chưa cấu hình thì bản Development ghi mã ra log API.
 Nút Tiếp tục với Google mở `GET /api/v1/auth/google/start` trong trình duyệt; API đổi mã với Google rồi trả vé một lần qua `sportshop://auth`, app đổi vé bằng `POST /api/v1/auth/google/exchange`. Cần migration 006 và mục `Google` trong `appsettings.Local.json`.
-Màn hình chi tiết sản phẩm chưa được triển khai trong app.
+`MainPage` có tìm kiếm, lọc danh mục, sắp xếp mới nhất/giá tăng/giá giảm/tên A–Z, tùy chọn chỉ còn hàng và phân trang.
+`ProductDetailPage` hiển thị biến thể size/màu, ảnh, giá, tồn kho và số lượng; thêm giỏ/mua ngay dùng service giỏ hàng và checkout hiện có.
+`PromotionsPage` đọc voucher đang hiệu lực và cho sao chép mã. `InfoPagesPage` đọc các chính sách và hướng dẫn từ backend.
+`ReviewsPage` xem đánh giá công khai, sao trung bình và trả lời của cửa hàng; khách đã đăng nhập và nhận hàng được gửi đánh giá 1–5 sao,
+theo dõi cả phản hồi đã gửi trong lịch sử riêng. Nội dung công khai tuân theo cờ hiển thị của cửa hàng.
+Backend mới có `GET /api/v1/products/{id}/reviews`; cập nhật API cùng app, không cần migration mới cho luồng này.
+Xem [kiểm kê và kết quả kiểm tra luồng khám phá sản phẩm](PRODUCT_DISCOVERY_REPORT.md).
 Không coi test API là bằng chứng app native đã chạy.
 
 ## Chạy Android thật từ VS Code qua USB

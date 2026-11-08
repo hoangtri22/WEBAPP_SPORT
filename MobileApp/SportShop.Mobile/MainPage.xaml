@@ -4,7 +4,11 @@
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
              x:Class="SportShop.Mobile.MainPage" x:DataType="vm:CatalogViewModel"
              BackgroundColor="#F5F7FA" Title="SportShop">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Padding="18,12,18,0" RowSpacing="14">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Ưu đãi" Clicked="OnPromotionsClicked" />
+        <ToolbarItem Text="Thông tin" Clicked="OnInfoClicked" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" Padding="18,12,18,0" RowSpacing="10">
         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
             <VerticalStackLayout Spacing="0">
                 <Label Text="SPORTSHOP" FontFamily="OpenSansSemibold" FontSize="24" CharacterSpacing="2" TextColor="#102C46" />
@@ -15,11 +19,9 @@
                 <Label Text="BỘ SƯU TẬP" FontSize="10" FontFamily="OpenSansSemibold" TextColor="#237044" />
             </Border>
         </Grid>
-        <Border Grid.Row="1" BackgroundColor="#102C46" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="20,18">
+        <Border Grid.Row="1" BackgroundColor="#102C46" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="16,10">
             <VerticalStackLayout Spacing="6">
-                <Label Text="SẴN SÀNG BỨT PHÁ" TextColor="#F8AC73" FontSize="10" CharacterSpacing="2" />
-                <Label Text="Mỗi ngày,&#10;một bước tiến." TextColor="White" FontSize="27" FontFamily="OpenSansSemibold" LineHeight="1.1" />
-                <Label Text="Khám phá đồ thể thao dành cho bạn." TextColor="#C5D5E2" FontSize="12" />
+                <Label Text="Mỗi ngày, một bước tiến." TextColor="White" FontSize="19" FontFamily="OpenSansSemibold" />
             </VerticalStackLayout>
         </Border>
         <Border Grid.Row="2" BackgroundColor="White" Stroke="#DFE6ED" StrokeShape="RoundRectangle 14">
@@ -28,7 +30,22 @@
                        BackgroundColor="Transparent" TextColor="#102C46" PlaceholderColor="#718293"
                        CancelButtonColor="#102C46" FontSize="14" AutomationId="ProductSearch" />
         </Border>
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" VerticalOptions="Center">
+        <VerticalStackLayout Grid.Row="3" Spacing="4">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Picker Title="Danh mục" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}"
+                        SelectedItem="{Binding SelectedCategory}" IsEnabled="{Binding IsIdle}" AutomationId="CategoryFilter" />
+                <Picker Grid.Column="1" Title="Sắp xếp" ItemsSource="{Binding SortOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedItem="{Binding SelectedSort}" IsEnabled="{Binding IsIdle}" AutomationId="ProductSort" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                <Switch IsToggled="{Binding InStockOnly}" IsEnabled="{Binding IsIdle}" OnColor="#237044" />
+                <Label Grid.Column="1" Text="Chỉ còn hàng" VerticalOptions="Center" FontSize="12" TextColor="#607487" />
+                <Button Grid.Column="2" Text="Tìm / Áp dụng" Command="{Binding SearchCommand}" FontSize="12"
+                        BackgroundColor="#102C46" TextColor="White" CornerRadius="10" AutomationId="ApplyCatalogFilters" />
+            </Grid>
+            <Label Text="{Binding FilterError}" IsVisible="{Binding HasFilterError}" TextColor="#8B3D1A" FontSize="11" />
+        </VerticalStackLayout>
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto" VerticalOptions="Center">
             <VerticalStackLayout Spacing="3">
                 <Label Text="Khám phá sản phẩm" FontSize="18" FontFamily="OpenSansSemibold" TextColor="#102C46" />
                 <Label Text="{Binding ResultSummary}" TextColor="#607487" FontSize="12" AutomationId="ProductCount" />
@@ -36,7 +53,7 @@
             <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                Color="#C55A24" HeightRequest="26" WidthRequest="26" />
         </Grid>
-        <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="10">
+        <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="10">
             <Border IsVisible="{Binding HasError}" BackgroundColor="#FFF0E8" Stroke="#F1C8B2"
                     StrokeShape="RoundRectangle 14" Padding="14" AutomationId="CatalogError">
                 <VerticalStackLayout Spacing="8">
@@ -63,6 +80,9 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ProductCard">
                             <Border BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 16">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnProductTapped" />
+                                </Border.GestureRecognizers>
                                 <VerticalStackLayout Spacing="0">
                                     <Grid HeightRequest="152" BackgroundColor="#EDF1F5">
                                         <Label Text="SPORTSHOP" FontSize="12" CharacterSpacing="1.5" TextColor="#8B9AA9"

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.ProductDetailPage" x:DataType="vm:ProductDetailViewModel"
+             Title="Chi tiết sản phẩm" BackgroundColor="#F5F7FA">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Giỏ hàng" Clicked="OnCartClicked" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="18" Spacing="16">
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#0F766E" />
+                <Border IsVisible="{Binding HasError}" BackgroundColor="#FFF0E8" Stroke="#F1C8B2"
+                        StrokeShape="RoundRectangle 12" Padding="14" AutomationId="ProductDetailError">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding ErrorMessage}" TextColor="#8B3D1A" />
+                        <Button Text="Tải lại sản phẩm" Clicked="OnRetryClicked" IsEnabled="{Binding IsIdle}"
+                                BackgroundColor="#102C46" TextColor="White" />
+                    </VerticalStackLayout>
+                </Border>
+                <VerticalStackLayout IsVisible="{Binding HasProduct}" Spacing="16">
+                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 16" BackgroundColor="White">
+                        <Grid HeightRequest="270">
+                            <Label Text="SPORTSHOP" TextColor="#8B9AA9" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="14" SemanticProperties.Description="{Binding Name}" />
+                        </Grid>
+                    </Border>
+                    <Label Text="{Binding CategoryName}" TextColor="#607487" FontSize="12" />
+                    <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="23" TextColor="#102C46" />
+                    <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="24" TextColor="#B64D1B" AutomationId="VariantPrice" />
+                    <Border BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 14" Padding="14">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Chọn size / màu" FontFamily="OpenSansSemibold" TextColor="#102C46" />
+                            <Picker Title="Size và màu sắc" ItemsSource="{Binding Variants}" ItemDisplayBinding="{Binding Label}"
+                                    SelectedItem="{Binding SelectedVariant}" IsEnabled="{Binding IsIdle}" AutomationId="ProductVariant" />
+                            <Label Text="{Binding StockText}" TextColor="#607487" FontSize="12" AutomationId="VariantStock" />
+                            <Button Text="Hướng dẫn chọn size" Clicked="OnSizeGuideClicked" BackgroundColor="Transparent"
+                                    TextColor="#0F766E" HorizontalOptions="Start" Padding="0" />
+                            <Grid ColumnDefinitions="*,Auto,70,Auto" ColumnSpacing="6">
+                                <Label Text="Số lượng" TextColor="#102C46" VerticalOptions="Center" />
+                                <Button Grid.Column="1" Text="−" Clicked="OnDecreaseClicked" IsEnabled="{Binding CanDecrease}"
+                                        WidthRequest="42" BackgroundColor="#E6EEF2" TextColor="#102C46" />
+                                <Entry Grid.Column="2" Text="{Binding QuantityText}" Keyboard="Numeric" MaxLength="3"
+                                       HorizontalTextAlignment="Center" IsEnabled="{Binding CanBuy}" AutomationId="ProductQuantity" />
+                                <Button Grid.Column="3" Text="+" Clicked="OnIncreaseClicked" IsEnabled="{Binding CanIncrease}"
+                                        WidthRequest="42" BackgroundColor="#E6EEF2" TextColor="#102C46" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                    <Label Text="{Binding StatusMessage}" IsVisible="{Binding HasStatus}" TextColor="#237044" AutomationId="ProductAdded" />
+                    <Button Text="Xem / gửi đánh giá sản phẩm" Clicked="OnReviewsClicked" BackgroundColor="White"
+                            TextColor="#0F766E" BorderColor="#0F766E" BorderWidth="1" CornerRadius="12" AutomationId="ProductReviews" />
+                    <Label Text="Thông tin sản phẩm" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#102C46" />
+                    <Label Text="{Binding Description}" TextColor="#40566B" FontSize="14" LineHeight="1.25" />
+                    <Label Text="Giá và tồn kho được xác nhận lại khi thêm giỏ và thanh toán." TextColor="#607487" FontSize="11" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10" Padding="16,10" BackgroundColor="White"
+              IsVisible="{Binding HasProduct}">
+            <Button Text="Thêm vào giỏ" Clicked="OnAddClicked" IsEnabled="{Binding CanBuy}"
+                    BackgroundColor="#E5F3EF" TextColor="#0F766E" CornerRadius="12" AutomationId="AddProductToCart" />
+            <Button Grid.Column="1" Text="Mua ngay" Clicked="OnBuyNowClicked" IsEnabled="{Binding CanBuy}"
+                    BackgroundColor="#0F766E" TextColor="White" CornerRadius="12" AutomationId="BuyProductNow" />
+        </Grid>
+    </Grid>
+</ContentPage>

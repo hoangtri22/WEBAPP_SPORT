@@ -6,13 +6,16 @@ namespace SportShop.Mobile;
 public partial class MainPage : ContentPage
 {
     private readonly CatalogViewModel _viewModel;
+    private readonly IServiceProvider _services;
     private CancellationTokenSource? _lifetime;
+    private bool _openingProduct;
 
     // Gắn CatalogViewModel vào trang.
-    public MainPage(CatalogViewModel viewModel)
+    public MainPage(CatalogViewModel viewModel, IServiceProvider services)
     {
         InitializeComponent();
         BindingContext = _viewModel = viewModel;
+        _services = services;
     }
 
     // Tải catalog qua CatalogViewModel.LoadAsync() khi mở trang; hủy request đầu tiên khi rời trang.
@@ -30,5 +33,34 @@ public partial class MainPage : ContentPage
     {
         _lifetime?.Cancel();
         base.OnDisappearing();
+    }
+
+    // Trang chủ có thể mở thẳng danh mục, vẫn dùng cùng bộ lọc và phân trang của catalog.
+    public Task OpenCategoryAsync(int? categoryId) => _viewModel.OpenCategoryAsync(categoryId);
+
+    // Mỗi sản phẩm mở một trang chi tiết riêng để lựa chọn không bị lẫn giữa các sản phẩm.
+    private async void OnProductTapped(object? sender, TappedEventArgs e)
+    {
+        if (_openingProduct || sender is not BindableObject { BindingContext: ProductCard product }) return;
+        _openingProduct = true;
+        try
+        {
+            var page = _services.GetRequiredService<ProductDetailPage>();
+            await Navigation.PushAsync(page);
+            await page.LoadAsync(product.Id);
+        }
+        finally { _openingProduct = false; }
+    }
+
+    // Mở các chương trình khuyến mãi đang hiệu lực.
+    private async void OnPromotionsClicked(object? sender, EventArgs e)
+        => await Navigation.PushAsync(_services.GetRequiredService<PromotionsPage>());
+
+    // Mở danh sách trang hỗ trợ và giới thiệu.
+    private async void OnInfoClicked(object? sender, EventArgs e)
+    {
+        var page = _services.GetRequiredService<InfoPagesPage>();
+        await Navigation.PushAsync(page);
+        await page.LoadAsync();
     }
 }

@@ -20,9 +20,11 @@ public sealed class FeedbackController(CustomerStore customers, ICatalogClock cl
     /// <summary>Lịch sử phản hồi của khách kèm trả lời mới nhất, đọc qua CustomerStore.MobileFeedbacks().</summary>
     [HttpGet]
     [ProducesResponseType<PagedResponse<FeedbackResponse>>(200)]
-    public IActionResult List([Range(1, int.MaxValue)] int page = 1, [Range(1, 100)] int pageSize = 20)
+    public IActionResult List([Range(1, int.MaxValue)] int page = 1, [Range(1, 100)] int pageSize = 20,
+        [Range(1, int.MaxValue)] int? productId = null)
     {
         var all = customers.MobileFeedbacks(CustomerId);
+        if (productId is int selectedProduct) all = all.Where(f => f.ProductId == selectedProduct).ToList();
         var items = all.Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize)
             .Select(f => new FeedbackResponse(f.Id, f.ProductId, f.ProductName, f.Stars, f.Content, clock.WithOffset(f.SentAt), f.Status, f.Reply)).ToList();
         return Ok(new PagedResponse<FeedbackResponse>(items, page, pageSize, all.Count));

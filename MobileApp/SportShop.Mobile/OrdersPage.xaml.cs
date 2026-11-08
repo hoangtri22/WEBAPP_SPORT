@@ -60,11 +60,7 @@ public partial class OrdersPage : ContentPage
     // Mở trang sản phẩm để mua hàng.
     private async void OnShopNowClicked(object? sender, EventArgs e)
     {
-        var catalogPage = _services.GetRequiredService<MainPage>();
-        if (catalogPage.Parent is null)
-            await Navigation.PushAsync(catalogPage);
-        else
-            await Navigation.PopToRootAsync();
+        await AppNavigation.OpenCatalogAsync(Navigation, _services);
     }
 
     // Hỏi xác nhận rồi hủy đơn.

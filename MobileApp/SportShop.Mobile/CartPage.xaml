@@ -129,7 +129,55 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Khối Tóm tắt đơn hàng (cart-summary giống hệt Views/Cart/Index.cshtml dòng 44-53) -->
+                    <!-- Khối Gợi ý mua thêm để đạt ưu đãi (cart-upsell giống hệt Views/Cart/Index.cshtml dòng 47-79) -->
+                    <Border IsVisible="{Binding HasUpsell}" BackgroundColor="White" Stroke="#99F6E4" StrokeThickness="1.5"
+                            StrokeShape="RoundRectangle 18" Padding="16">
+                        <VerticalStackLayout Spacing="12">
+                            <Border BackgroundColor="#F0FDFA" Stroke="#CCFBF1" StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12" Padding="12,10">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                    <Label Text="✨" FontSize="18" VerticalOptions="Start" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                        <Label Text="{Binding UpsellHeaderText}" FontFamily="OpenSansSemibold" FontSize="13.5" TextColor="#102C46" />
+                                        <Label Text="{Binding UpsellSubText}" FontSize="12" TextColor="#0F766E" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding UpsellItems}" Spacing="10">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CartUpsellItemViewModel">
+                                        <Grid ColumnDefinitions="56,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" StrokeThickness="1"
+                                                    StrokeShape="RoundRectangle 10" WidthRequest="56" HeightRequest="56" VerticalOptions="Center">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer CommandParameter="{Binding .}" Tapped="OnUpsellItemProductTapped" />
+                                                </Border.GestureRecognizers>
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
+                                            </Border>
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                <VerticalStackLayout.GestureRecognizers>
+                                                    <TapGestureRecognizer CommandParameter="{Binding .}" Tapped="OnUpsellItemProductTapped" />
+                                                </VerticalStackLayout.GestureRecognizers>
+                                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="13"
+                                                       TextColor="#102C46" MaxLines="2" LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="12.5" TextColor="#0F766E" />
+                                            </VerticalStackLayout>
+
+                                            <Button Grid.Column="2" Text="{Binding ActionButtonText}"
+                                                    CommandParameter="{Binding .}" Clicked="OnUpsellItemActionClicked"
+                                                    BackgroundColor="#E6F4F1" TextColor="#0F766E" FontFamily="OpenSansSemibold"
+                                                    FontSize="12" CornerRadius="10" HeightRequest="36" Padding="12,0"
+                                                    VerticalOptions="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Khối Tóm tắt đơn hàng (cart-summary giống hệt Views/Cart/Index.cshtml dòng 81-91) -->
                     <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                             StrokeShape="RoundRectangle 18" Padding="18">
                         <VerticalStackLayout Spacing="10">
@@ -138,6 +186,11 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label Text="Tạm tính" FontSize="13" TextColor="#64748B" />
                                 <Label Grid.Column="1" Text="{Binding SubtotalText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#102C46" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCartOrderPromo}">
+                                <Label Text="{Binding CartOrderPromoLabel}" FontSize="13" TextColor="#64748B" />
+                                <Label Grid.Column="1" Text="{Binding CartOrderPromoDiscountText}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#059669" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto">
@@ -152,7 +205,7 @@
                                 <Label Grid.Column="1" Text="{Binding EstimatedTotalText}" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#0F766E" />
                             </Grid>
 
-                            <Label Text="Mã giảm giá được nhập ở bước thanh toán." FontSize="12" TextColor="#64748B" />
+                            <Label Text="Mã giảm giá được chọn ở bước thanh toán và thay cho mức giảm theo đơn." FontSize="12" TextColor="#64748B" />
 
                             <Label IsVisible="{Binding HasStockWarning}"
                                    Text="Vui lòng giảm số lượng các sản phẩm vượt tồn kho."

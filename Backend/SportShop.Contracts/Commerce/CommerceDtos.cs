@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SportShop.Contracts.Commerce;
 
@@ -11,8 +11,15 @@ public sealed record SetCartQuantityRequest([Range(1, 999)] int Quantity);
 // Một dòng giỏ hàng trả cho app.
 public sealed record CartItemDto(int VariantId, int ProductId, string Name, string? Size, string? Color,
     string? ImageUrl, decimal UnitPrice, int Quantity, int Stock, decimal Amount, bool Available);
-// Giỏ hàng và tổng tiền.
-public sealed record CartDto(IReadOnlyList<CartItemDto> Items, int TotalQuantity, decimal Subtotal);
+// Khuyến mãi tự áp dụng theo giá trị đơn hàng (KM_THEO_DH) khi chưa chọn mã voucher.
+public sealed record AppliedOrderPromoDto(string Name, decimal Discount);
+// Một sản phẩm gợi ý mua thêm (upsell) để đạt mốc khuyến mãi theo giá trị đơn.
+public sealed record UpsellItemDto(int ProductId, string Name, string? ImageUrl, decimal Price, int? VariantId);
+// Thông tin gợi ý mua thêm trong giỏ hàng: số tiền còn thiếu, mức giảm của mốc kế tiếp và danh sách sản phẩm gợi ý.
+public sealed record CartUpsellDto(string Name, decimal Missing, decimal Percent, decimal Discount, IReadOnlyList<UpsellItemDto> Items);
+// Giỏ hàng và tổng tiền (kèm khuyến mãi tự áp dụng theo đơn và gợi ý mua thêm nếu có).
+public sealed record CartDto(IReadOnlyList<CartItemDto> Items, int TotalQuantity, decimal Subtotal,
+    AppliedOrderPromoDto? OrderPromo = null, CartUpsellDto? Upsell = null);
 // Thông tin người nhận.
 public sealed record ReceiverDto(string Name, string Phone, string Address);
 // Phương thức thanh toán ở trang thanh toán.
@@ -23,7 +30,8 @@ public sealed record EligibleVoucherDto(string Code, string Name, decimal Percen
 // Dữ liệu trang thanh toán.
 public sealed record CheckoutDto(CartDto Cart, ReceiverDto Receiver,
     IReadOnlyList<CheckoutPaymentMethodDto> PaymentMethods, IReadOnlyList<EligibleVoucherDto> Vouchers,
-    decimal Discount, decimal ShippingFee, decimal Total, bool CanPlaceOrder);
+    decimal Discount, decimal ShippingFee, decimal Total, bool CanPlaceOrder,
+    AppliedOrderPromoDto? OrderPromo = null);
 // Yêu cầu tính thử voucher.
 public sealed record CheckoutQuoteRequest([StringLength(30)] string? Voucher);
 // Yêu cầu đặt đơn hàng.

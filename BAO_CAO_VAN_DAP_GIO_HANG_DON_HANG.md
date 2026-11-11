@@ -19,17 +19,19 @@ Tài liệu này tổng hợp **chính xác từng file, class, hàm và số d�
 2. **Khi Giỏ hàng đang trống (`Items.Count == 0`):** Chỉ hiển thị thẻ *"Giỏ hàng đang trống — Hãy chọn vài món đồ bạn thích nhé."* và nút **Tiếp tục mua sắm** (ẩn hoàn toàn khung Tóm tắt đơn hàng ở dưới, giống hệt `Views/Cart/Index.cshtml` dòng 9–17).
 3. **Khi Giỏ hàng có sản phẩm (`Items.Count > 0`):**
    - Hiển thị danh sách sản phẩm trong giỏ (ảnh, tên, phân loại `Size / Màu`, đơn giá, cảnh báo *"Chỉ còn X sản phẩm trong kho"* nếu vượt tồn, nút `−` / `+` chỉnh số lượng, thành tiền, nút `✕` bỏ khỏi giỏ).
-   - Hiển thị khung **Tóm tắt đơn hàng** (`Tạm tính`, `Phí giao hàng`: miễn phí từ `500.000 ₫`, dưới mức là `30.000 ₫`, `Tổng cộng`, ghi chú *"Mã giảm giá được nhập ở bước thanh toán."*, nút **Tiến hành thanh toán** và **Tiếp tục mua sắm**).
+   - **Gợi ý mua thêm để đạt ưu đãi (`CartUpsellDto` / `UpsellItems`):** Hiển thị số tiền còn thiếu để đạt mốc ưu đãi theo giá trị đơn tiếp theo (`Mua thêm X ₫ để được giảm Y%`) và danh sách sản phẩm gợi ý còn tồn kho (`ShopStore.OrderUpsell`). Sản phẩm chỉ có 1 biến thể bán được cho phép bấm **Thêm vào giỏ** trực tiếp; sản phẩm nhiều biến thể bấm **Chọn mua** để mở trang chi tiết `ProductDetailPage`.
+   - Hiển thị khung **Tóm tắt đơn hàng** (`Tạm tính`, dòng **Giảm theo đơn** tự động từ `ShopStore.BestOrderPromo` khi đủ điều kiện, `Phí giao hàng`: miễn phí từ `500.000 ₫`, dưới mức là `30.000 ₫`, `Tổng cộng`, ghi chú *"Mã giảm giá được chọn ở bước thanh toán và thay cho mức giảm theo đơn."*, nút **Tiến hành thanh toán** và **Tiếp tục mua sắm**).
 4. **Màn hình Thanh toán (`CheckoutPage.xaml`):**
    - **Thông tin nhận hàng:** Họ và tên, Số điện thoại (`10 chữ số`), Địa chỉ giao hàng (tự điền mặc định từ sổ địa chỉ/hồ sơ khách hàng).
    - **Phương thức thanh toán:** Chọn phương thức thanh toán mô phỏng giống Web.
-   - **Mã giảm giá:** Chọn *"Không dùng mã"* hoặc chọn một mã giảm giá hợp lệ của tài khoản (`Code`, tên chương trình, `% giảm`, hạn sử dụng, số tiền giảm `-X ₫`), tự động gọi `/api/v1/checkout/quote` tính lại tiền ngay khi chạm chọn.
+   - **Tự áp dụng khuyến mãi theo giá trị đơn & Mã giảm giá:** Khi chưa chọn mã giảm giá (`voucher == null`), backend (`CheckoutController.Build` & `OrdersController.Place` với `orderPromo: true`) tự động chọn chương trình khuyến mãi theo giá trị đơn (`KM_THEO_DH`) có lợi nhất và hiển thị tên chương trình kèm số tiền giảm (`HasCheckoutOrderPromo` / `CheckoutOrderPromoText`). Khi người dùng chọn một mã giảm giá hợp lệ của tài khoản (`Code`, tên chương trình, `% giảm`, hạn sử dụng, số tiền giảm `-X ₫`), app tự động gọi `/api/v1/checkout/quote` tính lại tiền và thay cho mức giảm theo đơn.
    - **Đơn hàng ($N$ sản phẩm):** Liệt kê từng dòng `Tên SP (Size/Màu) × SL`, `Tạm tính`, `Giảm giá`, `Phí giao hàng`, `Tổng thanh toán`, nút **Đặt hàng** và **Quay lại giỏ hàng**.
    - **Đặt hàng thành công:** Hiển thị mã đơn `DHxxxx`, người nhận, danh sách món đã đặt, tổng thanh toán và 2 nút **Xem đơn hàng của tôi** / **Tiếp tục mua sắm**.
 5. **Màn hình Đơn hàng của tôi (`OrdersPage.xaml`):**
    - Hiển thị từng thẻ đơn hàng với: Mã đơn · Ngày đặt, badge Trạng thái đơn & badge Thanh toán (`Đã thanh toán` / `Chưa thanh toán`).
    - Thanh tiến trình **4 bước** (`Chờ xác nhận` → `Đang chuẩn bị` → `Đang giao` → `Đã giao`) hoặc hộp cảnh báo đỏ `Đơn đã hủy`.
    - Danh sách các dòng sản phẩm trong đơn (`CHI_TIET_DON_HANG`), địa chỉ giao nhận, đơn vị vận chuyển/mã vận đơn, số hóa đơn, tổng tiền và nút **Hủy đơn** (chỉ hiện khi `CanCancel == true`, tức đơn đang `cho_xac_nhan` và `chua_thanh_toan`, có hộp thoại xác nhận *"Hủy đơn hàng DHxxxx?"*).
+   - **Tự cập nhật trạng thái đơn hàng định kỳ (`OrdersPage.xaml.cs` + `OrdersViewModel.RefreshOrdersSilentlyAsync` + vòng đời `App.xaml.cs`):** Khi đang mở màn hình Đơn hàng, app định kỳ mỗi 8 giây lấy trạng thái mới ngầm từ API (`RefreshOrdersSilentlyAsync`, không bật vòng xoay `IsBusy`), tự động tạm dừng khi rời màn hình hoặc khi ứng dụng xuống nền (`App.AppStopped`) và tiếp tục ngay khi quay lại foreground (`App.AppResumed`). Khi phát hiện đơn hàng chuyển trạng thái (ví dụ sang `Đang giao` hoặc `Đã giao`), app cập nhật ngay danh sách và hiển thị thông báo cho khách hàng.
 
 ---
 

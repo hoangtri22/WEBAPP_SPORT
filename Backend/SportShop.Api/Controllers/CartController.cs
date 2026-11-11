@@ -20,9 +20,16 @@ public sealed class CartController(ShopStore shop, MediaUrlResolver media) : Con
 {
     int CustomerId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    /// <summary>Giỏ hàng dùng chung web và mobile qua ShopStore.CartLines(); giá, tồn kho lấy từ CSDL.</summary>
+    /// <summary>Giỏ hàng dùng chung web và mobile qua ShopStore.CartLines(); giá, tồn kho, khuyến mãi theo đơn và gợi ý mua thêm lấy từ CSDL.</summary>
     [HttpGet, ProducesResponseType<CartDto>(200)]
-    public ActionResult<CartDto> Get() => Ok(CommerceMapping.Cart(shop.CartLines(CustomerId), media));
+    public ActionResult<CartDto> Get()
+    {
+        var lines = shop.CartLines(CustomerId);
+        decimal subtotal = lines.Sum(line => line.Amount);
+        var orderPromo = lines.Count > 0 ? shop.BestOrderPromo(CustomerId, subtotal) : null;
+        var upsell = lines.Count > 0 ? shop.OrderUpsell(CustomerId, lines, subtotal) : null;
+        return Ok(CommerceMapping.Cart(lines, media, orderPromo, upsell));
+    }
 
     /// <summary>Thêm biến thể vào giỏ qua ShopStore.AddToCart(), cộng vào số lượng đã có.</summary>
     [HttpPost("items"), ProducesResponseType<CartDto>(200)]

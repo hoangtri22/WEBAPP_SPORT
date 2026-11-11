@@ -9,10 +9,25 @@ namespace SportShop.Api.Controllers;
 internal static class CommerceMapping
 {
     // Đổi các dòng ShopStore.CartLines() sang CartDto, đường dẫn ảnh qua MediaUrlResolver.Resolve().
-    internal static CartDto Cart(IReadOnlyList<CartLine> lines, MediaUrlResolver media) => new(
+    internal static CartDto Cart(IReadOnlyList<CartLine> lines, MediaUrlResolver media,
+        AppliedOrderPromo? promo = null, CartUpsell? upsell = null) => new(
         lines.Select(line => new CartItemDto(line.VariantId, line.ProductId, line.Name, line.Size, line.Color,
             media.Resolve(line.Image), line.Price, line.Qty, line.Stock, line.Amount, line.Enough)).ToArray(),
-        lines.Sum(line => line.Qty), lines.Sum(line => line.Amount));
+        lines.Sum(line => line.Qty),
+        lines.Sum(line => line.Amount),
+        OrderPromo(promo),
+        Upsell(upsell, media));
+    // Đổi AppliedOrderPromo của ShopStore sang AppliedOrderPromoDto.
+    internal static AppliedOrderPromoDto? OrderPromo(AppliedOrderPromo? promo) =>
+        promo is null ? null : new(promo.Name, promo.Discount);
+    // Đổi CartUpsell của ShopStore sang CartUpsellDto, đường dẫn ảnh qua MediaUrlResolver.Resolve().
+    internal static CartUpsellDto? Upsell(CartUpsell? upsell, MediaUrlResolver media) =>
+        upsell is null ? null : new(
+            upsell.Name,
+            upsell.Missing,
+            upsell.Percent,
+            upsell.Discount,
+            upsell.Items.Select(p => new UpsellItemDto(p.ProductId, p.Name, media.Resolve(p.Image), p.Price, p.VariantId)).ToArray());
     // Đổi UsablePromo của ShopStore sang EligibleVoucherDto.
     internal static EligibleVoucherDto Voucher(UsablePromo item, ICatalogClock clock) => new(item.Promo.Code, item.Promo.Name,
         item.Promo.Percent, item.Promo.MaxDiscount, item.Promo.Tier, clock.WithOffset(item.Promo.End), item.Discount);

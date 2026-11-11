@@ -126,6 +126,9 @@
                         <Label IsVisible="{Binding HasVoucherError}" Text="{Binding VoucherError}"
                                FontSize="12" TextColor="#DC2626" FontFamily="OpenSansSemibold" />
 
+                        <Label IsVisible="{Binding HasCheckoutOrderPromo}" Text="{Binding CheckoutOrderPromoText}"
+                               FontSize="12" TextColor="#059669" FontFamily="OpenSansSemibold" />
+
                         <Label IsVisible="{Binding HasAppliedVoucher}" Text="{Binding AppliedVoucherText}"
                                FontSize="12" TextColor="#059669" FontFamily="OpenSansSemibold" />
                     </VerticalStackLayout>

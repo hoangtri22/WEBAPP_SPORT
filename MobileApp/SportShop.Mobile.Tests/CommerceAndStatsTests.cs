@@ -142,6 +142,73 @@ public sealed class CommerceAndStatsTests
         Assert.Equal("DH00001", cartVm.PlacedOrderCode);
     }
 
+    // Kiểm tra tự áp dụng khuyến mãi theo giá trị đơn (OrderPromo) khi chưa nhập voucher và gợi ý mua thêm (Upsell).
+    [Fact]
+    public async Task AutoOrderPromotionAndCartUpsellWorkWhenNoVoucherIsSelected()
+    {
+        var fakeApi = new FakeCommerceApi();
+        var cartVm = new CartViewModel(fakeApi);
+
+        await cartVm.LoadCartAsync();
+        Assert.True(cartVm.HasCartOrderPromo);
+        Assert.Equal("Ưu đãi đơn từ 2 triệu", cartVm.CartOrderPromoName);
+        Assert.Equal(170_000m, cartVm.CartOrderPromoDiscount);
+        Assert.Equal(3_230_000m, cartVm.EstimatedTotal);
+
+        Assert.True(cartVm.HasUpsell);
+        Assert.Equal(2, cartVm.UpsellItems.Count);
+        Assert.Contains("Mua thêm 1.600.000", cartVm.UpsellHeaderText);
+        Assert.True(cartVm.UpsellItems[0].CanQuickAdd);
+        Assert.Equal("Thêm vào giỏ", cartVm.UpsellItems[0].ActionButtonText);
+        Assert.False(cartVm.UpsellItems[1].CanQuickAdd);
+        Assert.Equal("Chọn mua", cartVm.UpsellItems[1].ActionButtonText);
+
+        var quickAdded = await cartVm.AddUpsellItemAsync(cartVm.UpsellItems[0]);
+        Assert.True(quickAdded);
+
+        var multiVariantQuickAdd = await cartVm.AddUpsellItemAsync(cartVm.UpsellItems[1]);
+        Assert.False(multiVariantQuickAdd);
+
+        // Vào màn hình Thanh toán: chưa chọn mã thì tự áp dụng khuyến mãi theo đơn
+        await cartVm.LoadCheckoutAsync();
+        Assert.False(cartVm.HasAppliedVoucher);
+        Assert.True(cartVm.HasCheckoutOrderPromo);
+        Assert.Equal(170_000m, cartVm.Discount);
+        Assert.Contains("Ưu đãi đơn từ 2 triệu", cartVm.CheckoutOrderPromoText);
+
+        // Khi chọn mã giảm giá RUN15 thì mã thay cho khuyến mãi theo đơn
+        var promoOpt = cartVm.VoucherOptions.First(v => v.Code == "RUN15");
+        await cartVm.SelectVoucherOptionAsync(promoOpt);
+        Assert.True(cartVm.HasAppliedVoucher);
+        Assert.False(cartVm.HasCheckoutOrderPromo);
+        Assert.Equal(150_000m, cartVm.Discount);
+    }
+
+    // Kiểm tra tự cập nhật trạng thái đơn hàng định kỳ (RefreshOrdersSilentlyAsync & DetectStatusChanges).
+    [Fact]
+    public async Task SilentOrderPollingDetectsStatusChangesAndUpdatesListWithoutSettingIsBusy()
+    {
+        var cache = new AppMemoryCache();
+        var fakeApi = new FakeCommerceApi();
+        var vm = new OrdersViewModel(fakeApi, cache);
+
+        await vm.LoadOrdersAsync();
+        Assert.Equal("cho_xac_nhan", vm.Orders.First(o => o.Code == "DH00001").Status);
+
+        // Cửa hàng cập nhật trạng thái đơn DH00001 sang Đang giao và đơn DH00003 sang Đã giao
+        fakeApi.AdvanceOrderStatus(1, "dang_giao", "Đang giao");
+        fakeApi.AdvanceOrderStatus(3, "da_giao", "Đã giao");
+
+        var changes = await vm.RefreshOrdersSilentlyAsync();
+        Assert.False(vm.IsBusy);
+        Assert.Equal(2, changes.Count);
+        Assert.Contains(changes, msg => msg.Contains("DH00001") && msg.Contains("Đang giao"));
+        Assert.Contains(changes, msg => msg.Contains("DH00003") && msg.Contains("đã được giao"));
+        Assert.Equal("dang_giao", vm.Orders.First(o => o.Code == "DH00001").Status);
+        Assert.Equal("da_giao", vm.Orders.First(o => o.Code == "DH00003").Status);
+        Assert.True(vm.HasStatus);
+    }
+
     // ICommerceApi giả dùng dữ liệu mẫu.
     private sealed class FakeCommerceApi : ICommerceApi
     {
@@ -173,7 +240,7 @@ public sealed class CommerceAndStatsTests
 
         // Trả dữ liệu thanh toán mẫu.
         public Task<CheckoutDto> GetCheckoutAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(CreateSampleCheckout(0m));
+            Task.FromResult(CreateSampleCheckout(null));
 
         // Trả voucher mẫu.
         public Task<IReadOnlyList<EligibleVoucherDto>> GetEligibleVouchersAsync(CancellationToken cancellationToken = default) =>
@@ -183,13 +250,28 @@ public sealed class CommerceAndStatsTests
 
         // Trả dữ liệu thanh toán mẫu có giảm giá.
         public Task<CheckoutDto> QuoteCheckoutAsync(string? voucherCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult(CreateSampleCheckout(string.IsNullOrWhiteSpace(voucherCode) ? 0m : 150_000m));
+            Task.FromResult(CreateSampleCheckout(voucherCode));
+
+        // Cập nhật trạng thái đơn trong bộ nhớ giả lập để kiểm thử polling.
+        public void AdvanceOrderStatus(int orderId, string nextStatus, string nextStatusLabel)
+        {
+            var idx = _orders.FindIndex(o => o.Id == orderId);
+            if (idx < 0) return;
+            var old = _orders[idx];
+            _orders[idx] = old with
+            {
+                Status = nextStatus,
+                StatusLabel = nextStatusLabel,
+                PaymentStatus = nextStatus == "da_giao" ? "da_thanh_toan" : old.PaymentStatus,
+                CanCancel = nextStatus == "cho_xac_nhan" && old.PaymentStatus == "chua_thanh_toan"
+            };
+        }
 
         // Trả danh sách đơn mẫu.
         public Task<PagedResponse<OrderDto>> GetOrdersAsync(int page = 1, int pageSize = 20, string? status = null, CancellationToken cancellationToken = default)
         {
             OrderListCalls++;
-            return Task.FromResult(new PagedResponse<OrderDto>(_orders, page, pageSize, _orders.Count));
+            return Task.FromResult(new PagedResponse<OrderDto>(_orders.ToList(), page, pageSize, _orders.Count));
         }
 
         // Trả chi tiết đơn mẫu.
@@ -216,25 +298,42 @@ public sealed class CommerceAndStatsTests
             return Task.FromResult(cancelled);
         }
 
-        // Tạo giỏ mẫu.
+        // Tạo giỏ mẫu kèm khuyến mãi theo giá trị đơn và gợi ý mua thêm (upsell).
         private static CartDto CreateSampleCart() => new(
             [
                 new CartItemDto(101, 1, "Giày chạy bộ Nike Pegasus 41", "42", "Đen", null, 2_500_000m, 1, 10, 2_500_000m, true),
                 new CartItemDto(102, 2, "Áo thun thể thao Dri-FIT", "L", "Xanh", null, 450_000m, 2, 15, 900_000m, true)
             ],
             3,
-            3_400_000m);
+            3_400_000m,
+            new AppliedOrderPromoDto("Ưu đãi đơn từ 2 triệu", 170_000m),
+            new CartUpsellDto(
+                "Ưu đãi đơn từ 5 triệu",
+                1_600_000m,
+                10m,
+                500_000m,
+                [
+                    new UpsellItemDto(10, "Bình nước thể thao Pro", null, 250_000m, 501),
+                    new UpsellItemDto(11, "Quần short chạy bộ Aero", null, 550_000m, null)
+                ]));
 
-        // Tạo dữ liệu thanh toán mẫu.
-        private static CheckoutDto CreateSampleCheckout(decimal discount) => new(
-            CreateSampleCart(),
-            new ReceiverDto("Nguyễn Minh An", "0901234567", "123 Lê Lợi, Quận 1, TP.HCM"),
-            [new CheckoutPaymentMethodDto(1, "Thanh toán khi nhận hàng (COD)", true)],
-            [new EligibleVoucherDto("RUN15", "Giảm 15% đơn chạy bộ", 15m, 200_000m, "Vàng", DateTimeOffset.UtcNow.AddDays(10), 150_000m)],
-            discount,
-            0m,
-            3_400_000m - discount,
-            true);
+        // Tạo dữ liệu thanh toán mẫu: nếu chưa chọn mã thì tự áp dụng khuyến mãi theo giá trị đơn.
+        private static CheckoutDto CreateSampleCheckout(string? voucherCode)
+        {
+            var hasVoucher = !string.IsNullOrWhiteSpace(voucherCode);
+            var autoPromo = hasVoucher ? null : new AppliedOrderPromoDto("Ưu đãi đơn từ 2 triệu", 170_000m);
+            var discount = hasVoucher ? 150_000m : 170_000m;
+            return new CheckoutDto(
+                CreateSampleCart(),
+                new ReceiverDto("Nguyễn Minh An", "0901234567", "123 Lê Lợi, Quận 1, TP.HCM"),
+                [new CheckoutPaymentMethodDto(1, "Thanh toán khi nhận hàng (COD)", true)],
+                [new EligibleVoucherDto("RUN15", "Giảm 15% đơn chạy bộ", 15m, 200_000m, "Vàng", DateTimeOffset.UtcNow.AddDays(10), 150_000m)],
+                discount,
+                0m,
+                3_400_000m - discount,
+                true,
+                autoPromo);
+        }
 
         // Tạo danh sách đơn mẫu.
         public static IReadOnlyList<OrderDto> CreateSampleOrders() =>

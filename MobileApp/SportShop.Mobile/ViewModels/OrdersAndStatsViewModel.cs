@@ -398,6 +398,89 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         }
     }
 
+    // Làm mới ngầm danh sách đơn hàng (không bật IsBusy spinner) phục vụ tự động cập nhật trạng thái đơn định kỳ.
+    public async Task<IReadOnlyList<string>> RefreshOrdersSilentlyAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isBusy) return [];
+        try
+        {
+            var page = await _api.GetOrdersAsync(page: 1, pageSize: 100, status: null, cancellationToken);
+            var nextOrders = page.Items;
+            var changes = DetectStatusChanges(_allOrders, nextOrders);
+            var hasListChanged = changes.Count > 0 || HasOrderDataChanged(_allOrders, nextOrders);
+
+            _allOrders = nextOrders;
+            _cache.Put(AppMemoryCache.OrdersKey, _allOrders);
+            _usedMemoryCache = false;
+
+            if (changes.Count > 0)
+                _statusMessage = string.Join(" ", changes);
+
+            if (hasListChanged)
+                ApplyFilter(keepOrderId: _selectedOrder?.Id);
+
+            return changes;
+        }
+        catch
+        {
+            // Bỏ qua lỗi mạng tạm thời khi polling ngầm để không làm gián đoạn trải nghiệm người dùng.
+            return [];
+        }
+    }
+
+    // Phát hiện các đơn hàng vừa thay đổi trạng thái xử lý hoặc trạng thái thanh toán (đồng bộ với Views/Customer/Orders.cshtml).
+    public static IReadOnlyList<string> DetectStatusChanges(IReadOnlyList<OrderDto> previous, IReadOnlyList<OrderDto> current)
+    {
+        if (previous.Count == 0 || current.Count == 0) return [];
+        var prevById = previous.ToDictionary(o => o.Id);
+        var notifications = new List<string>();
+
+        foreach (var curr in current)
+        {
+            if (!prevById.TryGetValue(curr.Id, out var prev))
+                continue;
+
+            if (!string.Equals(prev.Status, curr.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(curr.Status, "da_giao", StringComparison.OrdinalIgnoreCase))
+                {
+                    notifications.Add($"Đơn hàng {curr.Code} đã được giao. Cảm ơn bạn đã mua sắm tại SPORTSHOP!");
+                }
+                else
+                {
+                    notifications.Add($"Đơn hàng {curr.Code} đã chuyển sang trạng thái \"{curr.StatusLabel}\".");
+                }
+            }
+            else if (!string.Equals(prev.PaymentStatus, curr.PaymentStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                var payLabel = curr.PaymentStatus == "da_thanh_toan" ? "Đã thanh toán" : "Chưa thanh toán";
+                notifications.Add($"Đơn hàng {curr.Code} cập nhật thanh toán: \"{payLabel}\".");
+            }
+        }
+
+        return notifications;
+    }
+
+    private static bool HasOrderDataChanged(IReadOnlyList<OrderDto> previous, IReadOnlyList<OrderDto> current)
+    {
+        if (previous.Count != current.Count) return true;
+        for (int i = 0; i < previous.Count; i++)
+        {
+            var a = previous[i];
+            var b = current[i];
+            if (a.Id != b.Id ||
+                a.Status != b.Status ||
+                a.PaymentStatus != b.PaymentStatus ||
+                a.Carrier != b.Carrier ||
+                a.TrackingNumber != b.TrackingNumber ||
+                a.InvoiceNumber != b.InvoiceNumber)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Hủy đơn hàng đúng điều kiện (chỉ đơn cho_xac_nhan và chua_thanh_toan mới có CanCancel == true).
     public async Task<bool> CancelSelectedOrderAsync(CancellationToken cancellationToken = default) =>
         _selectedOrder is not null && await CancelOrderAsync(_selectedOrder, cancellationToken);

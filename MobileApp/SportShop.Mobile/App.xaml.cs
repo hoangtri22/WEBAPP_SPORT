@@ -23,8 +23,18 @@ public partial class App : Application
         };
     }
 
-    // Tạo cửa sổ đầu tiên với trang AuthPage.
-    protected override Window CreateWindow(IActivationState? activationState) => new(_services.GetRequiredService<AuthPage>());
+    // Sự kiện vòng đời cửa sổ ứng dụng (Foreground / Background) để các màn hình tạm dừng hoặc tiếp tục tác vụ định kỳ.
+    public static event Action? AppResumed;
+    public static event Action? AppStopped;
+
+    // Tạo cửa sổ đầu tiên với trang AuthPage và gắn theo dõi vòng đời ứng dụng.
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        var window = new Window(_services.GetRequiredService<AuthPage>());
+        window.Resumed += (_, _) => AppResumed?.Invoke();
+        window.Stopped += (_, _) => AppStopped?.Invoke();
+        return window;
+    }
 
     // Phiên có thể hết hạn trên luồng nền (AuthorizedHandler), nên đổi trang luôn qua luồng giao diện.
     private void Show(Page page) => Dispatcher.Dispatch(() => Windows[0].Page = page);

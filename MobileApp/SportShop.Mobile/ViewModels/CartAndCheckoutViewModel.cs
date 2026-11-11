@@ -96,6 +96,22 @@ public sealed class PlacedOrderLineItem(OrderItemDto dto)
     public string AmountText => dto.Amount.ToString("N0", Vi) + " ₫";
 }
 
+// Một sản phẩm gợi ý mua thêm (upsell) trên CartPage để đạt mốc khuyến mãi theo giá trị đơn.
+public sealed class CartUpsellItemViewModel(UpsellItemDto dto)
+{
+    private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
+    public UpsellItemDto Dto => dto;
+    public int ProductId => dto.ProductId;
+    public string Name => dto.Name;
+    public string? ImageUrl => dto.ImageUrl;
+    public bool HasImage => !string.IsNullOrWhiteSpace(dto.ImageUrl);
+    public decimal Price => dto.Price;
+    public string PriceText => dto.Price.ToString("N0", Vi) + " ₫";
+    public int? VariantId => dto.VariantId;
+    public bool CanQuickAdd => dto.VariantId is > 0;
+    public string ActionButtonText => CanQuickAdd ? "Thêm vào giỏ" : "Chọn mua";
+}
+
 // ViewModel cho Giỏ hàng & Thanh toán (Checkout) — đồng bộ 100% chức năng và hiển thị với SportShop.CustomerWeb (Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml), hỗ trợ cả Khách hàng có tài khoản và Khách hàng vãng lai (Guest).
 public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = null) : INotifyPropertyChanged
 {
@@ -113,6 +129,9 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     private string? _statusMessage;
     private decimal _subtotal;
     private int _totalQuantity;
+    private AppliedOrderPromoDto? _cartOrderPromo;
+    private AppliedOrderPromoDto? _checkoutOrderPromo;
+    private CartUpsellDto? _upsell;
 
     // Trạng thái Checkout (Thanh toán)
     private string _receiverName = "";
@@ -133,6 +152,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<CartLineItem> Items { get; } = [];
+    public ObservableCollection<CartUpsellItemViewModel> UpsellItems { get; } = [];
     public ObservableCollection<CheckoutPaymentMethodDto> PaymentMethods { get; } = [];
     public ObservableCollection<PaymentMethodOption> PaymentMethodOptions { get; } = [];
     public ObservableCollection<EligibleVoucherDto> EligibleVouchers { get; } = [];
@@ -149,9 +169,29 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     public decimal Subtotal => _subtotal;
     public string SubtotalText => _subtotal.ToString("N0", Vi) + " ₫";
 
+    // Khuyến mãi tự động theo giá trị đơn hàng trên Giỏ hàng (Views/Cart/Index.cshtml)
+    public AppliedOrderPromoDto? CartOrderPromo => _cartOrderPromo;
+    public bool HasCartOrderPromo => _cartOrderPromo is { Discount: > 0 } && _subtotal > 0;
+    public string CartOrderPromoName => _cartOrderPromo?.Name ?? "";
+    public string CartOrderPromoLabel => HasCartOrderPromo
+        ? $"Giảm theo đơn ({_cartOrderPromo!.Name})"
+        : "Giảm theo đơn";
+    public decimal CartOrderPromoDiscount => _cartOrderPromo is { Discount: > 0 } p ? Math.Min(p.Discount, _subtotal) : 0m;
+    public string CartOrderPromoDiscountText => "-" + CartOrderPromoDiscount.ToString("N0", Vi) + " ₫";
+
+    // Gợi ý mua thêm để đạt mốc ưu đãi (Views/Cart/Index.cshtml)
+    public CartUpsellDto? Upsell => _upsell;
+    public bool HasUpsell => _upsell is not null && UpsellItems.Count > 0;
+    public string UpsellHeaderText => _upsell is null
+        ? ""
+        : $"Mua thêm {_upsell.Missing.ToString("N0", Vi)} ₫ để được giảm {_upsell.Percent:0.##}%";
+    public string UpsellSubText => _upsell is null
+        ? ""
+        : $"{_upsell.Name}: tiết kiệm đến {_upsell.Discount.ToString("N0", Vi)} ₫, tự áp dụng khi thanh toán.";
+
     public decimal EstimatedShippingFee => _subtotal <= 0 ? 0m : (_subtotal >= FreeShipFrom ? 0m : StandardShipFee);
     public string EstimatedShippingText => EstimatedShippingFee == 0 ? "Miễn phí" : EstimatedShippingFee.ToString("N0", Vi) + " ₫";
-    public decimal EstimatedTotal => _subtotal + EstimatedShippingFee;
+    public decimal EstimatedTotal => Math.Max(0m, _subtotal - CartOrderPromoDiscount) + EstimatedShippingFee;
     public string EstimatedTotalText => EstimatedTotal.ToString("N0", Vi) + " ₫";
 
     public bool HasError => !string.IsNullOrEmpty(_errorMessage);
@@ -217,6 +257,11 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     public string AppliedVoucherText => HasAppliedVoucher
         ? $"Đã áp dụng mã {_voucherCodeInput.Trim()}, giảm {_discount.ToString("N0", Vi)} ₫."
         : "";
+    public AppliedOrderPromoDto? CheckoutOrderPromo => _checkoutOrderPromo;
+    public bool HasCheckoutOrderPromo => !HasVoucherError && !HasAppliedVoucher && _checkoutOrderPromo is { Discount: > 0 };
+    public string CheckoutOrderPromoText => HasCheckoutOrderPromo
+        ? $"Đang áp dụng {_checkoutOrderPromo!.Name}, giảm {_discount.ToString("N0", Vi)} ₫. Chọn mã sẽ thay cho mức giảm này."
+        : "";
 
     public decimal Discount => _discount;
     public string DiscountText => "-" + _discount.ToString("N0", Vi) + " ₫";
@@ -259,6 +304,12 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             NotifyAll();
         }
     }
+
+    // Thêm sản phẩm gợi ý mua thêm (upsell) vào giỏ khi sản phẩm chỉ có 1 biến thể bán được.
+    public Task<bool> AddUpsellItemAsync(CartUpsellItemViewModel? item, CancellationToken cancellationToken = default) =>
+        item?.VariantId is int variantId and > 0
+            ? AddItemAsync(variantId, 1, cancellationToken)
+            : Task.FromResult(false);
 
     // Thêm sản phẩm vào giỏ qua POST /api/v1/cart/items.
     public async Task<bool> AddItemAsync(int variantId, int quantity = 1, CancellationToken cancellationToken = default)
@@ -418,8 +469,9 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             // Mã không áp dụng được: hiện lỗi dưới ô mã và quay về "Không dùng mã" để không chặn nút Đặt hàng.
             _voucherCodeInput = "";
             _selectedVoucher = null;
-            _discount = 0m;
-            _total = _subtotal + EstimatedShippingFee;
+            _checkoutOrderPromo = _cartOrderPromo;
+            _discount = _cartOrderPromo is { Discount: > 0 } p ? Math.Min(p.Discount, _subtotal) : 0m;
+            _total = Math.Max(0m, _subtotal - _discount) + EstimatedShippingFee;
             RebuildVoucherOptions();
         }
         finally
@@ -488,6 +540,10 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             _voucherCodeInput = "";
             _selectedVoucher = null;
             _discount = 0m;
+            _cartOrderPromo = null;
+            _checkoutOrderPromo = null;
+            _upsell = null;
+            UpsellItems.Clear();
             Items.Clear();
             _subtotal = 0m;
             _totalQuantity = 0;
@@ -513,6 +569,14 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             Items.Add(new CartLineItem(item));
         _totalQuantity = cart.TotalQuantity;
         _subtotal = cart.Subtotal;
+        _cartOrderPromo = cart.OrderPromo;
+        _upsell = cart.Upsell;
+        UpsellItems.Clear();
+        if (cart.Upsell?.Items is { Count: > 0 } upsellItems)
+        {
+            foreach (var u in upsellItems)
+                UpsellItems.Add(new CartUpsellItemViewModel(u));
+        }
         _shippingFee = EstimatedShippingFee;
         _total = Math.Max(0m, _subtotal - _discount) + _shippingFee;
         _canPlaceOrder = Items.Count > 0 && Items.All(i => i.Available);
@@ -521,7 +585,19 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     // Cập nhật dữ liệu trang thanh toán từ CheckoutDto.
     private void ApplyCheckoutDto(CheckoutDto checkout, bool overwriteReceiver)
     {
+        var previousCartPromo = _cartOrderPromo;
+        var previousUpsell = _upsell;
         ApplyCartDto(checkout.Cart);
+        _cartOrderPromo = checkout.Cart.OrderPromo ?? checkout.OrderPromo ?? previousCartPromo;
+        if (_upsell is null && previousUpsell is not null && Items.Count > 0)
+        {
+            _upsell = previousUpsell;
+            UpsellItems.Clear();
+            foreach (var u in previousUpsell.Items)
+                UpsellItems.Add(new CartUpsellItemViewModel(u));
+        }
+        _checkoutOrderPromo = checkout.OrderPromo;
+
         if (overwriteReceiver)
         {
             if (IsGuest)
@@ -554,7 +630,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
             ? EligibleVouchers.FirstOrDefault(v => string.Equals(v.Code, prevVoucherCode, StringComparison.OrdinalIgnoreCase))
             : null;
         // Mã cũ không còn nằm trong danh sách mã dùng được (vd. mã khách mới sau lần mua đầu) thì bỏ, không gửi lên khi đặt hàng.
-        if (_selectedVoucher is null && checkout.Discount <= 0) _voucherCodeInput = "";
+        if (_selectedVoucher is null && (checkout.OrderPromo is not null || checkout.Discount <= 0)) _voucherCodeInput = "";
         RebuildVoucherOptions();
 
         _discount = checkout.Discount;
@@ -599,14 +675,18 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         {
             nameof(IsBusy), nameof(IsEmpty), nameof(HasItems), nameof(HasStockWarning),
             nameof(CanProceedToCheckout), nameof(TotalQuantity), nameof(OrderSummaryHeaderText),
-            nameof(Subtotal), nameof(SubtotalText), nameof(EstimatedShippingFee),
-            nameof(EstimatedShippingText), nameof(EstimatedTotal), nameof(EstimatedTotalText),
+            nameof(Subtotal), nameof(SubtotalText),
+            nameof(CartOrderPromo), nameof(HasCartOrderPromo), nameof(CartOrderPromoName),
+            nameof(CartOrderPromoLabel), nameof(CartOrderPromoDiscount), nameof(CartOrderPromoDiscountText),
+            nameof(Upsell), nameof(HasUpsell), nameof(UpsellHeaderText), nameof(UpsellSubText),
+            nameof(EstimatedShippingFee), nameof(EstimatedShippingText), nameof(EstimatedTotal), nameof(EstimatedTotalText),
             nameof(HasError), nameof(ErrorMessage), nameof(HasStatus), nameof(StatusMessage),
             nameof(ReceiverName), nameof(ReceiverPhone), nameof(ReceiverAddress),
             nameof(SelectedPaymentMethod), nameof(SelectedVoucher), nameof(VoucherCodeInput),
             nameof(HasVouchers), nameof(HasNoVouchers), nameof(NoVouchersMessage), nameof(IsGuest),
             nameof(HasVoucherError), nameof(VoucherError),
             nameof(HasAppliedVoucher), nameof(AppliedVoucherText),
+            nameof(CheckoutOrderPromo), nameof(HasCheckoutOrderPromo), nameof(CheckoutOrderPromoText),
             nameof(Discount), nameof(DiscountText), nameof(ShippingFee), nameof(ShippingFeeText),
             nameof(Total), nameof(TotalText), nameof(CanPlaceOrder),
             nameof(LastPlacedOrder), nameof(HasPlacedOrder), nameof(ShowCheckoutForm),

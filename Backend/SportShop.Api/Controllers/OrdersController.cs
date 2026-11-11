@@ -54,7 +54,7 @@ public sealed class OrdersController(ShopStore shop, MediaUrlResolver media, ICa
     {
         var voucher = IsGuest ? null : request.Voucher;
         var result = shop.PlaceCartOrder(CustomerId, new ReceiverInfo(request.Name, request.Phone, request.Address),
-            request.PaymentMethodId, voucher, requestKey);
+            request.PaymentMethodId, voucher, requestKey, orderPromo: true);
         if (result.OrderId is not int id)
             return Conflict(ApiProblems.Create(HttpContext, 409, "ORDER_CONFLICT", result.Error ?? "Không thể tạo đơn hàng."));
         if (IsGuest)

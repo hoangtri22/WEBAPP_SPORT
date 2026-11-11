@@ -38,12 +38,13 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
         return Ok(shop.UsablePromos(CustomerId, subtotal).Select(item => CommerceMapping.Voucher(item, clock)).ToArray());
     }
 
-    // Dựng CheckoutDto từ ShopStore: CartLines(), PreviewVoucher(), Receiver(), PaymentMethods(), UsablePromos().
+    // Dựng CheckoutDto từ ShopStore: CartLines(), BestOrderPromo(), PreviewVoucher(), Receiver(), PaymentMethods(), UsablePromos().
     ActionResult<CheckoutDto> Build(string? voucher)
     {
         var lines = shop.CartLines(CustomerId);
         var cart = CommerceMapping.Cart(lines, media);
         decimal discount = 0;
+        AppliedOrderPromoDto? orderPromo = null;
         if (!string.IsNullOrWhiteSpace(voucher))
         {
             if (IsGuest)
@@ -52,6 +53,11 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
             if (preview.Error is not null)
                 return Conflict(ApiProblems.Create(HttpContext, 409, "VOUCHER_NOT_APPLICABLE", preview.Error));
             discount = Math.Clamp(preview.Discount, 0, cart.Subtotal);
+        }
+        else if (lines.Count > 0 && shop.BestOrderPromo(CustomerId, cart.Subtotal) is { } autoPromo)
+        {
+            orderPromo = CommerceMapping.OrderPromo(autoPromo);
+            discount = Math.Clamp(autoPromo.Discount, 0, cart.Subtotal);
         }
         // Khách vãng lai luôn nhập tay từng trường Họ tên, SĐT, Địa chỉ khi vào Checkout (không tự điền).
         var receiver = IsGuest ? new ReceiverDto("", "", "") : ToReceiverDto(shop.Receiver(CustomerId));
@@ -63,7 +69,8 @@ public sealed class CheckoutController(ShopStore shop, MediaUrlResolver media, I
             shop.PaymentMethods().Select(method => new CheckoutPaymentMethodDto(method.Id, method.Name)).ToArray(),
             vouchers,
             discount, shipping, Math.Max(0, cart.Subtotal - discount) + shipping,
-            lines.Count > 0 && lines.All(line => line.Enough)));
+            lines.Count > 0 && lines.All(line => line.Enough),
+            orderPromo));
     }
 
     // Đổi ReceiverInfo của ShopStore sang ReceiverDto.

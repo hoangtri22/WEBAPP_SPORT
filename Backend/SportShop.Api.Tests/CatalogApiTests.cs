@@ -47,6 +47,99 @@ public sealed class CatalogApiTests
         Assert.Equal(10, search.PageSize);
     }
 
+    // Các mảng lặp được bind và chuẩn hóa cùng các điều kiện cũ, không thay contract phân trang.
+    [Fact]
+    public async Task ProductList_ForwardsCombinedAdvancedFilters()
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/api/v1/products?categoryId=2&q=giay&sort=price_desc&inStockOnly=false&page=2&pageSize=3&minPrice=0&maxPrice=2500000.50&sizes=%2042%20&sizes=43&sizes=42&colors=Xanh&colors=%C4%90en");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var search = Assert.IsType<SportShop.Application.Catalog.ProductSearch>(factory.Reader.LastSearch);
+        Assert.Equal(0m, search.MinPrice);
+        Assert.Equal(2500000.50m, search.MaxPrice);
+        Assert.Equal(new[] { "42", "43" }, search.Sizes);
+        Assert.Equal(new[] { "Xanh", "Đen" }, search.Colors);
+        Assert.Equal(2, search.CategoryId);
+        Assert.Equal("giay", search.Q);
+        Assert.Equal("price_desc", search.Sort);
+        Assert.False(search.InStockOnly);
+        Assert.Equal(2, search.Page);
+        Assert.Equal(3, search.PageSize);
+    }
+
+    // Danh sách chọn size/màu có route riêng, hỗ trợ cả biến thể hết hàng nếu yêu cầu.
+    [Fact]
+    public async Task FilterOptions_ReturnsValuesAndHonorsStockFlag()
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/api/v1/products/filter-options?inStockOnly=false");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await ReadJson(response);
+        Assert.Equal(new[] { "42", "43" }, payload.GetProperty("sizes").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(new[] { "Xanh", "Đen" }, payload.GetProperty("colors").EnumerateArray().Select(item => item.GetString()));
+        Assert.False(factory.Reader.LastOptionsInStockOnly);
+    }
+
+    // Endpoint liên quan suy ra danh mục từ sản phẩm và loại ID trước khi giới hạn kết quả.
+    [Fact]
+    public async Task Related_UsesCurrentCategoryExcludesCurrentProductAndPreservesSummaryContract()
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/api/v1/products/7/related?limit=1");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var item = Assert.Single((await ReadJson(response)).EnumerateArray());
+        Assert.Equal(8, item.GetProperty("id").GetInt32());
+        Assert.Equal(2, item.GetProperty("categoryId").GetInt32());
+        Assert.Equal("VND", item.GetProperty("currency").GetString());
+        var search = factory.Reader.LastSearch!;
+        Assert.Equal(2, search.CategoryId);
+        Assert.Equal(7, search.ExcludeProductId);
+        Assert.True(search.InStockOnly);
+        Assert.Equal(1, search.PageSize);
+    }
+
+    // Sản phẩm không công khai/không tồn tại không cung cấp gợi ý.
+    [Fact]
+    public async Task Related_UnknownProductReturns404WithoutListingCatalog()
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/api/v1/products/999/related");
+        await AssertProblem(response, HttpStatusCode.NotFound, "RESOURCE_NOT_FOUND");
+        Assert.Equal(0, factory.Reader.ProductListCalls);
+    }
+
+    // Giới hạn query trên endpoint mới vẫn dùng ProblemDetails validation chuẩn của API.
+    [Theory]
+    [InlineData("/api/v1/products/0/related")]
+    [InlineData("/api/v1/products/7/related?limit=0")]
+    [InlineData("/api/v1/products/7/related?limit=21")]
+    [InlineData("/api/v1/products/filter-options?inStockOnly=invalid")]
+    public async Task NewCatalogEndpoints_RejectInvalidQueries(string route)
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync(route);
+        await AssertProblem(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR");
+        Assert.Equal(0, factory.Reader.ProductListCalls);
+    }
+
+    // Quá nhiều lựa chọn không tạo danh sách tham số SQL không giới hạn.
+    [Theory]
+    [InlineData("sizes")]
+    [InlineData("colors")]
+    public async Task ProductList_RejectsMoreThanFiftyFilterValues(string parameter)
+    {
+        using var factory = new CatalogApiFactory();
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/api/v1/products?" + string.Join('&', Enumerable.Range(1, 51).Select(i => $"{parameter}={i}")));
+        await AssertProblem(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR");
+        Assert.Equal(0, factory.Reader.ProductListCalls);
+    }
+
     // Kiểm tra truy vấn sai bị từ chối trước khi gọi reader.
     [Theory]
     [InlineData("page=0")]
@@ -61,6 +154,15 @@ public sealed class CatalogApiTests
     [InlineData("categoryId=not-a-number")]
     [InlineData("sort=price;%20DROP%20TABLE")]
     [InlineData("inStockOnly=not-a-boolean")]
+    [InlineData("minPrice=-1")]
+    [InlineData("maxPrice=-1")]
+    [InlineData("minPrice=abc")]
+    [InlineData("maxPrice=10000000000")]
+    [InlineData("minPrice=20&maxPrice=10")]
+    [InlineData("sizes=%20")]
+    [InlineData("sizes=123456789012345678901")]
+    [InlineData("colors=%20")]
+    [InlineData("colors=1234567890123456789012345678901")]
     public async Task ProductList_RejectsInvalidQueriesBeforeReader(string query)
     {
         using var factory = new CatalogApiFactory();

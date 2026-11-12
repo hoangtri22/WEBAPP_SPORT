@@ -38,6 +38,7 @@ Nút Tiếp tục với Google mở `GET /api/v1/auth/google/start` trong trình
 theo dõi cả phản hồi đã gửi trong lịch sử riêng. Nội dung công khai tuân theo cờ hiển thị của cửa hàng.
 Backend mới có `GET /api/v1/products/{id}/reviews`; cập nhật API cùng app, không cần migration mới cho luồng này.
 Xem [kiểm kê và kết quả kiểm tra luồng khám phá sản phẩm](PRODUCT_DISCOVERY_REPORT.md).
+Tìm kiếm nâng cao (giá, nhiều size/màu) và sản phẩm cùng loại: xem [phạm vi thay đổi, API và kết quả kiểm thử](ADVANCED_CATALOG_REPORT.md).
 Không coi test API là bằng chứng app native đã chạy.
 
 ## Chạy Android thật từ VS Code qua USB

@@ -67,6 +67,29 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
             throw new ArgumentOutOfRangeException(nameof(search), "Page must be positive and page size must be between 1 and 100.");
         if (search.CategoryId is <= 0)
             throw new ArgumentOutOfRangeException(nameof(search), "Category ID must be positive.");
+        if (search.ExcludeProductId is <= 0 || search.MinPrice is < 0 or > 9999999999.99m
+            || search.MaxPrice is < 0 or > 9999999999.99m || search.MinPrice > search.MaxPrice)
+            throw new ArgumentOutOfRangeException(nameof(search), "Invalid product exclusion or price range.");
+        var sizes = FilterValues(search.Sizes, 20);
+        var colors = FilterValues(search.Colors, 30);
+        var predicate = SearchPredicate;
+        if (search.ExcludeProductId.HasValue)
+            predicate += "\nAND sp.ma_san_pham <> @excludeProductId";
+        if (search.MinPrice.HasValue || search.MaxPrice.HasValue || sizes.Length > 0 || colors.Length > 0)
+        {
+            // Một biến thể phải thỏa toàn bộ giá, size, màu; tránh ghép điều kiện từ các biến thể khác nhau.
+            predicate += """
+
+                AND EXISTS (SELECT 1 FROM BIEN_THE_SP matching
+                            WHERE matching.ma_san_pham = sp.ma_san_pham AND matching.trang_thai = 'hien'
+                              AND (@inStockOnly = FALSE OR matching.so_luong_ton > 0)
+                """;
+            if (search.MinPrice.HasValue) predicate += "\nAND matching.gia_ban >= @minPrice";
+            if (search.MaxPrice.HasValue) predicate += "\nAND matching.gia_ban <= @maxPrice";
+            if (sizes.Length > 0) predicate += "\nAND TRIM(matching.kich_co) IN @sizes";
+            if (colors.Length > 0) predicate += "\nAND TRIM(matching.mau_sac) IN @colors";
+            predicate += ")";
+        }
 
         var order = search.Sort switch
         {
@@ -81,7 +104,8 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
         {
             archived = ArchivedCategory, categoryId = search.CategoryId,
             pattern = ContainsPattern(search.Q), inStockOnly = search.InStockOnly,
-            take = search.PageSize, offset
+            take = search.PageSize, offset, minPrice = search.MinPrice, maxPrice = search.MaxPrice,
+            sizes, colors, excludeProductId = search.ExcludeProductId
         };
 
         return ReadAsync(async () =>
@@ -89,15 +113,42 @@ public sealed class MySqlCatalogReader(MySqlConnectionFactory connections, ICata
             await using var connection = await connections.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(
                 IsolationLevel.RepeatableRead, isReadOnly: true, cancellationToken);
-            var countSql = "SELECT COUNT(*) FROM SAN_PHAM sp JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai\n" + SearchPredicate;
+            var countSql = "SELECT COUNT(*) FROM SAN_PHAM sp JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai\n" + predicate;
             var count = await connection.ExecuteScalarAsync<long>(Command(countSql, parameters, cancellationToken, transaction));
             var rows = await connection.QueryAsync<ProductRow>(Command(
-                ProductProjection + "\n" + SearchPredicate + "\n" + ProductGrouping + $"\nORDER BY {order}\nLIMIT @take OFFSET @offset",
+                ProductProjection + "\n" + predicate + "\n" + ProductGrouping + $"\nORDER BY {order}\nLIMIT @take OFFSET @offset",
                 parameters, cancellationToken, transaction));
             var products = rows.Select(ToProduct).ToArray();
             await transaction.CommitAsync(cancellationToken);
             return new PagedResponse<CatalogProduct>(products, search.Page, search.PageSize, count);
         });
+    }
+
+    // Lấy size/màu thật từ toàn bộ biến thể công khai; SQL loại rỗng và trùng theo collation hiện tại.
+    public Task<ProductFilterOptionsDto> FilterOptionsAsync(bool inStockOnly, CancellationToken cancellationToken) => ReadAsync(async () =>
+    {
+        const string from = """
+            FROM BIEN_THE_SP bt
+            JOIN SAN_PHAM sp ON sp.ma_san_pham = bt.ma_san_pham
+            JOIN LOAI_SP l ON l.ma_loai = sp.ma_loai
+            WHERE sp.trang_thai = 'hien' AND l.ten_loai <> @archived AND bt.trang_thai = 'hien'
+              AND (@inStockOnly = FALSE OR bt.so_luong_ton > 0)
+            """;
+        await using var connection = await connections.OpenAsync(cancellationToken);
+        using var rows = await connection.QueryMultipleAsync(Command(
+            "SELECT DISTINCT TRIM(bt.kich_co) AS Value " + from + " AND NULLIF(TRIM(bt.kich_co), '') IS NOT NULL ORDER BY Value;\n" +
+            "SELECT DISTINCT TRIM(bt.mau_sac) AS Value " + from + " AND NULLIF(TRIM(bt.mau_sac), '') IS NOT NULL ORDER BY Value;",
+            new { archived = ArchivedCategory, inStockOnly }, cancellationToken));
+        return new ProductFilterOptionsDto((await rows.ReadAsync<string>()).ToArray(), (await rows.ReadAsync<string>()).ToArray());
+    });
+
+    // Chuẩn hóa và giới hạn danh sách tham số trước khi Dapper dựng các tham số IN.
+    private static string[] FilterValues(IReadOnlyList<string>? values, int maximumLength)
+    {
+        if (values is null) return [];
+        if (values.Count > 50 || values.Any(value => string.IsNullOrWhiteSpace(value) || value.Trim().Length > maximumLength))
+            throw new ArgumentException("Invalid catalog filter values.", nameof(values));
+        return values.Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     // Chi tiết một sản phẩm kèm biến thể đang hiện trong BIEN_THE_SP. Gọi từ ProductsController.

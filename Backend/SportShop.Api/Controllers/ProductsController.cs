@@ -27,6 +27,29 @@ public sealed class ProductsController(ICatalogReader reader, MediaUrlResolver m
             page.Page, page.PageSize, page.TotalItems));
     }
 
+    /// <summary>Size và màu từ toàn bộ catalog công khai, không phụ thuộc trang sản phẩm đang tải.</summary>
+    [HttpGet("filter-options")]
+    [ProducesResponseType<ProductFilterOptionsDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<ProductFilterOptionsDto>> FilterOptions(
+        CancellationToken cancellationToken, bool inStockOnly = true)
+        => Ok(await reader.FilterOptionsAsync(inStockOnly, cancellationToken));
+
+    /// <summary>Sản phẩm cùng danh mục còn bán, còn hàng; loại sản phẩm hiện tại trước khi lấy giới hạn.</summary>
+    [HttpGet("{productId}/related")]
+    [ProducesResponseType<IReadOnlyList<ProductSummaryDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ProductSummaryDto>>> Related(
+        [Range(1, int.MaxValue)] int productId, CancellationToken cancellationToken,
+        [Range(1, 20)] int limit = 8)
+    {
+        var detail = await reader.ProductAsync(productId, cancellationToken);
+        if (detail is null)
+            return NotFound(ApiProblems.Create(HttpContext, 404, "RESOURCE_NOT_FOUND", "Không tìm thấy sản phẩm."));
+        var related = await reader.ProductsAsync(new ProductSearch(CategoryId: detail.Product.CategoryId,
+            PageSize: limit, ExcludeProductId: productId), cancellationToken);
+        return Ok(related.Items.Select(item => CatalogMapping.Summary(item, media)).ToArray());
+    }
+
     /// <summary>Chi tiết sản phẩm và các biến thể đang hiện qua ICatalogReader.ProductAsync(), gồm cả biến thể hết hàng.</summary>
     [HttpGet("{productId}")]
     [ProducesResponseType<ProductDetailDto>(StatusCodes.Status200OK)]

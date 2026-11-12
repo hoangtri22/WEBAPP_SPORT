@@ -41,6 +41,24 @@ public partial class ProductDetailPage : ContentPage
     }
 
     private async void OnRetryClicked(object? sender, EventArgs e) => await LoadAsync(_productId);
+    private async void OnRetryRelatedClicked(object? sender, EventArgs e)
+        => await _vm.LoadRelatedAsync(_lifetime?.Token ?? default);
+
+    // Mỗi gợi ý mở một trang transient với đúng ID; Back giữ trang và lựa chọn trước đó.
+    private async void OnRelatedProductTapped(object? sender, TappedEventArgs e)
+    {
+        if (_navigating || sender is not BindableObject { BindingContext: ProductCard product }
+                || product.Id == _vm.ProductId) return;
+        _navigating = true;
+        try
+        {
+            var page = _services.GetRequiredService<ProductDetailPage>();
+            await Navigation.PushAsync(page);
+            await page.LoadAsync(product.Id);
+        }
+        finally { _navigating = false; }
+    }
+
     private void OnDecreaseClicked(object? sender, EventArgs e) => _vm.Quantity--;
     private void OnIncreaseClicked(object? sender, EventArgs e) => _vm.Quantity++;
     private async void OnAddClicked(object? sender, EventArgs e)

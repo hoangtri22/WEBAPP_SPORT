@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.CatalogFiltersPage" x:DataType="vm:CatalogViewModel"
+             BackgroundColor="#F5F7FA" Title="Giá, size và màu">
+    <Grid RowDefinitions="*,Auto" Padding="18" RowSpacing="12">
+        <ScrollView>
+            <VerticalStackLayout Spacing="14">
+                <Label Text="Lọc sản phẩm" FontFamily="OpenSansSemibold" FontSize="22" TextColor="#102C46" />
+                <ActivityIndicator IsRunning="{Binding IsPreparingFilters}" IsVisible="{Binding IsPreparingFilters}" Color="#237044" />
+                <Label Text="Kết hợp với từ khóa, danh mục và sắp xếp đang chọn. Bỏ chọn từng size/màu hoặc xóa ô giá để gỡ điều kiện."
+                       FontSize="13" TextColor="#607487" />
+                <Label Text="Khoảng giá (₫)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
+                <Entry Text="{Binding MinPriceText}" Placeholder="Giá tối thiểu" Keyboard="Numeric" MaxLength="13"
+                       BackgroundColor="White" TextColor="#102C46" AutomationId="MinPriceFilter" />
+                <Entry Text="{Binding MaxPriceText}" Placeholder="Giá tối đa" Keyboard="Numeric" MaxLength="13"
+                       BackgroundColor="White" TextColor="#102C46" AutomationId="MaxPriceFilter" />
+                <Label Text="Nhập số, ví dụ 150000; không dùng dấu phân cách hàng nghìn."
+                       FontSize="11" TextColor="#607487" />
+                <Label Text="Size (chọn nhiều)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
+                <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Sizes}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CatalogFilterOption">
+                            <HorizontalStackLayout Spacing="2" Margin="0,0,12,4">
+                                <CheckBox IsChecked="{Binding IsSelected}" Color="#237044" />
+                                <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="#102C46"
+                                       MaximumWidthRequest="200" LineBreakMode="WordWrap" />
+                            </HorizontalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                    <BindableLayout.EmptyView><Label Text="Chưa có lựa chọn size." TextColor="#607487" FontSize="12" /></BindableLayout.EmptyView>
+                </FlexLayout>
+                <Label Text="Màu (chọn nhiều)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
+                <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Colors}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CatalogFilterOption">
+                            <HorizontalStackLayout Spacing="2" Margin="0,0,12,4">
+                                <CheckBox IsChecked="{Binding IsSelected}" Color="#237044" />
+                                <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="#102C46"
+                                       MaximumWidthRequest="200" LineBreakMode="WordWrap" />
+                            </HorizontalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                    <BindableLayout.EmptyView><Label Text="Chưa có lựa chọn màu." TextColor="#607487" FontSize="12" /></BindableLayout.EmptyView>
+                </FlexLayout>
+                <Button Text="Xóa giá, size và màu" Clicked="OnClearClicked" BackgroundColor="#E7F2EB"
+                        TextColor="#237044" CornerRadius="10" AutomationId="ClearAdvancedFilters" />
+                <Label Text="{Binding FilterError}" IsVisible="{Binding HasFilterError}" TextColor="#8B3D1A" FontSize="12" />
+                <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="#8B3D1A" FontSize="12" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#8B3D1A" FontSize="12" />
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout Grid.Row="1" Spacing="6">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#237044" HeightRequest="24" />
+            <Button Text="Áp dụng bộ lọc" Clicked="OnApplyClicked" BackgroundColor="#102C46"
+                    TextColor="White" CornerRadius="12" AutomationId="ApplyAdvancedFilters" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

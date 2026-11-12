@@ -54,6 +54,52 @@
                     <Label Text="Thông tin sản phẩm" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#102C46" />
                     <Label Text="{Binding Description}" TextColor="#40566B" FontSize="14" LineHeight="1.25" />
                     <Label Text="Giá và tồn kho được xác nhận lại khi thêm giỏ và thanh toán." TextColor="#607487" FontSize="11" />
+                    <VerticalStackLayout Spacing="10" AutomationId="RelatedProductsSection">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Sản phẩm cùng loại" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#102C46" />
+                            <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsRelatedLoading}"
+                                               IsVisible="{Binding IsRelatedLoading}" Color="#0F766E" HeightRequest="24" />
+                        </Grid>
+                        <VerticalStackLayout IsVisible="{Binding HasRelatedError}" Spacing="6">
+                            <Label Text="{Binding RelatedErrorMessage}" TextColor="#8B3D1A" FontSize="12" />
+                            <Button Text="Tải lại sản phẩm cùng loại" Clicked="OnRetryRelatedClicked"
+                                    IsEnabled="{Binding CanRetryRelated}" BackgroundColor="#102C46" TextColor="White"
+                                    HorizontalOptions="Start" AutomationId="RetryRelatedProducts" />
+                        </VerticalStackLayout>
+                        <Label Text="Chưa có sản phẩm cùng loại còn hàng." IsVisible="{Binding ShowRelatedEmpty}"
+                               TextColor="#607487" FontSize="13" AutomationId="RelatedProductsEmpty" />
+                        <CollectionView ItemsSource="{Binding RelatedProducts}" SelectionMode="None" HeightRequest="286"
+                                        IsVisible="{Binding HasRelatedProducts}" AutomationId="RelatedProductList">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ProductCard">
+                                    <Border WidthRequest="164" BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 16">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnRelatedProductTapped" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="0">
+                                            <Grid HeightRequest="142" BackgroundColor="#EDF1F5">
+                                                <Label Text="SPORTSHOP" FontSize="12" TextColor="#8B9AA9"
+                                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="8"
+                                                       SemanticProperties.Description="{Binding Name}" />
+                                            </Grid>
+                                            <VerticalStackLayout Padding="12" Spacing="6">
+                                                <Label Text="{Binding CategoryName}" TextColor="#667D8F" FontSize="10"
+                                                       MaxLines="1" LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Name}" TextColor="#102C46" FontFamily="OpenSansSemibold"
+                                                       FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="42" />
+                                                <Label Text="{Binding PriceText}" TextColor="#B64D1B" FontFamily="OpenSansSemibold" FontSize="15" />
+                                                <Label Text="{Binding StockText}" TextColor="#237044" FontSize="10" />
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>

@@ -65,6 +65,109 @@ public sealed class MySqlCatalogTests
         Assert.All(filtered.Items, product => Assert.Equal(categoryId, product.CategoryId));
     }
 
+    // Đối chiếu lọc biến thể, nhiều lựa chọn, tổ hợp, sắp xếp và phân trang bằng các dòng gốc độc lập.
+    [MySqlFact]
+    public async Task Products_AdvancedFiltersMatchSameVariantAndKeepStablePages()
+    {
+        using var context = new ReaderContext();
+        var raw = await LoadRawAsync(context.ConnectionString);
+        var sample = raw.PublicProducts(true).First(product => raw.VisibleVariants(product.Id)
+            .Any(variant => variant.Stock > 0 && variant.Size is not null && variant.Color is not null));
+        var variant = raw.VisibleVariants(sample.Id).First(value => value.Stock > 0 && value.Size is not null && value.Color is not null);
+        ProductSearch[] searches =
+        [
+            new(MinPrice: 200000m, MaxPrice: 800000m),
+            new(Sizes: ["M", "L"]),
+            new(Colors: ["Đen", "Xanh"]),
+            new(MinPrice: 0m, MaxPrice: 9999999999.99m, Sizes: ["M", "L"], Colors: ["Đen", "Xanh"]),
+            new(CategoryId: sample.CategoryId, Q: sample.Name, MinPrice: variant.Price, MaxPrice: variant.Price,
+                Sizes: [variant.Size!], Colors: [variant.Color!]),
+            new(Sizes: ["__no_size__"], Colors: ["__no_color__"])
+        ];
+        foreach (var search in searches)
+        foreach (var inStockOnly in new[] { true, false })
+        foreach (var sort in new[] { "new", "price_asc", "price_desc" })
+        {
+            var eligible = raw.PublicProducts(inStockOnly).Where(product =>
+                (search.CategoryId is null || product.CategoryId == search.CategoryId)
+                && (search.Q is null || product.Name == search.Q)
+                && raw.VisibleVariants(product.Id).Any(value => (!inStockOnly || value.Stock > 0)
+                    && (search.MinPrice is null || value.Price >= search.MinPrice)
+                    && (search.MaxPrice is null || value.Price <= search.MaxPrice)
+                    && (search.Sizes is null || search.Sizes.Contains(value.Size?.Trim(), StringComparer.OrdinalIgnoreCase))
+                    && (search.Colors is null || search.Colors.Contains(value.Color?.Trim(), StringComparer.OrdinalIgnoreCase))));
+            var ordered = sort switch
+            {
+                "price_asc" => eligible.OrderBy(product => raw.MinPrice(product.Id)).ThenBy(product => product.Id),
+                "price_desc" => eligible.OrderByDescending(product => raw.MaxPrice(product.Id)).ThenByDescending(product => product.Id),
+                _ => eligible.OrderByDescending(product => product.Id)
+            };
+            var expected = ordered.Select(product => product.Id).ToArray();
+            var first = await context.Reader.ProductsAsync(search with { InStockOnly = inStockOnly, Sort = sort, PageSize = 2 }, CancellationToken.None);
+            var second = await context.Reader.ProductsAsync(search with { InStockOnly = inStockOnly, Sort = sort, PageSize = 2, Page = 2 }, CancellationToken.None);
+            Assert.Equal(expected.Length, first.TotalItems);
+            Assert.Equal(first.TotalItems, second.TotalItems);
+            Assert.Equal(expected.Take(2), first.Items.Select(product => product.Id));
+            Assert.Equal(expected.Skip(2).Take(2), second.Items.Select(product => product.Id));
+            Assert.Empty(first.Items.Select(product => product.Id).Intersect(second.Items.Select(product => product.Id)));
+        }
+    }
+
+    // Size của biến thể A và màu của biến thể B không tạo thành một lựa chọn thực tế.
+    [MySqlFact]
+    public async Task Products_DoNotCombineSizeAndColorFromDifferentVariants()
+    {
+        using var context = new ReaderContext();
+        var raw = await LoadRawAsync(context.ConnectionString);
+        var mismatch = (from product in raw.PublicProducts(false)
+                        from sizeVariant in raw.VisibleVariants(product.Id)
+                        from colorVariant in raw.VisibleVariants(product.Id)
+                        where sizeVariant.Size is not null && colorVariant.Color is not null
+                            && !raw.VisibleVariants(product.Id).Any(value => value.Size == sizeVariant.Size && value.Color == colorVariant.Color)
+                        select new { product.Id, Size = sizeVariant.Size, Color = colorVariant.Color }).First();
+        var actual = await context.Reader.ProductsAsync(new ProductSearch(InStockOnly: false,
+            Sizes: [mismatch.Size], Colors: [mismatch.Color], PageSize: 100), CancellationToken.None);
+        Assert.DoesNotContain(actual.Items, product => product.Id == mismatch.Id);
+    }
+
+    // Loại sản phẩm đang xem ngay trong SQL để trang gợi ý vẫn đủ số lượng và đúng tổng.
+    [MySqlFact]
+    public async Task Products_ExcludesCurrentProductBeforePagination()
+    {
+        using var context = new ReaderContext();
+        var raw = await LoadRawAsync(context.ConnectionString);
+        var sample = raw.PublicProducts(true).GroupBy(product => product.CategoryId).First(group => group.Count() > 2)
+            .OrderByDescending(product => product.Id).First();
+        var expected = raw.PublicProducts(true).Where(product => product.CategoryId == sample.CategoryId && product.Id != sample.Id)
+            .OrderByDescending(product => product.Id).Select(product => product.Id).ToArray();
+        var actual = await context.Reader.ProductsAsync(new ProductSearch(CategoryId: sample.CategoryId,
+            PageSize: 2, ExcludeProductId: sample.Id), CancellationToken.None);
+        Assert.Equal(expected.Length, actual.TotalItems);
+        Assert.Equal(expected.Take(2), actual.Items.Select(product => product.Id));
+    }
+
+    // Danh sách lựa chọn phải đến từ toàn bộ sản phẩm công khai, bỏ rỗng/ẩn/lưu trữ và tuân cờ tồn.
+    [MySqlFact]
+    public async Task FilterOptions_UsesOnlyPublicVisibleVariantsAndHonorsStockFlag()
+    {
+        using var context = new ReaderContext();
+        var raw = await LoadRawAsync(context.ConnectionString);
+        foreach (var inStockOnly in new[] { true, false })
+        {
+            var variants = raw.PublicProducts(false).SelectMany(product => raw.VisibleVariants(product.Id))
+                .Where(variant => !inStockOnly || variant.Stock > 0).ToArray();
+            var expectedSizes = variants.Select(variant => variant.Size?.Trim()).Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var expectedColors = variants.Select(variant => variant.Color?.Trim()).Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var actual = await context.Reader.FilterOptionsAsync(inStockOnly, CancellationToken.None);
+            Assert.True(expectedSizes.SetEquals(actual.Sizes));
+            Assert.True(expectedColors.SetEquals(actual.Colors));
+            Assert.Equal(actual.Sizes.Count, actual.Sizes.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Assert.Equal(actual.Colors.Count, actual.Colors.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        }
+    }
+
     // Kiểm tra mọi kiểu sắp xếp ổn định qua các trang, giá null xếp cuối.
     [MySqlFact]
     public async Task Products_AllSortOrdersAreStableAcrossPagesAndNullPricesRemainLast()
@@ -286,7 +389,7 @@ public sealed class MySqlCatalogTests
         using var rows = await connection.QueryMultipleAsync("""
             SELECT ma_loai AS Id, ten_loai AS Name FROM LOAI_SP;
             SELECT ma_san_pham AS Id, ma_loai AS CategoryId, ten_san_pham AS Name, trang_thai AS Status FROM SAN_PHAM;
-            SELECT ma_bien_the AS Id, ma_san_pham AS ProductId, gia_ban AS Price,
+            SELECT ma_bien_the AS Id, ma_san_pham AS ProductId, gia_ban AS Price, kich_co AS Size, mau_sac AS Color,
                    so_luong_ton AS Stock, trang_thai AS Status, hinh_anh AS ImagePath FROM BIEN_THE_SP;
             SELECT ma_ctkm AS Id, loai_khuyen_mai AS Type, trang_thai AS Status,
                    ngay_bat_dau AS StartsAt, ngay_ket_thuc AS EndsAt,
@@ -371,7 +474,7 @@ public sealed class MySqlCatalogTests
     // Dòng sản phẩm đọc bằng Dapper.
     private sealed class ProductRaw { public int Id { get; set; } public int CategoryId { get; set; } public string Name { get; set; } = ""; public string Status { get; set; } = ""; }
     // Dòng biến thể đọc bằng Dapper.
-    private sealed class VariantRaw { public int Id { get; set; } public int ProductId { get; set; } public decimal Price { get; set; } public int Stock { get; set; } public string Status { get; set; } = ""; public string? ImagePath { get; set; } }
+    private sealed class VariantRaw { public int Id { get; set; } public int ProductId { get; set; } public decimal Price { get; set; } public int Stock { get; set; } public string Status { get; set; } = ""; public string? ImagePath { get; set; } public string? Size { get; set; } public string? Color { get; set; } }
     // Dòng khuyến mãi đọc bằng Dapper.
     private sealed class PromotionRaw { public int Id { get; set; } public string Type { get; set; } = ""; public string Status { get; set; } = ""; public DateTime StartsAt { get; set; } public DateTime EndsAt { get; set; } public int? Limit { get; set; } public int Used { get; set; } public string? RequiredTier { get; set; } public int? PerCustomerLimit { get; set; } }
     // Dòng voucher đọc bằng Dapper.

@@ -26,23 +26,32 @@
         </Border>
         <Border Grid.Row="2" BackgroundColor="White" Stroke="#DFE6ED" StrokeShape="RoundRectangle 14">
             <SearchBar Placeholder="Tìm giày, áo, dụng cụ…" Text="{Binding SearchText}"
-                       SearchCommand="{Binding SearchCommand}" MaxLength="100" IsEnabled="{Binding IsIdle}"
+                       SearchCommand="{Binding SearchCommand}" MaxLength="100"
                        BackgroundColor="Transparent" TextColor="#102C46" PlaceholderColor="#718293"
                        CancelButtonColor="#102C46" FontSize="14" AutomationId="ProductSearch" />
         </Border>
         <VerticalStackLayout Grid.Row="3" Spacing="4">
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Picker Title="Danh mục" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}"
-                        SelectedItem="{Binding SelectedCategory}" IsEnabled="{Binding IsIdle}" AutomationId="CategoryFilter" />
+                        SelectedItem="{Binding SelectedCategory}" AutomationId="CategoryFilter" />
                 <Picker Grid.Column="1" Title="Sắp xếp" ItemsSource="{Binding SortOptions}" ItemDisplayBinding="{Binding Name}"
-                        SelectedItem="{Binding SelectedSort}" IsEnabled="{Binding IsIdle}" AutomationId="ProductSort" />
+                        SelectedItem="{Binding SelectedSort}" AutomationId="ProductSort" />
             </Grid>
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
-                <Switch IsToggled="{Binding InStockOnly}" IsEnabled="{Binding IsIdle}" OnColor="#237044" />
+                <Switch IsToggled="{Binding InStockOnly}" OnColor="#237044" />
                 <Label Grid.Column="1" Text="Chỉ còn hàng" VerticalOptions="Center" FontSize="12" TextColor="#607487" />
                 <Button Grid.Column="2" Text="Tìm / Áp dụng" Command="{Binding SearchCommand}" FontSize="12"
                         BackgroundColor="#102C46" TextColor="White" CornerRadius="10" AutomationId="ApplyCatalogFilters" />
             </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Text="Giá · Size · Màu" Clicked="OnAdvancedFiltersClicked" FontSize="12"
+                        BackgroundColor="#E7F2EB" TextColor="#237044" CornerRadius="10" AutomationId="AdvancedCatalogFilters" />
+                <Button Grid.Column="1" Text="Đặt lại tất cả" Command="{Binding ResetCommand}" FontSize="12"
+                        BackgroundColor="Transparent" TextColor="#607487" AutomationId="ResetCatalogFilters" />
+            </Grid>
+            <Label Text="{Binding AppliedFilterSummary}" FontSize="11" TextColor="#607487" MaxLines="2"
+                   LineBreakMode="TailTruncation" AutomationId="AppliedCatalogFilters" />
+            <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="#8B3D1A" FontSize="11" />
             <Label Text="{Binding FilterError}" IsVisible="{Binding HasFilterError}" TextColor="#8B3D1A" FontSize="11" />
         </VerticalStackLayout>
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto" VerticalOptions="Center">
@@ -102,7 +111,7 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                     <CollectionView.Footer>
-                        <VerticalStackLayout Padding="0,16,0,24" Spacing="12">
+                        <VerticalStackLayout Padding="0,16,0,24" Spacing="12" IsVisible="{Binding HasProducts}">
                             <Button Text="Xem thêm sản phẩm" Command="{Binding LoadMoreCommand}"
                                     IsVisible="{Binding HasMore}" IsEnabled="{Binding IsIdle}"
                                     BackgroundColor="#102C46" TextColor="White" CornerRadius="12" AutomationId="LoadMore" />

@@ -2,6 +2,8 @@ namespace SportShop.Contracts.Catalog;
 
 // Danh mục và số sản phẩm.
 public sealed record CategoryDto(int Id, string Name, int ProductCount);
+// Giá trị size/màu thực tế từ biến thể của sản phẩm công khai.
+public sealed record ProductFilterOptionsDto(IReadOnlyList<string> Sizes, IReadOnlyList<string> Colors);
 // Một sở thích thể thao.
 public sealed record InterestDto(int Id, string Name);
 // Một phương thức thanh toán.

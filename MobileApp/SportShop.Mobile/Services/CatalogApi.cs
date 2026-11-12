@@ -1,4 +1,5 @@
 using System.Net;
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using SportShop.Contracts.Catalog;
@@ -15,6 +16,14 @@ public interface ICatalogApi
         => GetProductsAsync(query, page, cancellationToken);
     Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<CategoryDto>>([]);
+    Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, int? categoryId,
+        string sort, bool inStockOnly, decimal? minPrice, decimal? maxPrice,
+        IReadOnlyList<string> sizes, IReadOnlyList<string> colors, CancellationToken cancellationToken)
+        => GetProductsAsync(query, page, categoryId, sort, inStockOnly, cancellationToken);
+    Task<ProductFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new ProductFilterOptionsDto([], []));
+    Task<IReadOnlyList<ProductSummaryDto>> GetRelatedProductsAsync(int productId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ProductSummaryDto>>([]);
     Task<ProductDetailDto> GetProductAsync(int productId, CancellationToken cancellationToken = default)
         => Task.FromException<ProductDetailDto>(new CatalogException("Không tìm thấy sản phẩm."));
 }
@@ -28,16 +37,46 @@ public sealed class CatalogApi(HttpClient http) : ICatalogApi
         => GetProductsAsync(query, page, null, "new", true, cancellationToken);
 
     // Giữ nguyên điều kiện lọc và sắp xếp trên mỗi trang kết quả.
-    public async Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(
+    public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(
         string? query, int page, int? categoryId, string sort, bool inStockOnly, CancellationToken cancellationToken)
+        => GetProductsAsync(query, page, categoryId, sort, inStockOnly, null, null, [], [], cancellationToken);
+
+    // Gửi bộ lọc biến thể lên backend; số thập phân độc lập ngôn ngữ của thiết bị.
+    public async Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(
+        string? query, int page, int? categoryId, string sort, bool inStockOnly, decimal? minPrice,
+        decimal? maxPrice, IReadOnlyList<string> sizes, IReadOnlyList<string> colors, CancellationToken cancellationToken)
     {
         var path = $"api/v1/products?page={page}&pageSize=20&sort={Uri.EscapeDataString(sort)}&inStockOnly={inStockOnly.ToString().ToLowerInvariant()}";
         if (categoryId is > 0) path += "&categoryId=" + categoryId;
         if (!string.IsNullOrWhiteSpace(query)) path += "&q=" + Uri.EscapeDataString(query.Trim());
+        if (minPrice is { } minimum) path += "&minPrice=" + minimum.ToString(CultureInfo.InvariantCulture);
+        if (maxPrice is { } maximum) path += "&maxPrice=" + maximum.ToString(CultureInfo.InvariantCulture);
+        foreach (var size in sizes) path += "&sizes=" + Uri.EscapeDataString(size);
+        foreach (var color in colors) path += "&colors=" + Uri.EscapeDataString(color);
         var result = await GetAsync<PagedResponse<ProductSummaryDto>>(path, cancellationToken);
         if (result.Items is null || result.Page != page || result.PageSize < 1 || result.TotalItems < 0
             || result.Items.Any(item => item is null || item.Id <= 0))
             throw new CatalogException("Dữ liệu sản phẩm chưa hợp lệ. Vui lòng thử lại.");
+        return result;
+    }
+
+    // Danh sách lựa chọn lấy từ toàn bộ catalog công khai, không suy ra từ trang kết quả hiện tại.
+    public async Task<ProductFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await GetAsync<ProductFilterOptionsDto>("api/v1/products/filter-options?inStockOnly=false", cancellationToken);
+        if (result.Sizes is null || result.Colors is null
+            || result.Sizes.Concat(result.Colors).Any(string.IsNullOrWhiteSpace))
+            throw new CatalogException("Dữ liệu bộ lọc chưa hợp lệ. Vui lòng thử lại.");
+        return result;
+    }
+
+    // Backend xác định danh mục và loại sản phẩm hiện tại trước khi giới hạn số gợi ý.
+    public async Task<IReadOnlyList<ProductSummaryDto>> GetRelatedProductsAsync(int productId, CancellationToken cancellationToken = default)
+    {
+        if (productId <= 0) throw new CatalogException("Không tìm thấy sản phẩm.");
+        var result = await GetAsync<ProductSummaryDto[]>($"api/v1/products/{productId}/related?limit=8", cancellationToken);
+        if (result.Any(item => item is null || item.Id <= 0))
+            throw new CatalogException("Dữ liệu sản phẩm liên quan chưa hợp lệ. Vui lòng thử lại.");
         return result;
     }
 
@@ -77,8 +116,9 @@ public sealed class CatalogApi(HttpClient http) : ICatalogApi
             return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
                 ?? throw new CatalogException("Dữ liệu sản phẩm chưa hợp lệ. Vui lòng thử lại.");
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or WebException or IOException)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             throw new CatalogException("Không kết nối được cửa hàng. Vui lòng kiểm tra kết nối và thử lại.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)

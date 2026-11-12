@@ -57,6 +57,7 @@ internal sealed class FakeCatalogReader : ICatalogReader
     public Exception? Failure { get; set; }
     public ProductSearch? LastSearch { get; private set; }
     public int ProductListCalls { get; private set; }
+    public bool? LastOptionsInStockOnly { get; private set; }
     public string? ImagePath { get; set; } = "/images/giay-pegasus.jpg";
     public string? VariantImagePath { get; set; } = "/uploads/unavailable-test-fixture-731a9820.jpg";
 
@@ -81,8 +82,23 @@ internal sealed class FakeCatalogReader : ICatalogReader
         ThrowIfFailed();
         ProductListCalls++;
         LastSearch = search;
+        if (search.ExcludeProductId.HasValue)
+        {
+            CatalogProduct[] candidates = [Product, Product with { Id = 8 }, Product with { Id = 9, CategoryId = 3 }];
+            var related = candidates.Where(product => product.Id != search.ExcludeProductId
+                && product.CategoryId == search.CategoryId).Take(search.PageSize).ToArray();
+            return Task.FromResult(new PagedResponse<CatalogProduct>(related, search.Page, search.PageSize, related.Length));
+        }
         IReadOnlyList<CatalogProduct> products = search.Page == 1 ? [Product] : [];
         return Task.FromResult(new PagedResponse<CatalogProduct>(products, search.Page, search.PageSize, 23));
+    }
+
+    // Ghi nhận lựa chọn tồn kho và trả size/màu cho kiểm thử contract HTTP.
+    public Task<ProductFilterOptionsDto> FilterOptionsAsync(bool inStockOnly, CancellationToken cancellationToken)
+    {
+        ThrowIfFailed();
+        LastOptionsInStockOnly = inStockOnly;
+        return Task.FromResult(new ProductFilterOptionsDto(["42", "43"], ["Xanh", "Đen"]));
     }
 
     // Trả chi tiết sản phẩm giả.

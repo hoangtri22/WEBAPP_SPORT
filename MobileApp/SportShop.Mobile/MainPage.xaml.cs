@@ -9,6 +9,7 @@ public partial class MainPage : ContentPage
     private readonly IServiceProvider _services;
     private CancellationTokenSource? _lifetime;
     private bool _openingProduct;
+    private bool _openingFilters;
 
     // Gắn CatalogViewModel vào trang.
     public MainPage(CatalogViewModel viewModel, IServiceProvider services)
@@ -37,6 +38,15 @@ public partial class MainPage : ContentPage
 
     // Trang chủ có thể mở thẳng danh mục, vẫn dùng cùng bộ lọc và phân trang của catalog.
     public Task OpenCategoryAsync(int? categoryId) => _viewModel.OpenCategoryAsync(categoryId);
+
+    // Bộ lọc cuộn riêng để danh sách lựa chọn dài vẫn dùng được trên màn hình nhỏ.
+    private async void OnAdvancedFiltersClicked(object? sender, EventArgs e)
+    {
+        if (_openingFilters) return;
+        _openingFilters = true;
+        try { await Navigation.PushAsync(new CatalogFiltersPage(_viewModel)); }
+        finally { _openingFilters = false; }
+    }
 
     // Mỗi sản phẩm mở một trang chi tiết riêng để lựa chọn không bị lẫn giữa các sản phẩm.
     private async void OnProductTapped(object? sender, TappedEventArgs e)

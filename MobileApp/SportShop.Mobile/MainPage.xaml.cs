@@ -10,6 +10,7 @@ public partial class MainPage : ContentPage
     private CancellationTokenSource? _lifetime;
     private bool _openingProduct;
     private bool _openingFilters;
+    private bool _navigatingTab;
 
     // Gắn CatalogViewModel vào trang.
     public MainPage(CatalogViewModel viewModel, IServiceProvider services)
@@ -72,5 +73,32 @@ public partial class MainPage : ContentPage
         var page = _services.GetRequiredService<InfoPagesPage>();
         await Navigation.PushAsync(page);
         await page.LoadAsync();
+    }
+
+    // Thanh tab giữ cách mở Trang chủ, Giỏ hàng và Tài khoản như các màn hình hiện có.
+    private async void OnHomeNavClicked(object? sender, EventArgs e)
+        => await NavigateTabAsync(async () =>
+        {
+            if (Navigation.NavigationStack.Count > 1) await Navigation.PopToRootAsync();
+        });
+
+    private async void OnCartNavClicked(object? sender, EventArgs e)
+        => await NavigateTabAsync(() => Navigation.PushAsync(_services.GetRequiredService<CartPage>()));
+
+    private async void OnAccountNavClicked(object? sender, EventArgs e)
+        => await NavigateTabAsync(async () =>
+        {
+            var auth = _services.GetRequiredService<AuthViewModel>();
+            if (auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
+            else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
+                await auth.LeaveAsync();
+        });
+
+    private async Task NavigateTabAsync(Func<Task> navigate)
+    {
+        if (_navigatingTab) return;
+        _navigatingTab = true;
+        try { await navigate(); }
+        finally { _navigatingTab = false; }
     }
 }

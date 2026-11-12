@@ -8,6 +8,7 @@
         <ToolbarItem Text="Ưu đãi" Clicked="OnPromotionsClicked" />
         <ToolbarItem Text="Thông tin" Clicked="OnInfoClicked" />
     </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="*,Auto">
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" Padding="18,12,18,0" RowSpacing="10">
         <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
             <VerticalStackLayout Spacing="0">
@@ -121,6 +122,13 @@
                     </CollectionView.Footer>
                 </CollectionView>
             </RefreshView>
+        </Grid>
+    </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" Padding="8,4" BackgroundColor="White">
+            <Button Text="Trang chủ" Clicked="OnHomeNavClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
+            <Button Grid.Column="1" Text="Sản phẩm" BackgroundColor="Transparent" TextColor="{StaticResource Teal}" FontSize="11" Padding="0" />
+            <Button Grid.Column="2" Text="Giỏ hàng" Clicked="OnCartNavClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
+            <Button Grid.Column="3" Text="Tài khoản" Clicked="OnAccountNavClicked" BackgroundColor="Transparent" TextColor="{StaticResource Muted}" FontSize="11" Padding="0" />
         </Grid>
     </Grid>
 </ContentPage>

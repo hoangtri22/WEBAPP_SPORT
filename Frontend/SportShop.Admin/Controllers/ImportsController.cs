@@ -6,6 +6,19 @@ namespace SportShop.Admin.Controllers;
 // Quản lý phiếu nhập hàng, đọc qua ShopData và nhập file qua ShopCommands.
 public class ImportsController(ShopData db, ShopCommands cmd) : Controller
 {
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng phiếu nhập: nhà cung cấp (cột 1), ngày lập (cột 2), nhân viên lập (cột 4) và tổng tiền (cột 5).
+    static readonly FilterSpec ImportFilter = new()
+    {
+        Id = "imports", Noun = "phiếu nhập",
+        Fields =
+        [
+            new("supplier", "Nhà cung cấp", "select", Col: 1),
+            new("total", "Tổng tiền (đ)", "number", Col: 5),
+            new("date", "Ngày lập phiếu", "date", Col: 2),
+            new("employee", "Nhân viên lập", "select", Col: 4),
+        ],
+    };
+
     // Quản lý nhập hàng: danh sách phiếu nhập từ ShopData.ImportSlips; lập phiếu mới qua CrudController → ShopCommands.SaveImport().
     public IActionResult Index()
     {
@@ -20,7 +33,7 @@ public class ImportsController(ShopData db, ShopCommands cmd) : Controller
             Subtitle = "Theo dõi phiếu nhập hàng",
             Sections =
             [
-                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, AddLabel = "Thêm mới", Entity = "import", CanEdit = false, CanDelete = false },
+                new() { Columns = ["Mã phiếu", "Nhà cung cấp", "Ngày nhập", "Số lượng", "Nhân viên lập", "Tổng giá trị"], Rows = slips, Filter = ImportFilter, AddLabel = "Thêm mới", Entity = "import", CanEdit = false, CanDelete = false },
             ]
         });
     }

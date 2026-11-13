@@ -6,6 +6,14 @@ namespace SportShop.Admin.Controllers;
 // Quản lý sản phẩm, loại sản phẩm và nhập Excel; đọc qua ShopData, ghi qua ShopCommands.
 public class ProductsController(ShopData db, ShopCommands cmd) : Controller
 {
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng loại sản phẩm: số sản phẩm thuộc loại (cột 2).
+    static readonly FilterSpec CategoryFilter = new()
+    {
+        Id = "categories", Noun = "loại sản phẩm",
+        Fields = [new("count", "Số sản phẩm thuộc loại", "number", Col: 2)],
+        Quick = [new("Loại chưa có sản phẩm", "count", "lte", "0")],
+    };
+
     // Xuất sản phẩm đang bán và biến thể ra Excel (cột A–I); cũng là file mẫu cho nút "Nhập Excel" (ImportExcel).
     public IActionResult ExportExcel()
     {
@@ -63,7 +71,7 @@ public class ProductsController(ShopData db, ShopCommands cmd) : Controller
         {
             Title = "Quản lý loại sản phẩm",
             Subtitle = "Sắp xếp danh mục hàng hóa",
-            Sections = [new() { Columns = ["Mã loại", "Tên loại sản phẩm", "Số sản phẩm"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "category" }]
+            Sections = [new() { Columns = ["Mã loại", "Tên loại sản phẩm", "Số sản phẩm"], Rows = rows, Filter = CategoryFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "category" }]
         });
     }
 
@@ -71,6 +79,8 @@ public class ProductsController(ShopData db, ShopCommands cmd) : Controller
     public IActionResult Index()
     {
         ViewBag.Menu = "products";
+        ViewBag.ProductSuppliers = db.ProductSuppliers();
+        ViewBag.ProductsOnSale = db.ProductsOnSale();
         var variantRows = db.ActiveVariants.Select(v => new Row(
             [$"BT{v.Id:D3}", db.Product(v.ProductId).Name, v.Size ?? "-", v.Color ?? "-", Fmt.Money(v.Price), Fmt.Money(v.Cost), v.Stock.ToString()], Url.Action("Detail", new { id = v.ProductId }), v.Id)).ToList();
         return View(new ProductsVm(db.Categories, db.ActiveProducts, db.Variants.GroupBy(v => v.ProductId).ToDictionary(g => g.Key, g => g.ToList()), variantRows));

@@ -3,7 +3,7 @@
     var id = ViewData["id"] as string ?? "tbl";
     var hint = ViewData["hint"] as string ?? "";
 }
-<section class="card dtable" id="@id" data-pagesize="@Model.PageSize">
+<section class="card dtable" id="@id" data-pagesize="@Model.PageSize" data-filter="@(Model.Filter == null ? "" : System.Text.Json.JsonSerializer.Serialize(Model.Filter, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))">
     @if (!string.IsNullOrEmpty(Model.Heading))
     {
         <div class="card-title">@Model.Heading</div>
@@ -19,7 +19,7 @@
                     <input type="search" placeholder="Tìm kiếm trong @hint..." autocomplete="off" />
                     <kbd>Ctrl K</kbd>
                 </label>
-                <button type="button" class="btn-outline js-adv" aria-expanded="false">@Icons.Svg("search", 18) Tìm kiếm nâng cao <span class="adv-count" hidden></span></button>
+                <button type="button" class="btn-outline js-adv" aria-expanded="false">@Icons.Svg("sliders", 18) Tìm kiếm nâng cao <span class="adv-count"@(Model.Filter == null ? " hidden" : "")>0</span></button>
             }
             <span class="grow"></span>
             @if (Model.ExportUrl != null)
@@ -28,7 +28,14 @@
             }
             @if (Model.AddLabel != null)
             {
-                <button type="button" class="btn-primary" data-crud="create" data-entity="@Model.Entity">@Icons.Svg("plus", 18) @Model.AddLabel</button>
+                @if (Model.AddId != null)
+                {
+                    <button type="button" class="btn-primary" id="@Model.AddId">@Icons.Svg("plus", 18) @Model.AddLabel</button>
+                }
+                else
+                {
+                    <button type="button" class="btn-primary" data-crud="create" data-entity="@Model.Entity">@Icons.Svg("plus", 18) @Model.AddLabel</button>
+                }
             }
         </div>
         @if (Model.Toolbar)
@@ -48,7 +55,7 @@
             <tbody>
                 @foreach (var r in Model.Rows)
                 {
-                    <tr data-peek="@r.Url">
+                    <tr data-peek="@r.Url" data-f="@(r.Data == null ? "" : System.Text.Json.JsonSerializer.Serialize(r.Data))">
                         @foreach (var cell in r.Cells) { <td>@Fmt.Cell(cell)</td> }
                         @if (Model.ShowActions)
                         {

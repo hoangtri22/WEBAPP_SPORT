@@ -15,6 +15,42 @@
     </div>
 </div>
 
+<partial name="_Section" model="Model.History" view-data='new ViewDataDictionary(ViewData) { { "id", "tblReports" }, { "hint", "báo cáo" } }' />
+
+<dialog class="report-dlg" id="reportDlg">
+    <form method="post" id="reportForm">
+        @Html.AntiForgeryToken()
+        <h3>Tạo báo cáo</h3>
+        <label>Loại báo cáo
+            <select name="kind">
+                @foreach (var k in ReportsController.TypeLabels) { <option value="@k.Key">@k.Value</option> }
+            </select>
+        </label>
+        <label>Nhóm theo
+            <select name="group">
+                <option value="month">Tháng</option>
+                <option value="quarter">Quý</option>
+                <option value="year">Năm</option>
+            </select>
+        </label>
+        <div class="dlg-row">
+            <label>Từ ngày <input type="date" name="from" /></label>
+            <label>Đến ngày <input type="date" name="to" /></label>
+        </div>
+        <label>Định dạng
+            <select name="format">
+                <option value="Excel">Excel (.xlsx)</option>
+                <option value="PDF">PDF</option>
+            </select>
+        </label>
+        <p class="dlg-err" id="reportErr" hidden></p>
+        <div class="dlg-actions">
+            <button type="button" class="btn-outline" id="reportCancel">Hủy</button>
+            <button type="submit" class="btn-primary">Tạo báo cáo</button>
+        </div>
+    </form>
+</dialog>
+
 <form class="card range" method="get" asp-controller="Reports" asp-action="Index" id="rangeForm">
     <div class="range-input">
         @Icons.Svg("calendar", 20)
@@ -199,6 +235,24 @@
 
 @section Scripts {
     <script>
+        // Hộp thoại "Tạo báo cáo": gửi form đến ReportsController.Create, thành công thì tải lại trang để báo cáo mới hiện trong danh sách.
+        (function () {
+            var dlg = document.getElementById('reportDlg'), openBtn = document.getElementById('newReport'), form = document.getElementById('reportForm');
+            if (!dlg || !openBtn) return;
+            var err = document.getElementById('reportErr');
+            openBtn.addEventListener('click', function () { err.hidden = true; dlg.showModal(); });
+            document.getElementById('reportCancel').addEventListener('click', function () { dlg.close(); });
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var btn = form.querySelector('[type=submit]');
+                btn.disabled = true;
+                postForm('/Reports/Create', new FormData(form)).then(function (res) {
+                    btn.disabled = false;
+                    handleResult(res, function (m) { err.textContent = m; err.hidden = false; });
+                });
+            });
+        })();
+
         // Chọn nhanh kỳ báo cáo: điền ngày from/to rồi gửi form GET đến ReportsController.Index.
         document.getElementById('period').addEventListener('change', function () {
             var v = this.value; if (!v) return;

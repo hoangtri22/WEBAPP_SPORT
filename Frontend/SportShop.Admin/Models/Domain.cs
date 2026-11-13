@@ -66,7 +66,7 @@ public record Promotion(int Id, string Name, string Type, DateTime Start, DateTi
 public record Campaign(string Title, string Channel, string Group, string Promotion, string Creator, bool Sent, int Id = 0);
 
 // Khảo sát (KHAO_SAT) kèm số liệu gửi và hoàn thành.
-public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status);
+public record Survey(int Id, string Title, int Questions, int Sent, int Completed, DateTime End, string Status, DateTime Start = default);
 
 // Ghi chú chăm sóc khách (LICH_SU_CHAM_SOC).
 public record CareNote(int CustomerId, int EmployeeId, string Channel, string Content, DateTime Date, DateTime? FollowUp);
@@ -160,6 +160,8 @@ public static class Fmt
             }
             return new HtmlString(html.Append("</ul>").ToString());
         }
+        if (s.StartsWith("[a]") && s.IndexOf('|') is > 3 and var bar)
+            return new HtmlString($"<a class=\"cell-link\" href=\"{WebUtility.HtmlEncode(s[3..bar])}\">{WebUtility.HtmlEncode(s[(bar + 1)..])}</a>");
         if (s.Length > 3 && s[0] == '[' && s[2] == ']')
             return new HtmlString($"<span class=\"pill p-{s[1]}\"><i></i>{WebUtility.HtmlEncode(s[3..])}</span>");
         return new HtmlString(WebUtility.HtmlEncode(s));

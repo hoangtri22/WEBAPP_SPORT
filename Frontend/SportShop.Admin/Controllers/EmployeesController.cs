@@ -14,6 +14,14 @@ public class EmployeesController(ShopData db) : Controller
         base.OnActionExecuting(context);
     }
 
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng nhân viên: chức vụ (cột 2), trạng thái (cột 4) và giới tính (data-f của dòng).
+    static readonly FilterSpec EmployeeFilter = new()
+    {
+        Id = "employees", Noun = "nhân viên",
+        Fields = [new("position", "Chức vụ", "select", Col: 2), new("status", "Trạng thái làm việc", "select", Col: 4), new("gender", "Giới tính", "select", Data: "gender")],
+        Quick = [new("Đang làm", "status", "eq", "Đang làm việc")],
+    };
+
     // Quản lý nhân viên: danh sách từ ShopData.Employees (NHAN_VIEN + TAI_KHOAN); nhân viên đã nghỉ việc tách sang bảng riêng có nút Khôi phục.
     public IActionResult Index()
     {
@@ -22,7 +30,7 @@ public class EmployeesController(ShopData db) : Controller
         [
             $"{e.LastName} {e.FirstName}", $"NV{e.Id:D3}", e.Position, Fmt.Money(e.BaseSalary),
             e.Working ? "[g]Đang làm việc" : "[x]Nghỉ việc"
-        ], Url.Action(nameof(Detail), new { id = e.Id }), e.Id)).ToList();
+        ], Url.Action(nameof(Detail), new { id = e.Id }), e.Id, null, new() { ["gender"] = e.Gender })).ToList();
         var left = db.Employees.Where(e => !e.Working).Select(e => new Row(
             [$"{e.LastName} {e.FirstName}", $"NV{e.Id:D3}", e.Position, Fmt.Money(e.BaseSalary), "[x]Nghỉ việc"],
             Url.Action(nameof(Detail), new { id = e.Id }), e.Id)).ToList();
@@ -33,7 +41,7 @@ public class EmployeesController(ShopData db) : Controller
             Subtitle = "Theo dõi đội ngũ và trạng thái làm việc",
             Sections =
             [
-                new() { Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "employee" },
+                new() { Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = rows, Filter = EmployeeFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "employee" },
                 new() { Heading = "Nhân viên đã nghỉ việc", Columns = ["Nhân viên", "Mã NV", "Chức vụ", "Lương cơ bản", "Trạng thái"], Rows = left, ShowActions = true, Toolbar = false, Entity = "employee", CanEdit = false, CanDelete = false, RestoreAction = User.IsInRole("Quản lý") ? "restore_employee" : null },
             ]
         });

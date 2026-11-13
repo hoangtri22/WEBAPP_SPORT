@@ -372,6 +372,7 @@ document.querySelectorAll('.dtable').forEach(function (card) {
             var okA = !adv || adv.matches(tr);
             return okQ && okA;
         });
+        if (adv && adv.setResult) adv.setResult(matched.length);
         var pages = Math.max(1, Math.ceil(matched.length / pageSize));
         if (state.page > pages) state.page = pages;
         var from = (state.page - 1) * pageSize;

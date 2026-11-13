@@ -4,6 +4,29 @@
     var pending = Model.Items.Where(f => !f.Answered).ToList();
     var answered = Model.Items.Where(f => f.Answered).ToList();
 
+    // Dữ liệu lọc của từng phản hồi (thuộc tính data-f): loại, trạng thái xử lý, số sao, ngày gửi, người xử lý.
+    string F(FeedbackItem f) => System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+    {
+        ["type"] = Fmt.FeedbackType(f.Type),
+        ["status"] = f.Answered ? "Đã trả lời" : f.Status == "dang_xu_ly" ? "Đang xử lý" : "Chưa trả lời",
+        ["stars"] = f.Stars?.ToString() ?? "",
+        ["date"] = f.SentAt.ToString("yyyy-MM-dd"),
+        ["handler"] = f.ReplyEmployeeId is int emp && Model.EmployeeNames.TryGetValue(emp, out var empName) ? empName : "",
+    });
+    var fbFilter = new FilterSpec
+    {
+        Id = "feedback", Noun = "phản hồi",
+        Fields =
+        [
+            new("type", "Loại phản hồi", "select", Data: "type"),
+            new("status", "Trạng thái xử lý", "select", Data: "status", Options: ["Chưa trả lời", "Đang xử lý", "Đã trả lời"]),
+            new("stars", "Số sao đánh giá", "number", Data: "stars"),
+            new("date", "Ngày gửi", "date", Data: "date"),
+            new("handler", "Người xử lý", "select", Data: "handler"),
+        ],
+        Quick = [new("Chưa xử lý", "status", "eq", "Chưa trả lời"), new("Khiếu nại", "type", "eq", "Khiếu nại"), new("Dưới 3 sao", "stars", "lte", "2")],
+    };
+
     // Lấy chữ cái đầu của họ và tên khách.
     string Initials(Customer c) => (string.IsNullOrWhiteSpace(c.LastName) ? "" : c.LastName.Trim()[..1]) + (string.IsNullOrWhiteSpace(c.FirstName) ? "" : c.FirstName.Trim()[..1]) is { Length: > 0 } s ? s : "?";
     // Nhãn trạng thái của phản hồi.
@@ -22,6 +45,13 @@
     <button type="button" class="tab" data-tab="answered">Đã trả lời <span class="tab-count gray">@answered.Count</span></button>
 </div>
 
+<section class="card adv-host" id="fbCard" data-filter="@System.Text.Json.JsonSerializer.Serialize(fbFilter, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase })">
+    <div class="toolbar">
+        <button type="button" class="btn-outline js-adv" id="fbAdvBtn" aria-expanded="false">@Icons.Svg("sliders", 18) Tìm kiếm nâng cao <span class="adv-count">0</span></button>
+    </div>
+    <div class="adv-panel" id="fbAdv" hidden></div>
+</section>
+
 <div class="inbox card">
     <div class="inbox-list">
         <label class="search">
@@ -34,7 +64,7 @@
             {
                 var c = Model.Customers[f.CustomerId];
                 bool isPending = !f.Answered;
-                <button type="button" class="msg @(f == pending.FirstOrDefault() ? "active" : "")" data-id="@f.Id" data-group="@(isPending ? "pending" : "answered")"
+                <button type="button" class="msg @(f == pending.FirstOrDefault() ? "active" : "")" data-id="@f.Id" data-group="@(isPending ? "pending" : "answered")" data-f="@F(f)"
                         data-text="@(c.FullName + " " + f.Title + " " + f.Body)" @(isPending ? "" : "hidden")>
                     <span class="avatar sm">@Initials(c)</span>
                     <span class="msg-main">
@@ -117,13 +147,15 @@
 
             function render() {
                 var q = document.getElementById('fbSearch').value;
-                var first = null;
+                var first = null, shown = 0;
                 items.forEach(function (m) {
-                    var ok = m.dataset.group === tab && SearchKit.matches(m.dataset.text, q);
+                    var ok = m.dataset.group === tab && SearchKit.matches(m.dataset.text, q) && adv.matches(m);
                     m.hidden = !ok;
+                    if (ok) shown++;
                     if (ok && !first) first = m;
                 });
                 document.getElementById('fbEmpty').hidden = !!first;
+                adv.setResult(shown);
                 details.forEach(function (d) { d.hidden = true; });
                 if (first) select(first.dataset.id);
             }
@@ -135,6 +167,9 @@
                     tab = t.dataset.tab; render();
                 });
             });
+            // Bộ lọc nâng cao theo mẫu thiết kế: áp cùng lúc với tab và ô tìm kiếm.
+            var adv = SearchKit.filterPanel(document.getElementById('fbAdvBtn'), document.getElementById('fbAdv'), items,
+                JSON.parse(document.getElementById('fbCard').dataset.filter), function () { render(); });
             document.getElementById('fbSearch').addEventListener('input', render);
             render();
         })();

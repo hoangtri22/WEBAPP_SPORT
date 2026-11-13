@@ -4,6 +4,37 @@
     // Màu thẻ theo loại sản phẩm.
     string Tone(string cat) => cat switch { "Giày" => "t-teal", "Quần áo" => "t-orange", "Vợt cầu lông" => "t-purple", _ => "t-blue" };
 
+    // Dữ liệu lọc của từng sản phẩm (thuộc tính data-f): loại, nhà cung cấp (lần nhập gần nhất), giá bán thấp nhất, tình trạng tồn kho, khuyến mãi, trạng thái.
+    var suppliers = ViewBag.ProductSuppliers as Dictionary<int, string> ?? new();
+    var onSale = ViewBag.ProductsOnSale as HashSet<int> ?? new();
+    string F(Product p)
+    {
+        var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
+        int stock = vs.Sum(v => v.Stock);
+        return System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["cat"] = p.Category, ["supplier"] = suppliers.GetValueOrDefault(p.Id, ""),
+            ["price"] = vs.Count == 0 ? "" : ((long)vs.Min(v => v.Price)).ToString(),
+            ["stock"] = stock == 0 ? "Hết hàng" : stock <= 5 ? "Sắp hết hàng" : "Còn hàng",
+            ["promo"] = onSale.Contains(p.Id) ? "Đang giảm giá" : "Không giảm giá",
+            ["status"] = p.Visible ? "Đang bán" : "Đang ẩn",
+        });
+    }
+    var prodFilter = new FilterSpec
+    {
+        Id = "products", Noun = "sản phẩm",
+        Fields =
+        [
+            new("cat", "Loại sản phẩm", "select", Data: "cat", Options: Model.Categories.ToArray()),
+            new("supplier", "Nhà cung cấp", "select", Data: "supplier"),
+            new("price", "Giá bán (đ)", "number", Data: "price"),
+            new("stock", "Tồn kho", "select", Data: "stock", Options: ["Còn hàng", "Sắp hết hàng", "Hết hàng"]),
+            new("promo", "Khuyến mãi", "select", Data: "promo", Options: ["Đang giảm giá", "Không giảm giá"]),
+            new("status", "Trạng thái", "select", Data: "status", Options: ["Đang bán", "Đang ẩn"]),
+        ],
+        Quick = [new("Sắp hết hàng", "stock", "eq", "Sắp hết hàng"), new("Hết hàng", "stock", "eq", "Hết hàng"), new("Đang giảm giá", "promo", "eq", "Đang giảm giá")],
+    };
+
     var variantSection = new TableSection
     {
         Heading = "Biến thể sản phẩm (size, màu, giá bán, giá vốn, tồn)",
@@ -19,20 +50,14 @@
     </div>
 </div>
 
-<section class="card" id="prodCard">
+<section class="card" id="prodCard" data-filter="@System.Text.Json.JsonSerializer.Serialize(prodFilter, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase })">
     <div class="toolbar">
         <label class="search">
             @Icons.Svg("search", 18)
             <input type="search" id="prodSearch" placeholder="Tìm tên, mã hoặc loại sản phẩm..." autocomplete="off" />
             <kbd>Ctrl K</kbd>
         </label>
-        <div class="select-wrap">
-            @Icons.Svg("sliders", 18)
-            <select id="prodCat">
-                <option value="">Loại sản phẩm</option>
-                @foreach (var c in Model.Categories) { <option>@c</option> }
-            </select>
-        </div>
+        <button type="button" class="btn-outline js-adv" id="prodAdvBtn" aria-expanded="false">@Icons.Svg("sliders", 18) Tìm kiếm nâng cao <span class="adv-count">0</span></button>
         <span class="grow"></span>
         <div class="seg">
             <button type="button" class="active" id="viewGrid" title="Dạng lưới">@Icons.Svg("layout-grid", 20)</button>
@@ -46,12 +71,14 @@
         <button type="button" class="btn-primary" data-crud="create" data-entity="product">@Icons.Svg("plus", 18) Thêm sản phẩm</button>
     </div>
 
+    <div class="adv-panel" id="prodAdv" hidden></div>
+
     <div class="prod-grid" id="prodGrid">
         @foreach (var p in Model.Products)
         {
             var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
             var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
-            <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
+            <article class="prod" data-crud="edit" data-entity="product" data-id="@p.Id" title="Bấm để sửa sản phẩm" data-cat="@p.Category" data-f="@F(p)" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                 <div class="prod-img @Tone(p.Category)">
                     <span>@p.Name.Substring(0, 1)</span>
                     @if (!string.IsNullOrEmpty(p.Image)) { <img src="@p.Image" alt="@p.Name" loading="lazy" onerror="this.remove()" /> }
@@ -76,7 +103,7 @@
                 {
                     var vs = Model.Variants.GetValueOrDefault(p.Id) ?? [];
                     var price = vs.Count == 0 ? "Chưa có giá" : vs.Min(v => v.Price) == vs.Max(v => v.Price) ? Fmt.Money(vs[0].Price) : $"{Fmt.Money(vs.Min(v => v.Price))} - {Fmt.Money(vs.Max(v => v.Price))}";
-                    <tr data-peek="@Url.Action("Detail", new { id = p.Id })" data-cat="@p.Category" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
+                    <tr data-peek="@Url.Action("Detail", new { id = p.Id })" data-cat="@p.Category" data-f="@F(p)" data-text="@(p.Name + " " + p.Category + " SP" + p.Id.ToString("D3"))">
                         <td>SP@(p.Id.ToString("D3"))</td><td><div class="prod-name">@if (!string.IsNullOrEmpty(p.Image)) { <img class="prod-thumb" src="@p.Image" alt="" loading="lazy" onerror="this.remove()" /> }@p.Name</div></td><td>@p.Category</td><td>@p.Unit</td><td>@price</td><td>@vs.Sum(v => v.Stock)</td>
                         <td>@Fmt.Cell(p.Visible ? "[g]Đang bán" : "[x]Đang ẩn")</td>
                         <td><div class="actions">
@@ -99,7 +126,7 @@
         (function () {
             var grid = document.getElementById('prodGrid'), list = document.getElementById('prodList');
             var btnGrid = document.getElementById('viewGrid'), btnList = document.getElementById('viewList');
-            var search = document.getElementById('prodSearch'), cat = document.getElementById('prodCat');
+            var search = document.getElementById('prodSearch');
             var empty = document.getElementById('prodEmpty');
 
             function setView(isGrid) {
@@ -110,15 +137,20 @@
             btnList.onclick = function () { setView(false); };
 
             function apply() {
-                var q = search.value, c = cat.value, shown = 0;
+                var q = search.value, shown = 0;
                 document.querySelectorAll('#prodGrid .prod, #prodList tbody tr').forEach(function (el) {
-                    var ok = (!c || el.dataset.cat === c) && SearchKit.matches(el.dataset.text, q);
+                    var ok = SearchKit.matches(el.dataset.text, q) && adv.matches(el);
                     el.style.display = ok ? '' : 'none';
                     if (ok && el.classList.contains('prod')) shown++;
                 });
-                empty.hidden = shown > 0;
+                empty.hidden = shown > 0; adv.setResult(shown);
             }
-            search.addEventListener('input', apply); cat.addEventListener('change', apply);
+            // Bộ lọc nâng cao theo mẫu thiết kế: lọc cả thẻ lưới lẫn dòng danh sách.
+            var adv = SearchKit.filterPanel(document.getElementById('prodAdvBtn'), document.getElementById('prodAdv'),
+                Array.prototype.slice.call(document.querySelectorAll('#prodGrid .prod, #prodList tbody tr')),
+                JSON.parse(document.getElementById('prodCard').dataset.filter), function () { apply(); });
+            search.addEventListener('input', apply);
+            apply();
 
             // Nhập Excel: chọn file xong gửi luôn; kết quả lần nhập trước (TempData) báo bằng thông báo nhỏ
             document.getElementById('importFile').addEventListener('change', function () { if (this.files.length) document.getElementById('importForm').submit(); });

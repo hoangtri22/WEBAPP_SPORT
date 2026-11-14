@@ -1,60 +1,198 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
              x:Class="SportShop.Mobile.CatalogFiltersPage" x:DataType="vm:CatalogViewModel"
-             BackgroundColor="#F5F7FA" Title="Giá, size và màu">
-    <Grid RowDefinitions="*,Auto" Padding="18" RowSpacing="12">
-        <ScrollView>
-            <VerticalStackLayout Spacing="14">
-                <Label Text="Lọc sản phẩm" FontFamily="OpenSansSemibold" FontSize="22" TextColor="#102C46" />
-                <ActivityIndicator IsRunning="{Binding IsPreparingFilters}" IsVisible="{Binding IsPreparingFilters}" Color="#237044" />
-                <Label Text="Kết hợp với từ khóa, danh mục và sắp xếp đang chọn. Bỏ chọn từng size/màu hoặc xóa ô giá để gỡ điều kiện."
-                       FontSize="13" TextColor="#607487" />
-                <Label Text="Khoảng giá (₫)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
-                <Entry Text="{Binding MinPriceText}" Placeholder="Giá tối thiểu" Keyboard="Numeric" MaxLength="13"
-                       BackgroundColor="White" TextColor="#102C46" AutomationId="MinPriceFilter" />
-                <Entry Text="{Binding MaxPriceText}" Placeholder="Giá tối đa" Keyboard="Numeric" MaxLength="13"
-                       BackgroundColor="White" TextColor="#102C46" AutomationId="MaxPriceFilter" />
-                <Label Text="Nhập số, ví dụ 150000; không dùng dấu phân cách hàng nghìn."
-                       FontSize="11" TextColor="#607487" />
-                <Label Text="Size (chọn nhiều)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
-                <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Sizes}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:CatalogFilterOption">
-                            <HorizontalStackLayout Spacing="2" Margin="0,0,12,4">
-                                <CheckBox IsChecked="{Binding IsSelected}" Color="#237044" />
-                                <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="#102C46"
-                                       MaximumWidthRequest="200" LineBreakMode="WordWrap" />
-                            </HorizontalStackLayout>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                    <BindableLayout.EmptyView><Label Text="Chưa có lựa chọn size." TextColor="#607487" FontSize="12" /></BindableLayout.EmptyView>
-                </FlexLayout>
-                <Label Text="Màu (chọn nhiều)" FontFamily="OpenSansSemibold" TextColor="#102C46" />
-                <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Colors}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:CatalogFilterOption">
-                            <HorizontalStackLayout Spacing="2" Margin="0,0,12,4">
-                                <CheckBox IsChecked="{Binding IsSelected}" Color="#237044" />
-                                <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="#102C46"
-                                       MaximumWidthRequest="200" LineBreakMode="WordWrap" />
-                            </HorizontalStackLayout>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                    <BindableLayout.EmptyView><Label Text="Chưa có lựa chọn màu." TextColor="#607487" FontSize="12" /></BindableLayout.EmptyView>
-                </FlexLayout>
-                <Button Text="Xóa giá, size và màu" Clicked="OnClearClicked" BackgroundColor="#E7F2EB"
-                        TextColor="#237044" CornerRadius="10" AutomationId="ClearAdvancedFilters" />
-                <Label Text="{Binding FilterError}" IsVisible="{Binding HasFilterError}" TextColor="#8B3D1A" FontSize="12" />
-                <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="#8B3D1A" FontSize="12" />
-                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#8B3D1A" FontSize="12" />
+             BackgroundColor="{StaticResource Bg}" Title="Bộ lọc sản phẩm">
+    <ContentPage.Resources>
+        <Style x:Key="FilterSection" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="White" />
+            <Setter Property="Stroke" Value="{StaticResource Line}" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style x:Key="FilterTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="TextColor" Value="{StaticResource Ink}" />
+        </Style>
+        <Style x:Key="FilterHint" TargetType="Label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextColor" Value="{StaticResource Muted}" />
+            <Setter Property="LineHeight" Value="1.2" />
+        </Style>
+        <Style x:Key="PriceField" TargetType="Entry">
+            <Setter Property="TextColor" Value="{StaticResource Ink}" />
+            <Setter Property="PlaceholderColor" Value="{StaticResource Muted}" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Keyboard" Value="Numeric" />
+            <Setter Property="MaxLength" Value="13" />
+            <Setter Property="MinimumHeightRequest" Value="48" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView IsEnabled="{Binding IsIdle}">
+            <VerticalStackLayout Spacing="16" Padding="18,18,18,24">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Tìm đúng món bạn cần" FontFamily="OpenSansSemibold" FontSize="24"
+                           TextColor="{StaticResource Ink}" SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="Kết hợp các lựa chọn rồi nhấn Áp dụng để xem kết quả." Style="{StaticResource FilterHint}" />
+                    <Label Text="Một số bộ lọc chưa tải được. Nhấn Áp dụng để thử lại."
+                           IsVisible="{Binding HasFilterError}" TextColor="#9A3412" FontSize="12" />
+                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsPreparingFilters}">
+                        <ActivityIndicator IsRunning="{Binding IsPreparingFilters}" Color="{StaticResource Teal}" HeightRequest="20" WidthRequest="20" />
+                        <Label Text="Đang tải lựa chọn…" Style="{StaticResource FilterHint}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource FilterSection}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Danh mục" Style="{StaticResource FilterTitle}" SemanticProperties.HeadingLevel="Level2" />
+                        <Border BackgroundColor="{StaticResource Bg}" Stroke="{StaticResource Line}"
+                                StrokeShape="RoundRectangle 12" Padding="10,0">
+                            <Picker Title="Chọn danh mục" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}"
+                                    SelectedItem="{Binding SelectedCategory}" TextColor="{StaticResource Ink}"
+                                    TitleColor="{StaticResource Muted}" BackgroundColor="Transparent" FontSize="14"
+                                    MinimumHeightRequest="48" AutomationId="CategoryFilter"
+                                    SemanticProperties.Description="Danh mục sản phẩm" />
+                        </Border>
+                        <BoxView HeightRequest="1" Color="{StaticResource Line}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                                <Label Text="Chỉ còn hàng" FontFamily="OpenSansSemibold" FontSize="14" TextColor="{StaticResource Ink}" />
+                                <Label Text="Ưu tiên sản phẩm có thể đặt mua" Style="{StaticResource FilterHint}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding InStockOnly}" OnColor="{StaticResource Teal}"
+                                    AutomationId="InStockFilter" SemanticProperties.Description="Chỉ hiển thị sản phẩm còn hàng" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource FilterSection}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Khoảng giá" Style="{StaticResource FilterTitle}" SemanticProperties.HeadingLevel="Level2" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Từ (₫)" Style="{StaticResource FilterHint}" />
+                                <Border BackgroundColor="{StaticResource Bg}" Stroke="{StaticResource Line}"
+                                        StrokeShape="RoundRectangle 12" Padding="8,0">
+                                    <Entry Text="{Binding MinPriceText}" Placeholder="Không giới hạn" Style="{StaticResource PriceField}"
+                                           AutomationId="MinPriceFilter" SemanticProperties.Description="Giá tối thiểu, đơn vị đồng" />
+                                </Border>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Đến (₫)" Style="{StaticResource FilterHint}" />
+                                <Border BackgroundColor="{StaticResource Bg}" Stroke="{StaticResource Line}"
+                                        StrokeShape="RoundRectangle 12" Padding="8,0">
+                                    <Entry Text="{Binding MaxPriceText}" Placeholder="Không giới hạn" Style="{StaticResource PriceField}"
+                                           AutomationId="MaxPriceFilter" SemanticProperties.Description="Giá tối đa, đơn vị đồng" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Label Text="Ví dụ: 150000. Để trống nếu không giới hạn; nhập số không có dấu phân cách hàng nghìn."
+                               Style="{StaticResource FilterHint}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource FilterSection}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Kích cỡ" Style="{StaticResource FilterTitle}" SemanticProperties.HeadingLevel="Level2" />
+                            <Label Grid.Column="1" Text="Chọn nhiều" Style="{StaticResource FilterHint}" VerticalOptions="Center" />
+                        </Grid>
+                        <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Sizes}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CatalogFilterOption">
+                                    <Border BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 12"
+                                            Margin="0,0,8,8" Padding="0,0,12,0">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="{StaticResource TealSoft}" />
+                                                <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <HorizontalStackLayout Spacing="0">
+                                            <CheckBox IsChecked="{Binding IsSelected}" Color="{StaticResource Teal}"
+                                                      SemanticProperties.Description="{Binding Value, StringFormat='Kích cỡ {0}'}" />
+                                            <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="{StaticResource Ink}"
+                                                   FontSize="13" MaximumWidthRequest="160" LineBreakMode="WordWrap" Padding="0,12,0,12">
+                                                <Label.GestureRecognizers><TapGestureRecognizer Tapped="OnOptionLabelTapped" /></Label.GestureRecognizers>
+                                            </Label>
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                            <BindableLayout.EmptyView>
+                                <Label Text="Chưa có lựa chọn kích cỡ." Style="{StaticResource FilterHint}" />
+                            </BindableLayout.EmptyView>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource FilterSection}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Màu sắc" Style="{StaticResource FilterTitle}" SemanticProperties.HeadingLevel="Level2" />
+                            <Label Grid.Column="1" Text="Chọn nhiều" Style="{StaticResource FilterHint}" VerticalOptions="Center" />
+                        </Grid>
+                        <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Colors}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CatalogFilterOption">
+                                    <Border BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 12"
+                                            Margin="0,0,8,8" Padding="0,0,12,0">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="{StaticResource TealSoft}" />
+                                                <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <HorizontalStackLayout Spacing="0">
+                                            <CheckBox IsChecked="{Binding IsSelected}" Color="{StaticResource Teal}"
+                                                      SemanticProperties.Description="{Binding Value, StringFormat='Màu {0}'}" />
+                                            <Label Text="{Binding Value}" VerticalOptions="Center" TextColor="{StaticResource Ink}"
+                                                   FontSize="13" MaximumWidthRequest="160" LineBreakMode="WordWrap" Padding="0,12,0,12">
+                                                <Label.GestureRecognizers><TapGestureRecognizer Tapped="OnOptionLabelTapped" /></Label.GestureRecognizers>
+                                            </Label>
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                            <BindableLayout.EmptyView>
+                                <Label Text="Chưa có lựa chọn màu sắc." Style="{StaticResource FilterHint}" />
+                            </BindableLayout.EmptyView>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Border>
             </VerticalStackLayout>
         </ScrollView>
-        <VerticalStackLayout Grid.Row="1" Spacing="6">
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#237044" HeightRequest="24" />
-            <Button Text="Áp dụng bộ lọc" Clicked="OnApplyClicked" BackgroundColor="#102C46"
-                    TextColor="White" CornerRadius="12" AutomationId="ApplyAdvancedFilters" />
-        </VerticalStackLayout>
+
+        <Border Grid.Row="1" BackgroundColor="White" Stroke="{StaticResource Line}" Padding="18,12">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="#9A3412" FontSize="12" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#9A3412" FontSize="12" />
+                <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsBusy}" HorizontalOptions="Center">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Teal}" HeightRequest="20" WidthRequest="20" />
+                    <Label Text="Đang tìm sản phẩm…" Style="{StaticResource FilterHint}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <Grid ColumnDefinitions="1.1*,1.9*" ColumnSpacing="10">
+                    <Button Text="Xóa nâng cao" Clicked="OnClearClicked" IsEnabled="{Binding IsIdle}" FontSize="12" Padding="8,10"
+                            BackgroundColor="{StaticResource TealSoft}" TextColor="{StaticResource Teal}" CornerRadius="12"
+                            MinimumHeightRequest="48" AutomationId="ClearAdvancedFilters"
+                            SemanticProperties.Description="Xóa khoảng giá, kích cỡ và màu sắc đã chọn" />
+                    <Button Grid.Column="1" Text="Áp dụng bộ lọc" Clicked="OnApplyClicked" IsEnabled="{Binding IsIdle}"
+                            FontFamily="OpenSansSemibold" FontSize="13" Padding="10,10"
+                            BackgroundColor="{StaticResource Teal}" TextColor="White" CornerRadius="12"
+                            MinimumHeightRequest="48" AutomationId="ApplyAdvancedFilters">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsPreparingFilters}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
     </Grid>
 </ContentPage>

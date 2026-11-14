@@ -10,6 +10,7 @@ public partial class MainPage : ContentPage
     private CancellationTokenSource? _lifetime;
     private bool _openingProduct;
     private bool _openingFilters;
+    private bool _openingSort;
     private bool _navigatingTab;
 
     // Gắn CatalogViewModel vào trang.
@@ -49,6 +50,23 @@ public partial class MainPage : ContentPage
         finally { _openingFilters = false; }
     }
 
+    private async void OnSortClicked(object? sender, EventArgs e)
+    {
+        if (_openingSort) return;
+        _openingSort = true;
+        ProductSearchBar.Unfocus();
+        try
+        {
+            var selected = await DisplayActionSheetAsync("Sắp xếp sản phẩm", "Đóng", null,
+                _viewModel.SortOptions.Select(option => option.Name).ToArray());
+            var sort = _viewModel.SortOptions.FirstOrDefault(option => option.Name == selected);
+            if (sort is null) return;
+            _viewModel.SelectedSort = sort;
+            await _viewModel.LoadAsync();
+        }
+        finally { _openingSort = false; }
+    }
+
     // Mỗi sản phẩm mở một trang chi tiết riêng để lựa chọn không bị lẫn giữa các sản phẩm.
     private async void OnProductTapped(object? sender, TappedEventArgs e)
     {
@@ -61,18 +79,6 @@ public partial class MainPage : ContentPage
             await page.LoadAsync(product.Id);
         }
         finally { _openingProduct = false; }
-    }
-
-    // Mở các chương trình khuyến mãi đang hiệu lực.
-    private async void OnPromotionsClicked(object? sender, EventArgs e)
-        => await Navigation.PushAsync(_services.GetRequiredService<PromotionsPage>());
-
-    // Mở danh sách trang hỗ trợ và giới thiệu.
-    private async void OnInfoClicked(object? sender, EventArgs e)
-    {
-        var page = _services.GetRequiredService<InfoPagesPage>();
-        await Navigation.PushAsync(page);
-        await page.LoadAsync();
     }
 
     // Thanh tab giữ cách mở Trang chủ, Giỏ hàng và Tài khoản như các màn hình hiện có.

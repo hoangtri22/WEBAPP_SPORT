@@ -79,10 +79,15 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     public bool HasError => !string.IsNullOrEmpty(_errorMessage);
     public bool HasMore => HasLoaded && _hasMore;
     public bool HasProducts => Products.Count > 0;
+    public bool IsInitialLoading => IsBusy && !HasProducts;
     public bool ShowEmpty => HasLoaded && !IsBusy && !HasError && Products.Count == 0;
     public string? ErrorMessage => _errorMessage;
     public string ResultSummary => !HasLoaded ? (IsBusy ? "Đang tải sản phẩm…" : "Sản phẩm từ cửa hàng")
-        : $"{Products.Count}/{_totalItems} sản phẩm · Kéo xuống để làm mới";
+        : $"{_totalItems:N0} sản phẩm · Đã tải {Products.Count:N0}";
+    public string AppliedSortName => SortOptions.First(option => option.Code == (_activeFilter?.Sort ?? "new")).Name;
+    public bool HasRefinements => _activeFilter is { } filter && (!string.IsNullOrEmpty(filter.Query)
+        || filter.CategoryId is not null || filter.MinPrice is not null || filter.MaxPrice is not null
+        || filter.Sizes.Length > 0 || filter.Colors.Length > 0 || !filter.InStockOnly || filter.Sort != "new");
     public string AppliedFilterSummary => _activeFilter is not { } filter ? "Chưa áp dụng bộ lọc"
         : "Đang áp dụng: " + string.Join(" · ", new[]
         {
@@ -279,7 +284,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             _filterError = null;
         }
         catch (CatalogException ex) when (!cancellationToken.IsCancellationRequested)
-        { _filterError = ex.Message + " Bấm Tìm / Áp dụng để tải lại danh mục."; }
+        { _filterError = ex.Message + " Bấm Tìm hoặc áp dụng bộ lọc để tải lại danh mục."; }
         Notify(nameof(HasFilterError));
         Notify(nameof(FilterError));
     }
@@ -299,7 +304,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             _optionsError = null;
         }
         catch (CatalogException ex) when (!cancellationToken.IsCancellationRequested)
-        { _optionsError = ex.Message + " Bấm Tìm / Áp dụng để tải lại size và màu."; }
+        { _optionsError = ex.Message + " Bấm Tìm hoặc áp dụng bộ lọc để tải lại size và màu."; }
         Notify(nameof(HasFilterError));
         Notify(nameof(FilterError));
     }
@@ -309,7 +314,8 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     {
         foreach (var name in new[] { nameof(IsBusy), nameof(IsIdle), nameof(HasLoaded), nameof(HasError),
                      nameof(ErrorMessage), nameof(HasMore), nameof(HasProducts), nameof(ShowEmpty), nameof(ResultSummary),
-                     nameof(AppliedFilterSummary) }) Notify(name);
+                     nameof(AppliedFilterSummary), nameof(AppliedSortName), nameof(HasRefinements),
+                     nameof(IsInitialLoading) }) Notify(name);
         SearchCommand.NotifyCanExecuteChanged();
         RefreshCommand.NotifyCanExecuteChanged();
         RetryCommand.NotifyCanExecuteChanged();

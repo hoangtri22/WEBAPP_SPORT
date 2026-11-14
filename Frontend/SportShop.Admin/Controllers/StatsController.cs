@@ -49,6 +49,12 @@ public class StatsController(ShopData db) : Controller
     public IActionResult Export(DateTime? from, DateTime? to, string? kind, string? group)
     {
         var vm = Build(from, to, kind, group);
+        return File(ExcelBytes(vm), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"thong-ke-{vm.Kind}-{DateTime.Today:yyyyMMdd}.xlsx");
+    }
+
+    // Dựng file Excel (mỗi bảng một sheet) từ dữ liệu thống kê; dùng chung cho nút Xuất Excel và việc tạo báo cáo ở trang Báo cáo thống kê (ReportsController.Create).
+    internal static byte[] ExcelBytes(StatsVm vm)
+    {
         using var book = new XLWorkbook();
         foreach (var t in vm.Tables)
         {
@@ -82,7 +88,7 @@ public class StatsController(ShopData db) : Controller
         if (vm.Tables.Count == 0) book.Worksheets.Add("Thống kê");
         using var ms = new MemoryStream();
         book.SaveAs(ms);
-        return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"thong-ke-{vm.Kind}-{DateTime.Today:yyyyMMdd}.xlsx");
+        return ms.ToArray();
     }
 
     // Tải file PDF các bảng đang xem: lấy dữ liệu qua Build() rồi dựng file bằng StatsPdf.Build() (Models/StatsPdf.cs).
@@ -105,7 +111,7 @@ public class StatsController(ShopData db) : Controller
     }
 
     // Dựng dữ liệu trang thống kê từ ShopData.InvoiceRows() và các bảng đang chọn trong khoảng ngày đã chọn (không chọn thì lấy 3 kỳ gần nhất qua DefaultStart()); dùng chung cho Index, xuất Excel và tải PDF.
-    StatsVm Build(DateTime? from, DateTime? to, string? kind, string? group)
+    internal StatsVm Build(DateTime? from, DateTime? to, string? kind, string? group)
     {
         var all = db.InvoiceRows();
         kind = Kinds.Any(k => k.Key == kind) ? kind! : "all";

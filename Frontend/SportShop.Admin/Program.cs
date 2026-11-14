@@ -17,6 +17,7 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddSingleton<DataCache>();
 builder.Services.AddScoped<ShopData>();
 builder.Services.AddSingleton<ShopCommands>();
+builder.Services.AddSingleton<ReportStore>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

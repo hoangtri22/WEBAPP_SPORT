@@ -56,6 +56,14 @@ public class AccountController(ShopData db) : Controller
         return RedirectToAction(nameof(Login));
     }
 
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng tài khoản: vai trò (cột 1) và trạng thái (cột 4).
+    static readonly FilterSpec AccountFilter = new()
+    {
+        Id = "accounts", Noun = "tài khoản",
+        Fields = [new("role", "Vai trò", "select", Col: 1), new("status", "Trạng thái", "select", Col: 4)],
+        Quick = [new("Tài khoản bị khóa", "status", "eq", "Đã khóa"), new("Quản trị", "role", "eq", "Quản lý")],
+    };
+
     // Tài khoản & phân quyền: danh sách từ ShopData.Accounts, tài khoản đã xóa (trang_thai = da_xoa) tách sang bảng riêng có nút Khôi phục; thêm/sửa/xóa/khóa qua CrudController với entity "account".
     public IActionResult Index()
     {
@@ -74,7 +82,7 @@ public class AccountController(ShopData db) : Controller
             Subtitle = "Quản lý quyền truy cập hệ thống",
             Sections =
             [
-                new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "account", LockAction = manager ? "lock_account" : null },
+                new() { Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = rows, Filter = AccountFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "account", LockAction = manager ? "lock_account" : null },
                 new() { Heading = "Tài khoản đã xóa", Columns = ["Tài khoản", "Vai trò", "Email", "Số điện thoại", "Trạng thái"], Rows = deleted, ShowActions = true, Toolbar = false, Entity = "account", CanEdit = false, CanDelete = false, RestoreAction = manager ? "restore_account" : null },
             ]
         });

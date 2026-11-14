@@ -6,6 +6,38 @@ namespace SportShop.Admin.Controllers;
 // Quản lý đơn hàng và hóa đơn, xuất Excel; đọc dữ liệu qua ShopData.
 public class OrdersController(ShopData db) : Controller
 {
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng đơn hàng: trạng thái (cột 5), thanh toán (cột 4), giá trị đơn (cột 3), ngày đặt (cột 2), đơn vị vận chuyển và kênh bán (data-f).
+    static readonly FilterSpec OrderFilter = new()
+    {
+        Id = "orders", Noun = "đơn hàng",
+        Fields =
+        [
+            new("status", "Trạng thái đơn", "select", Col: 5),
+            new("pay", "Thanh toán", "select", Col: 4),
+            new("carrier", "Đơn vị vận chuyển", "select", Data: "carrier"),
+            new("total", "Giá trị đơn (đ)", "number", Col: 3),
+            new("date", "Ngày đặt", "date", Col: 2),
+            new("channel", "Kênh bán", "select", Data: "channel", Options: ["Online", "Tại quầy"]),
+        ],
+        Quick = [new("Chờ xác nhận", "status", "eq", "Chờ xác nhận"), new("Đang giao", "status", "eq", "Đang giao"), new("Chưa thanh toán", "pay", "eq", "Chưa thanh toán")],
+    };
+
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng hóa đơn: tổng tiền (cột 4), ngày lập (cột 3), phương thức thanh toán, thu ngân, khuyến mãi và trạng thái (data-f).
+    static readonly FilterSpec InvoiceFilter = new()
+    {
+        Id = "invoices", Noun = "hóa đơn",
+        Fields =
+        [
+            new("pay", "Phương thức thanh toán", "select", Data: "pay"),
+            new("total", "Tổng tiền (đ)", "number", Col: 4),
+            new("date", "Ngày lập", "date", Col: 3),
+            new("cashier", "Thu ngân", "select", Data: "cashier"),
+            new("promo", "Có dùng khuyến mãi", "select", Data: "promo", Options: ["Có", "Không"]),
+            new("state", "Trạng thái", "select", Data: "state", Options: ["Đã thanh toán", "Đã hủy"]),
+        ],
+        Quick = [new("Đã hủy", "state", "eq", "Đã hủy"), new("Có khuyến mãi", "promo", "eq", "Có")],
+    };
+
     // Quản lý đơn hàng: danh sách từ ShopData.Orders; tạo đơn / cập nhật trạng thái qua CrudController với entity "order".
     public IActionResult Index()
     {
@@ -13,13 +45,14 @@ public class OrdersController(ShopData db) : Controller
         var rows = db.Orders.OrderByDescending(o => o.Id).Select(o => new Row(
             [$"DH{o.Id:D5}", db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total),
              Fmt.PayStatus(o.PayStatus), Fmt.OrderStatus(o.Status)],
-            Url.Action(nameof(Detail), new { id = o.Code }), o.Id)).ToList();
+            Url.Action(nameof(Detail), new { id = o.Code }), o.Id, null,
+            new() { ["carrier"] = o.Carrier ?? "", ["channel"] = o.EmployeeId == null ? "Online" : "Tại quầy" })).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Quản lý đơn đặt hàng và giao hàng",
             Subtitle = "Tiếp nhận, xử lý và theo dõi giao hàng",
-            Sections = [new() { Columns = ["Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
+            Sections = [new() { Columns = ["Mã đơn", "Khách hàng", "Ngày đặt", "Tổng tiền", "Thanh toán", "Trạng thái"], Rows = rows, Filter = OrderFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "order", CanDelete = false }]
         });
     }
 
@@ -29,14 +62,19 @@ public class OrdersController(ShopData db) : Controller
         ViewBag.Menu = "invoices";
         var rows = db.Orders.Where(o => o.Invoiced).OrderByDescending(o => o.Id).Select(o => new Row(
             [o.Code, $"DH{o.Id:D5}", db.Customer(o.CustomerId).FullName, Fmt.DateTimeDot(o.Date), Fmt.Money(o.Total)],
-            Url.Action(nameof(Detail), new { id = o.Code, from = "invoices" }), o.Id)).ToList();
+            Url.Action(nameof(Detail), new { id = o.Code, from = "invoices" }), o.Id, null,
+            new()
+            {
+                ["pay"] = o.PayMethod, ["cashier"] = o.EmployeeId is int emp ? db.Employee(emp).FirstName : "Online",
+                ["promo"] = o.Discount > 0 || !string.IsNullOrEmpty(o.Voucher) ? "Có" : "Không", ["state"] = o.Status == "da_huy" ? "Đã hủy" : "Đã thanh toán",
+            })).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Quản lý hóa đơn",
             Subtitle = "Tra cứu và in hóa đơn bán hàng",
             DetailHint = "Chọn một hóa đơn để xem chi tiết",
-            Sections = [new() { Columns = ["Số hóa đơn", "Mã đơn", "Khách hàng", "Ngày đặt", "Tổng thanh toán"], Rows = rows, Entity = "order", ExportUrl = Url.Action(nameof(ExportInvoices)) }]
+            Sections = [new() { Columns = ["Số hóa đơn", "Mã đơn", "Khách hàng", "Ngày đặt", "Tổng thanh toán"], Rows = rows, Filter = InvoiceFilter, Entity = "order", ExportUrl = Url.Action(nameof(ExportInvoices)) }]
         });
     }
 

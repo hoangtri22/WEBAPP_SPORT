@@ -45,11 +45,86 @@ public class ReportsVm
     public List<Row> HighStock { get; init; } = [];
     public List<Row> Promos { get; init; } = [];
     public List<Row> Interests { get; init; } = [];
+
+    // Khung "Các báo cáo đã tạo và tải xuống" (lịch sử báo cáo từ ReportStore).
+    public TableSection History { get; init; } = new();
 }
 
 // Dựng trang Báo cáo thống kê từ ShopData.
-public class ReportsController(ShopData db) : Controller
+public class ReportsController(ShopData db, ReportStore reports) : Controller
 {
+    // Nhãn loại báo cáo theo kiểu thống kê (khóa của StatsController.KindList).
+    public static readonly Dictionary<string, string> TypeLabels = new()
+    {
+        ["all"] = "Báo cáo tổng hợp",
+        ["range"] = "Báo cáo doanh thu theo khoảng ngày",
+        ["period"] = "Báo cáo doanh thu theo tháng / quý / năm",
+        ["employee"] = "Báo cáo doanh thu theo nhân viên",
+        ["customer"] = "Báo cáo doanh thu theo khách hàng",
+        ["product"] = "Báo cáo doanh thu theo sản phẩm",
+    };
+
+    // Bộ lọc "Tìm kiếm nâng cao" của khung báo cáo đã tạo: loại (cột 1), người lập (cột 3), trạng thái (cột 5) và ngày tạo (data-f).
+    static FilterSpec HistoryFilter() => new()
+    {
+        Id = "reports", Noun = "kết quả",
+        Fields =
+        [
+            new("type", "Loại báo cáo", "select", Col: 1),
+            new("status", "Trạng thái", "select", Col: 5, Options: ["Đã tạo", "Đã tải xuống"]),
+            new("by", "Người lập", "select", Col: 3),
+            new("date", "Ngày tạo", "date", Data: "date"),
+        ],
+        Quick = [new("Báo cáo doanh thu", "type", "contains", "doanh thu"), new("Tạo trong tháng này", "date", "gte", new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))],
+    };
+
+    // Khung lịch sử báo cáo: mỗi báo cáo đã tạo một dòng, cột cuối là liên kết tải xuống.
+    TableSection BuildHistory() => new()
+    {
+        Heading = "Các báo cáo đã tạo và tải xuống",
+        Columns = ["Tên báo cáo", "Loại báo cáo", "Kỳ báo cáo", "Người lập", "Ngày tạo", "Trạng thái", "Tải xuống"],
+        Rows = reports.All().Select(r => new Row(
+            [r.Name, r.TypeLabel, $"{r.From:dd/MM/yyyy} – {r.To:dd/MM/yyyy}", r.CreatedBy, Fmt.DateTimeDot(r.CreatedAt),
+             r.Downloads > 0 ? "[g]Đã tải xuống" : "[b]Đã tạo", $"[a]{Url.Action(nameof(Download), new { id = r.Id })}|Tải {r.Format}"],
+            null, 0, null, new() { ["date"] = r.CreatedAt.ToString("yyyy-MM-dd") })).ToList(),
+        Filter = HistoryFilter(),
+        AddLabel = "Tạo báo cáo", AddId = "newReport", ShowActions = false,
+    };
+
+    // Tạo một báo cáo thống kê (Excel hoặc PDF) cho kiểu và khoảng ngày đã chọn, lưu vào ReportStore; trả JSON {ok, message}.
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult Create(DateTime? from, DateTime? to, string? kind, string? group, string? format)
+    {
+        kind = TypeLabels.ContainsKey(kind ?? "") ? kind! : "all";
+        format = format == "PDF" ? "PDF" : "Excel";
+        try
+        {
+            var vm = new StatsController(db).Build(from, to, kind, group);
+            byte[] bytes = format == "PDF"
+                ? StatsPdf.Build(vm, StatsController.KindList.First(k => k.Key == vm.Kind).Text)
+                : StatsController.ExcelBytes(vm);
+            string name = $"{TypeLabels[kind]} {vm.From:dd/MM/yyyy} – {vm.To:dd/MM/yyyy}";
+            reports.Add(name, kind, TypeLabels[kind], format, bytes, vm.From, vm.To, User.Identity?.Name ?? "");
+            return Json(new Result(true, $"Đã tạo báo cáo \"{name}\"."));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return Json(new Result(false, "Không lưu được file báo cáo, vui lòng thử lại."));
+        }
+    }
+
+    // Tải một báo cáo đã tạo (theo mã trong lịch sử); mỗi lượt tải tăng bộ đếm để trạng thái chuyển thành "Đã tải xuống".
+    public IActionResult Download(string id)
+    {
+        var opened = reports.Open(id);
+        if (opened is null) return NotFound();
+        var (entry, path) = opened.Value;
+        string ext = entry.Format == "PDF" ? ".pdf" : ".xlsx";
+        string mime = entry.Format == "PDF" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        string safe = string.Concat(entry.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
+        return PhysicalFile(path, mime, safe + ext);
+    }
+
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     // Định dạng số cho tọa độ biểu đồ SVG.
     static string F(double v) => v.ToString("0.##", Inv);
@@ -138,6 +213,7 @@ public class ReportsController(ShopData db) : Controller
             YTicks = Enumerable.Range(0, 5).Select(i => (padT + plotH * (1 - i / 4.0), (max * i / 4).ToString("0.##", Inv))).ToList(),
             Bars = bars, Donut = donut, CustomerTotal = cust.Count, Staff = staff,
             ProfitByProduct = profit, HighStock = high, Promos = promos, Interests = interests,
+            History = BuildHistory(),
         });
     }
 

@@ -154,6 +154,27 @@ public class ShopData
             ORDER BY hd.ngay_xuat
             """).Select(r => new InvoiceLine(T(r, "ngay_xuat"), S(r, "ten_san_pham"), M(r, "thanh_tien"))).ToList(), DataCache.LongAge);
 
+    // Nhà cung cấp của lần nhập gần nhất cho từng sản phẩm (qua các phiếu nhập), dùng cho bộ lọc nâng cao của trang Quản lý sản phẩm.
+    public Dictionary<int, string> ProductSuppliers()
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var r in Query("""
+            SELECT bt.ma_san_pham, ncc.ten_ncc
+            FROM CHI_TIET_PHIEU_NHAP_HANG ct
+            JOIN PHIEU_NHAP_HANG pn ON pn.ma_phieu_nhap = ct.ma_phieu_nhap
+            JOIN BIEN_THE_SP bt ON bt.ma_bien_the = ct.ma_bien_the
+            JOIN NHA_CUNG_CAP ncc ON ncc.ma_ncc = pn.ma_ncc
+            ORDER BY pn.ngay_nhap, pn.ma_phieu_nhap
+            """)) map[I(r, "ma_san_pham")] = S(r, "ten_ncc");
+        return map;
+    }
+
+    // Mã các sản phẩm đang có khuyến mãi theo sản phẩm còn hiệu lực (KM_THEO_SP + CTKM), dùng cho bộ lọc "đang giảm giá".
+    public HashSet<int> ProductsOnSale() => Query("""
+        SELECT DISTINCT km.ma_san_pham FROM KM_THEO_SP km JOIN CTKM c ON c.ma_ctkm = km.ma_ctkm
+        WHERE c.trang_thai = 'hoat_dong' AND NOW() BETWEEN c.ngay_bat_dau AND c.ngay_ket_thuc
+        """).Select(r => I(r, "ma_san_pham")).ToHashSet();
+
     // Thống kê tổng chi: mỗi phiếu nhập hàng một dòng (ngày nhập, tổng tiền), cất vào DataCache 10 phút như hóa đơn.
     public List<ImportRow> ImportRows() =>
         _cache.Get<List<ImportRow>>("importRows") ?? _cache.Put("importRows", Query("""
@@ -477,13 +498,13 @@ public class ShopData
     // Đọc khảo sát từ KHAO_SAT kèm số câu hỏi và số khách nhận.
     List<Survey> LoadSurveys() =>
         Query("""
-            SELECT ks.ma_khao_sat, ks.tieu_de, ks.ngay_ket_thuc, ks.trang_thai,
+            SELECT ks.ma_khao_sat, ks.tieu_de, ks.ngay_bat_dau, ks.ngay_ket_thuc, ks.trang_thai,
                    (SELECT COUNT(*) FROM CAU_HOI_KHAO_SAT c WHERE c.ma_khao_sat = ks.ma_khao_sat) AS so_cau,
                    (SELECT COUNT(*) FROM KHAO_SAT_KHACH_HANG k WHERE k.ma_khao_sat = ks.ma_khao_sat) AS da_gui,
                    (SELECT COUNT(*) FROM KHAO_SAT_KHACH_HANG k WHERE k.ma_khao_sat = ks.ma_khao_sat AND k.trang_thai = 'hoan_thanh') AS hoan_thanh
             FROM KHAO_SAT ks ORDER BY ks.ngay_tao DESC
             """).Select(r => new Survey(I(r, "ma_khao_sat"), S(r, "tieu_de"), I(r, "so_cau"), I(r, "da_gui"), I(r, "hoan_thanh"),
-                T(r, "ngay_ket_thuc"), S(r, "trang_thai"))).ToList();
+                T(r, "ngay_ket_thuc"), S(r, "trang_thai"), T(r, "ngay_bat_dau"))).ToList();
 
     // Thống kê một khảo sát: số khách nhận / hoàn thành (KHAO_SAT_KHACH_HANG), số lượt chọn từng lựa chọn và câu trả lời văn bản (TRA_LOI_KHAO_SAT).
     public SurveyStats? SurveyStat(int id)

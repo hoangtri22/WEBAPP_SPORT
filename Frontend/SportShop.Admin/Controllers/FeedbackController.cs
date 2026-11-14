@@ -6,6 +6,19 @@ namespace SportShop.Admin.Controllers;
 // Phản hồi khách hàng và khảo sát, đọc dữ liệu qua ShopData.
 public class FeedbackController(ShopData db) : Controller
 {
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng khảo sát: trạng thái (cột 4), số phản hồi và ngày bắt đầu (data-f).
+    static readonly FilterSpec SurveyFilter = new()
+    {
+        Id = "surveys", Noun = "khảo sát",
+        Fields =
+        [
+            new("status", "Trạng thái", "select", Col: 4),
+            new("done", "Số phản hồi", "number", Data: "done"),
+            new("start", "Ngày bắt đầu", "date", Data: "start"),
+        ],
+        Quick = [new("Đang mở", "status", "eq", "Đang thu thập"), new("Chưa có phản hồi", "done", "lte", "0")],
+    };
+
     // Hộp thư phản hồi từ ShopData.FeedbackItems (PHAN_HOI + TRA_LOI_PHAN_HOI); trả lời gửi qua CrudController.Act với action "feedback_reply".
     public IActionResult Index()
     {
@@ -24,13 +37,14 @@ public class FeedbackController(ShopData db) : Controller
         [
             s.Title, $"{s.Questions} câu hỏi", $"{s.Completed} / {s.Sent} khách hoàn thành", Fmt.Date(s.End),
             s.Status switch { "da_gui" => "[g]Đang thu thập", "da_dong" => "[x]Đã kết thúc", _ => "[x]Nháp" }
-        ], Url.Action(nameof(SurveyResult), new { id = s.Id }), s.Id)).ToList();
+        ], Url.Action(nameof(SurveyResult), new { id = s.Id }), s.Id, null,
+            new() { ["done"] = s.Completed.ToString(), ["start"] = s.Start == default ? "" : s.Start.ToString("yyyy-MM-dd") })).ToList();
 
         return View("~/Views/Shared/Table.cshtml", new TablePage
         {
             Title = "Khảo sát",
             Subtitle = "Thu thập ý kiến và xem thống kê kết quả",
-            Sections = [new() { Columns = ["Tên khảo sát", "Câu hỏi", "Lượt phản hồi", "Ngày kết thúc", "Trạng thái"], Rows = rows, AddLabel = "Thêm mới", ShowActions = true, Entity = "survey" }]
+            Sections = [new() { Columns = ["Tên khảo sát", "Câu hỏi", "Lượt phản hồi", "Ngày kết thúc", "Trạng thái"], Rows = rows, Filter = SurveyFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "survey" }]
         });
     }
 

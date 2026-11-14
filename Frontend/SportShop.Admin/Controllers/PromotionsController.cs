@@ -6,6 +6,20 @@ namespace SportShop.Admin.Controllers;
 // Quản lý khuyến mãi và chiến dịch; đọc qua ShopData, ghi qua ShopCommands.
 public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
 {
+    // Bộ lọc "Tìm kiếm nâng cao" của bảng khuyến mãi: hình thức (cột 1), tình trạng (cột 4), hạng áp dụng (đọc từ mức giảm) và ngày kết thúc (data-f).
+    static readonly FilterSpec PromotionFilter = new()
+    {
+        Id = "promotions", Noun = "chương trình",
+        Fields =
+        [
+            new("type", "Hình thức", "select", Col: 1),
+            new("status", "Tình trạng", "select", Col: 4),
+            new("tier", "Áp dụng cho", "select", Data: "tier"),
+            new("end", "Ngày kết thúc", "date", Data: "end"),
+        ],
+        Quick = [new("Đang chạy", "status", "eq", "Đang diễn ra"), new("Sắp diễn ra", "status", "eq", "Sắp diễn ra")],
+    };
+
     // Khuyến mãi & marketing: chương trình khuyến mãi (ShopData.Promotions, chương trình đã ngừng tách sang bảng riêng có nút Khôi phục) và chiến dịch thông báo (ShopData.Campaigns).
     public IActionResult Index()
     {
@@ -13,7 +27,8 @@ public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
         var promos = db.Promotions.Where(p => p.Status != "ngung").Select(p => new Row(
         [
             p.Name, p.Type, $"{p.Start:dd/MM} – {p.End:dd/MM/yyyy}", p.Discount, StatusOf(p)
-        ], Url.Action(nameof(Detail), new { id = p.Id }), p.Id)).ToList();
+        ], Url.Action(nameof(Detail), new { id = p.Id }), p.Id, null,
+            new() { ["tier"] = System.Text.RegularExpressions.Regex.Match(p.Discount, @"hạng (\p{L}+)") is { Success: true } m ? "Hạng " + m.Groups[1].Value : "Mọi hạng", ["end"] = p.End.ToString("yyyy-MM-dd") })).ToList();
         var stopped = db.Promotions.Where(p => p.Status == "ngung").Select(p => new Row(
             [p.Name, p.Type, $"{p.Start:dd/MM} – {p.End:dd/MM/yyyy}", p.Discount, StatusOf(p)], Url.Action(nameof(Detail), new { id = p.Id }), p.Id)).ToList();
 
@@ -26,7 +41,7 @@ public class PromotionsController(ShopData db, ShopCommands cmd) : Controller
             Subtitle = "Tạo và theo dõi các chiến dịch ưu đãi",
             Sections =
             [
-                new() { Columns = ["Chương trình", "Loại", "Thời gian áp dụng", "Mức giảm", "Trạng thái"], Rows = promos, AddLabel = "Thêm mới", ShowActions = true, Entity = "promotion" },
+                new() { Columns = ["Chương trình", "Loại", "Thời gian áp dụng", "Mức giảm", "Trạng thái"], Rows = promos, Filter = PromotionFilter, AddLabel = "Thêm mới", ShowActions = true, Entity = "promotion" },
                 new() { Heading = "Chương trình đã ngừng", Columns = ["Chương trình", "Loại", "Thời gian áp dụng", "Mức giảm", "Trạng thái"], Rows = stopped, ShowActions = true, Toolbar = false, Entity = "promotion", CanEdit = false, CanDelete = false, RestoreAction = "restore_promotion" },
                 new() { Heading = "Chiến dịch thông báo", Columns = ["Tiêu đề", "Kênh gửi", "Nhóm khách", "Khuyến mãi gắn kèm", "Người tạo", "Trạng thái"], Rows = campaigns, AddLabel = "Tạo chiến dịch", ShowActions = true, Toolbar = false, Entity = "campaign" },
             ]

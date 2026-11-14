@@ -30,6 +30,7 @@ public sealed class ProductDetailTests
         Assert.True(await vm.AddToCartAsync());
         Assert.Equal((12, 2), Assert.Single(cart.Added));
         Assert.True(vm.HasStatus);
+        Assert.Equal("Đã thêm sản phẩm vào giỏ hàng thành công!", vm.StatusMessage);
         vm.SelectedVariant = vm.Variants.Single(option => option.Id == 10);
         Assert.False(vm.CanBuy);
         Assert.False(await vm.AddToCartAsync());
@@ -64,10 +65,72 @@ public sealed class ProductDetailTests
         var vm = new ProductDetailViewModel(new DetailApi(), cart);
         await vm.LoadAsync(1);
         var adding = vm.AddToCartAsync();
+        Assert.True(vm.IsBusy);
+        Assert.False(vm.CanBuy);
+        Assert.False(vm.HasStatus);
         Assert.False(await vm.AddToCartAsync());
         Assert.Single(cart.Added);
         pending.SetResult(EmptyCart);
         Assert.True(await adding);
+        Assert.False(vm.IsBusy);
+        Assert.Equal("Đã thêm sản phẩm vào giỏ hàng thành công!", vm.StatusMessage);
+    }
+
+    [Fact]
+    public async Task FailedAddClearsPreviousSuccessAndKeepsErrorVisible()
+    {
+        var cart = new CartApi();
+        var vm = new ProductDetailViewModel(new DetailApi(), cart);
+        await vm.LoadAsync(1);
+        Assert.True(await vm.AddToCartAsync());
+        Assert.True(vm.HasStatus);
+
+        cart.Add = (_, _) => throw new CommerceException("Không thể thêm sản phẩm", statusCode: 503);
+        Assert.False(await vm.AddToCartAsync());
+
+        Assert.False(vm.HasStatus);
+        Assert.Null(vm.StatusMessage);
+        Assert.True(vm.HasError);
+        Assert.Equal("Không thể thêm sản phẩm", vm.ErrorMessage);
+        Assert.Equal(2, cart.Added.Count);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task CanceledAddDoesNotReportSuccessWhenTransportReturnsLate()
+    {
+        var pending = new TaskCompletionSource<CartDto>();
+        var cart = new CartApi { Add = (_, _) => pending.Task };
+        var vm = new ProductDetailViewModel(new DetailApi(), cart);
+        await vm.LoadAsync(1);
+        using var lifetime = new CancellationTokenSource();
+        var adding = vm.AddToCartAsync(lifetime.Token);
+
+        lifetime.Cancel();
+        pending.SetResult(EmptyCart);
+
+        Assert.False(await adding);
+        Assert.Single(cart.Added);
+        Assert.False(vm.HasStatus);
+        Assert.False(vm.HasError);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task AlreadyCanceledAddDoesNotSendCartMutation()
+    {
+        var cart = new CartApi();
+        var vm = new ProductDetailViewModel(new DetailApi(), cart);
+        await vm.LoadAsync(1);
+        using var lifetime = new CancellationTokenSource();
+        lifetime.Cancel();
+
+        Assert.False(await vm.AddToCartAsync(lifetime.Token));
+
+        Assert.Empty(cart.Added);
+        Assert.False(vm.HasStatus);
+        Assert.False(vm.HasError);
+        Assert.False(vm.IsBusy);
     }
 
     // Giới hạn backend 999 vẫn được giữ khi kho lớn; đổi sản phẩm không giữ lựa chọn cũ.

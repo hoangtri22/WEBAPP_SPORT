@@ -19,6 +19,7 @@ public partial class App : Application
         auth.Left += () =>
         {
             _services.GetRequiredService<AppMemoryCache>().Clear();
+            _services.GetRequiredService<CartBadgeState>().Clear();
             Show(_services.GetRequiredService<AuthPage>());
         };
     }

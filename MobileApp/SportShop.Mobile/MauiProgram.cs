@@ -31,6 +31,7 @@ public static class MauiProgram
             Timeout = TimeSpan.FromSeconds(20)
         });
         builder.Services.AddSingleton<AppMemoryCache>();
+        builder.Services.AddSingleton<CartBadgeState>();
         builder.Services.AddSingleton<ICatalogApi, CatalogApi>();
         builder.Services.AddSingleton<IAuthApi, AuthApi>();
         builder.Services.AddSingleton<ISessionStore, SessionStore>();

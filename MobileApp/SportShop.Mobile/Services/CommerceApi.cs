@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using SportShop.Contracts.Commerce;
 using SportShop.Contracts.Common;
+using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile.Services;
 
@@ -31,13 +32,18 @@ public sealed class CommerceApi(
     HttpClient http,
     ISessionManager session,
     AppMemoryCache? cache = null,
-    IDeviceIdentity? deviceIdentity = null) : ICommerceApi
+    IDeviceIdentity? deviceIdentity = null,
+    CartBadgeState? cartBadge = null) : ICommerceApi
 {
     public const string GuestDeviceHeader = "X-Guest-Device-Key";
 
     // Lấy giỏ hàng.
-    public Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default) =>
-        SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/cart"), cancellationToken);
+    public async Task<CartDto> GetCartAsync(CancellationToken cancellationToken = default)
+    {
+        var cart = await SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/cart"), cancellationToken);
+        cartBadge?.Update(cart);
+        return cart;
+    }
 
     // Thêm biến thể vào giỏ.
     public async Task<CartDto> AddCartItemAsync(int variantId, int quantity, CancellationToken cancellationToken = default)
@@ -47,6 +53,7 @@ public sealed class CommerceApi(
             Content = JsonContent.Create(new AddCartItemRequest(variantId, quantity))
         }, cancellationToken);
         cache?.InvalidateCommerce();
+        cartBadge?.Update(cart);
         return cart;
     }
 
@@ -58,6 +65,7 @@ public sealed class CommerceApi(
             Content = JsonContent.Create(new SetCartQuantityRequest(quantity))
         }, cancellationToken);
         cache?.InvalidateCommerce();
+        cartBadge?.Update(cart);
         return cart;
     }
 
@@ -66,6 +74,7 @@ public sealed class CommerceApi(
     {
         var cart = await SendAuthenticatedAsync<CartDto>(() => new HttpRequestMessage(HttpMethod.Delete, $"api/v1/cart/items/{variantId}"), cancellationToken);
         cache?.InvalidateCommerce();
+        cartBadge?.Update(cart);
         return cart;
     }
 
@@ -74,22 +83,31 @@ public sealed class CommerceApi(
     {
         await SendAuthenticatedNoContentAsync(() => new HttpRequestMessage(HttpMethod.Delete, "api/v1/cart"), cancellationToken);
         cache?.InvalidateCommerce();
+        cartBadge?.Clear();
     }
 
     // Lấy dữ liệu trang thanh toán.
-    public Task<CheckoutDto> GetCheckoutAsync(CancellationToken cancellationToken = default) =>
-        SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/checkout"), cancellationToken);
+    public async Task<CheckoutDto> GetCheckoutAsync(CancellationToken cancellationToken = default)
+    {
+        var checkout = await SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/checkout"), cancellationToken);
+        cartBadge?.Update(checkout.Cart);
+        return checkout;
+    }
 
     // Lấy các voucher dùng được.
     public Task<IReadOnlyList<EligibleVoucherDto>> GetEligibleVouchersAsync(CancellationToken cancellationToken = default) =>
         SendAuthenticatedAsync<IReadOnlyList<EligibleVoucherDto>>(() => new HttpRequestMessage(HttpMethod.Get, "api/v1/checkout/vouchers"), cancellationToken);
 
     // Tính thử voucher.
-    public Task<CheckoutDto> QuoteCheckoutAsync(string? voucherCode, CancellationToken cancellationToken = default) =>
-        SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Post, "api/v1/checkout/quote")
+    public async Task<CheckoutDto> QuoteCheckoutAsync(string? voucherCode, CancellationToken cancellationToken = default)
+    {
+        var checkout = await SendAuthenticatedAsync<CheckoutDto>(() => new HttpRequestMessage(HttpMethod.Post, "api/v1/checkout/quote")
         {
             Content = JsonContent.Create(new CheckoutQuoteRequest(string.IsNullOrWhiteSpace(voucherCode) ? null : voucherCode.Trim()))
         }, cancellationToken);
+        cartBadge?.Update(checkout.Cart);
+        return checkout;
+    }
 
     // Lấy danh sách đơn hàng có phân trang.
     public Task<PagedResponse<OrderDto>> GetOrdersAsync(
@@ -124,6 +142,7 @@ public sealed class CommerceApi(
             return msg;
         }, cancellationToken);
         cache?.InvalidateCommerce();
+        cartBadge?.Clear();
         return order;
     }
 

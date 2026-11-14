@@ -13,6 +13,8 @@ public partial class HomePage : ContentPage
     private readonly HomeViewModel _viewModel;
     private CancellationTokenSource? _lifetime;
     private bool _navigating;
+    private (double X, double Y)? _returnScroll;
+    private bool _isVisible;
 
     // Nhận AuthViewModel, các trang liên quan và bộ dịch vụ.
     public HomePage(AuthViewModel auth, MainPage catalog, CartPage cartPage, IServiceProvider services, HomeViewModel viewModel)
@@ -30,13 +32,16 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _isVisible = true;
         _lifetime?.Dispose();
         _lifetime = new CancellationTokenSource();
         if (!_viewModel.HasLoaded) await _viewModel.LoadAsync(_lifetime.Token);
+        await RestoreHomeScrollAsync();
     }
 
     protected override void OnDisappearing()
     {
+        _isVisible = false;
         _lifetime?.Cancel();
         base.OnDisappearing();
     }
@@ -66,9 +71,24 @@ public partial class HomePage : ContentPage
         await NavigateAsync(async () =>
         {
             var page = _services.GetRequiredService<ProductDetailPage>();
+            _returnScroll = (HomeScroll.ScrollX, HomeScroll.ScrollY);
+            page.SetContinueShopping(async () =>
+            {
+                if (await AppNavigation.ReturnToSourceAsync(Navigation, this)) await RestoreHomeScrollAsync();
+                else await AppNavigation.OpenDefaultCatalogAsync(Navigation, _services);
+            });
             await Navigation.PushAsync(page);
             await page.LoadAsync(productId);
         });
+    }
+
+    private async void OnHomeScrollReady(object? sender, EventArgs e) => await RestoreHomeScrollAsync();
+
+    private async Task RestoreHomeScrollAsync()
+    {
+        if (!_isVisible || _returnScroll is not { } point || HomeScroll.Height <= 0 || HomeScroll.Content.Height <= 0) return;
+        _returnScroll = null;
+        await HomeScroll.ScrollToAsync(point.X, point.Y, animated: false);
     }
 
     private async void OnPromotionsClicked(object? sender, EventArgs e)

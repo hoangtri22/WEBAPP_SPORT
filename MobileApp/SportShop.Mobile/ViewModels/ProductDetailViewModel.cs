@@ -56,7 +56,7 @@ public sealed class ProductDetailViewModel(ICatalogApi catalog, ICommerceApi com
     public bool IsBusy => _isBusy;
     public bool IsIdle => !_isBusy;
     public bool HasProduct => _product is not null;
-    public bool CanBuy => !_isBusy && SelectedVariant is not null && Stock > 0;
+    public bool CanBuy => !_isBusy && ProductId > 0 && SelectedVariant is { Id: > 0 } && Stock > 0;
     public bool CanIncrease => CanBuy && Quantity < MaximumQuantity;
     public bool CanDecrease => CanBuy && Quantity > 1;
     public bool HasError => !string.IsNullOrWhiteSpace(_error);
@@ -191,8 +191,10 @@ public sealed class ProductDetailViewModel(ICatalogApi catalog, ICommerceApi com
         NotifyAll();
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await commerce.AddCartItemAsync(variantId, quantity, cancellationToken);
-            _status = "Đã thêm sản phẩm vào giỏ hàng.";
+            cancellationToken.ThrowIfCancellationRequested();
+            _status = "Đã thêm sản phẩm vào giỏ hàng thành công!";
             return true;
         }
         catch (CommerceException ex)

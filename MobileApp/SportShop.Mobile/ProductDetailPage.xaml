@@ -110,5 +110,44 @@
             <Button Grid.Column="1" Text="Mua ngay" Clicked="OnBuyNowClicked" IsEnabled="{Binding CanBuy}"
                     BackgroundColor="#0F766E" TextColor="White" CornerRadius="12" AutomationId="BuyProductNow" />
         </Grid>
+        <Grid x:Name="AddSuccessOverlay" Grid.RowSpan="2" ZIndex="10" IsVisible="False"
+              BackgroundColor="#80000000" Padding="18" AutomationId="ProductAddedDialog">
+            <ScrollView x:Name="SuccessDialogScroll">
+                <Grid RowDefinitions="*,Auto,*"
+                      MinimumHeightRequest="{Binding Height, Source={x:Reference SuccessDialogScroll}, x:DataType=ScrollView}">
+                    <Border Grid.Row="1" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 22"
+                            Padding="20" VerticalOptions="Center" HorizontalOptions="Fill" MaximumWidthRequest="440">
+                        <VerticalStackLayout Spacing="16">
+                            <Grid ColumnDefinitions="72,*,Auto" ColumnSpacing="12">
+                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{StaticResource Bg}">
+                                    <Image Source="{Binding ImageUrl}" HeightRequest="72" WidthRequest="72" Aspect="AspectFit"
+                                           Margin="6" SemanticProperties.Description="{Binding Name}" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="5">
+                                    <Label Text="ĐÃ THÊM VÀO GIỎ" TextColor="{StaticResource Teal}" FontSize="10"
+                                           CharacterSpacing="1" FontFamily="OpenSansSemibold" />
+                                    <Label Text="{Binding Name}" TextColor="{StaticResource Ink}" FontSize="14"
+                                           FontFamily="OpenSansSemibold" MaxLines="2" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding PriceText}" TextColor="{StaticResource Teal}" FontSize="13" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="×" Clicked="OnDismissAddedClicked" BackgroundColor="Transparent"
+                                        TextColor="{StaticResource Muted}" FontSize="24" Padding="0" WidthRequest="44"
+                                        HeightRequest="44" VerticalOptions="Start" SemanticProperties.Description="Đóng thông báo"
+                                        AutomationId="DismissProductAdded" />
+                            </Grid>
+                            <Label Text="Đã thêm sản phẩm vào giỏ hàng thành công!" TextColor="{StaticResource Ink}"
+                                   FontFamily="OpenSansSemibold" FontSize="19" SemanticProperties.HeadingLevel="Level1"
+                                   AutomationId="ProductAddedSuccessMessage" />
+                            <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
+                                    BackgroundColor="{StaticResource Teal}" TextColor="White" CornerRadius="12"
+                                    MinimumHeightRequest="48" AutomationId="ContinueShoppingAfterAdd" />
+                            <Button Text="Xem giỏ hàng" Clicked="OnCartClicked" BackgroundColor="White"
+                                    TextColor="{StaticResource Teal}" BorderColor="{StaticResource Teal}" BorderWidth="1"
+                                    CornerRadius="12" MinimumHeightRequest="48" AutomationId="ViewCartAfterAdd" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+            </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

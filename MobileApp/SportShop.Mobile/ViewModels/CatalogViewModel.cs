@@ -74,6 +74,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     public AsyncCommand LoadMoreCommand { get; }
     public AsyncCommand ResetCommand { get; }
     public bool HasLoaded { get; private set; }
+    public int ResultVersion { get; private set; }
     public bool IsBusy => _isBusy;
     public bool IsIdle => !_isBusy;
     public bool HasError => !string.IsNullOrEmpty(_errorMessage);
@@ -143,7 +144,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             var result = await _api.GetProductsAsync(filter.Query, nextPage, filter.CategoryId, filter.Sort,
                 filter.InStockOnly, filter.MinPrice, filter.MaxPrice, filter.Sizes, filter.Colors, token);
             if (version != _loadVersion || token.IsCancellationRequested) return;
-            if (!append) Products.Clear();
+            if (!append) { Products.Clear(); ResultVersion++; }
             foreach (var product in result.Items)
                 if (!Products.Any(existing => existing.Id == product.Id)) Products.Add(new ProductCard(product));
             _activeFilter = filter;

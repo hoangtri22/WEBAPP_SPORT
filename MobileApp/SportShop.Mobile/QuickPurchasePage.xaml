@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.QuickPurchasePage" x:DataType="vm:QuickPurchaseViewModel"
+             BackgroundColor="{StaticResource Bg}" NavigationPage.HasNavigationBar="False"
+             Title="{Binding ActionTitle}" AutomationId="QuickPurchaseModal">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto" Padding="18,12" ColumnSpacing="10" BackgroundColor="White">
+            <Label Text="{Binding ActionTitle}" FontFamily="OpenSansSemibold" FontSize="20"
+                   TextColor="{StaticResource Ink}" VerticalOptions="Center" SemanticProperties.HeadingLevel="Level1" />
+            <Button Grid.Column="1" Text="Đóng" Clicked="OnCloseClicked" IsEnabled="{Binding CanClose}"
+                    BackgroundColor="{StaticResource TealSoft}" TextColor="{StaticResource Teal}"
+                    CornerRadius="12" Padding="12,8" AutomationId="CloseQuickPurchase" />
+        </Grid>
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="18,18,18,24" Spacing="16">
+                <Label Text="{Binding ActionHint}" FontSize="13" TextColor="{StaticResource Muted}" />
+                <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                                   Color="{StaticResource Teal}" />
+                <Border IsVisible="{Binding HasProduct}" BackgroundColor="White" Stroke="{StaticResource Line}"
+                        StrokeShape="RoundRectangle 18" Padding="16">
+                    <VerticalStackLayout Spacing="12">
+                        <Image Source="{Binding ImageUrl}" HeightRequest="170" Aspect="AspectFit"
+                               SemanticProperties.Description="{Binding Name}" />
+                        <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="18"
+                               TextColor="{StaticResource Ink}" AutomationId="QuickPurchaseName" />
+                        <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="20"
+                               TextColor="{StaticResource Teal}" AutomationId="QuickPurchasePrice" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border IsVisible="{Binding HasProduct}" BackgroundColor="White" Stroke="{StaticResource Line}"
+                        StrokeShape="RoundRectangle 18" Padding="16">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Chọn size / màu" FontFamily="OpenSansSemibold" FontSize="16" TextColor="{StaticResource Ink}" />
+                        <Border BackgroundColor="{StaticResource Bg}" Stroke="{StaticResource Line}"
+                                StrokeShape="RoundRectangle 12" Padding="8,0">
+                            <Picker Title="Chọn phiên bản sản phẩm" ItemsSource="{Binding Variants}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:ProductVariantOption}"
+                                    SelectedItem="{Binding SelectedVariant}" IsEnabled="{Binding CanEdit}"
+                                    TextColor="{StaticResource Ink}" TitleColor="{StaticResource Muted}"
+                                    FontSize="14" MinimumHeightRequest="48" AutomationId="QuickPurchaseVariant" />
+                        </Border>
+                        <Label Text="{Binding SelectionHint}" FontSize="13" TextColor="{StaticResource Muted}"
+                               AutomationId="QuickPurchaseStock" />
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                            <Label Text="Số lượng" FontSize="14" TextColor="{StaticResource Ink}" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="−" Clicked="OnDecreaseClicked" IsEnabled="{Binding CanDecrease}"
+                                    WidthRequest="44" BackgroundColor="{StaticResource TealSoft}" TextColor="{StaticResource Teal}"
+                                    Padding="0" AutomationId="QuickPurchaseDecrease" />
+                            <Entry Grid.Column="2" Text="{Binding QuantityText}" Keyboard="Numeric" MaxLength="3"
+                                   IsEnabled="{Binding CanEditQuantity}" HorizontalTextAlignment="Center" WidthRequest="54"
+                                   TextColor="{StaticResource Ink}" FontSize="15" AutomationId="QuickPurchaseQuantity"
+                                   SemanticProperties.Description="Số lượng sản phẩm" />
+                            <Button Grid.Column="3" Text="+" Clicked="OnIncreaseClicked" IsEnabled="{Binding CanIncrease}"
+                                    WidthRequest="44" BackgroundColor="{StaticResource TealSoft}" TextColor="{StaticResource Teal}"
+                                    Padding="0" AutomationId="QuickPurchaseIncrease" />
+                        </Grid>
+                        <Label Text="{Binding QuantityValidationMessage}" IsVisible="{Binding HasQuantityError}"
+                               FontSize="12" TextColor="#9A3412" AutomationId="QuickPurchaseQuantityError" />
+                    </VerticalStackLayout>
+                </Border>
+                <Button Text="Tải lại sản phẩm" Clicked="OnRetryClicked" IsVisible="{Binding CanRetry}"
+                        BackgroundColor="White" TextColor="{StaticResource Teal}" BorderColor="{StaticResource Teal}"
+                        BorderWidth="1" CornerRadius="12" AutomationId="RetryQuickPurchase" />
+            </VerticalStackLayout>
+        </ScrollView>
+        <Border Grid.Row="2" BackgroundColor="White" Stroke="{StaticResource Line}" Padding="18,12">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#9A3412"
+                       FontSize="13" AutomationId="QuickPurchaseError" />
+                <HorizontalStackLayout IsVisible="{Binding IsSubmitting}" HorizontalOptions="Center" Spacing="8">
+                    <ActivityIndicator IsRunning="{Binding IsSubmitting}" Color="{StaticResource Teal}" WidthRequest="20" HeightRequest="20" />
+                    <Label Text="Đang thêm sản phẩm…" FontSize="13" TextColor="{StaticResource Muted}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <Button Text="{Binding ActionTitle}" Clicked="OnSubmitClicked" IsEnabled="{Binding CanSubmit}"
+                        BackgroundColor="{StaticResource Teal}" TextColor="White" FontFamily="OpenSansSemibold"
+                        CornerRadius="12" MinimumHeightRequest="48" AutomationId="ConfirmQuickPurchase" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

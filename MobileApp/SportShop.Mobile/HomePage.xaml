@@ -11,7 +11,7 @@
             <ImageButton Grid.Column="1" Source="ic_search_ink.png" WidthRequest="44" HeightRequest="44" Padding="10" BackgroundColor="Transparent" SemanticProperties.Description="Tìm kiếm sản phẩm" Clicked="OnCatalogClicked" />
             <ImageButton Grid.Column="2" Source="ic_shopping_bag_ink.png" WidthRequest="44" HeightRequest="44" Padding="10" BackgroundColor="Transparent" SemanticProperties.Description="Giỏ hàng" Clicked="OnCartClicked" />
         </Grid>
-        <ScrollView Grid.Row="1">
+        <ScrollView x:Name="HomeScroll" Grid.Row="1" Loaded="OnHomeScrollReady" SizeChanged="OnHomeScrollReady">
             <VerticalStackLayout Spacing="22" Padding="0,0,0,24">
                 <Border BackgroundColor="{StaticResource TealDark}" StrokeThickness="0" StrokeShape="RoundRectangle 0,0,22,22" Padding="20">
                     <VerticalStackLayout Spacing="12">

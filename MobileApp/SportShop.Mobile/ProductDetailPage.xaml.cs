@@ -10,6 +10,7 @@ public partial class ProductDetailPage : ContentPage
     private CancellationTokenSource? _lifetime;
     private int _productId;
     private bool _navigating;
+    private Func<Task>? _continueShopping;
 
     public ProductDetailPage(ProductDetailViewModel vm, IServiceProvider services)
     {
@@ -17,6 +18,9 @@ public partial class ProductDetailPage : ContentPage
         BindingContext = _vm = vm;
         _services = services;
     }
+
+    // Danh sách nguồn giữ chính trang, dữ liệu và vị trí cuộn của nó trong phiên điều hướng.
+    public void SetContinueShopping(Func<Task> callback) => _continueShopping = callback;
 
     // Gọi sau PushAsync để tải đúng sản phẩm với vòng đời màn hình.
     public async Task LoadAsync(int productId)
@@ -36,8 +40,16 @@ public partial class ProductDetailPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        AddSuccessOverlay.IsVisible = false;
         _lifetime?.Cancel();
         base.OnDisappearing();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (!AddSuccessOverlay.IsVisible) return base.OnBackButtonPressed();
+        AddSuccessOverlay.IsVisible = false;
+        return true;
     }
 
     private async void OnRetryClicked(object? sender, EventArgs e) => await LoadAsync(_productId);
@@ -53,6 +65,7 @@ public partial class ProductDetailPage : ContentPage
         try
         {
             var page = _services.GetRequiredService<ProductDetailPage>();
+            if (_continueShopping is not null) page.SetContinueShopping(_continueShopping);
             await Navigation.PushAsync(page);
             await page.LoadAsync(product.Id);
         }
@@ -62,12 +75,39 @@ public partial class ProductDetailPage : ContentPage
     private void OnDecreaseClicked(object? sender, EventArgs e) => _vm.Quantity--;
     private void OnIncreaseClicked(object? sender, EventArgs e) => _vm.Quantity++;
     private async void OnAddClicked(object? sender, EventArgs e)
-        => await _vm.AddToCartAsync(_lifetime?.Token ?? default);
+    {
+        if (_navigating || !_vm.CanBuy) return;
+        _navigating = true;
+        AddSuccessOverlay.IsVisible = false;
+        try
+        {
+            if (await _vm.AddToCartAsync(_lifetime?.Token ?? default)
+                && Navigation.NavigationStack.LastOrDefault() == this)
+                AddSuccessOverlay.IsVisible = true;
+        }
+        finally { _navigating = false; }
+    }
+
+    private void OnDismissAddedClicked(object? sender, EventArgs e)
+        => AddSuccessOverlay.IsVisible = false;
+
+    private async void OnContinueShoppingClicked(object? sender, EventArgs e)
+    {
+        if (_navigating) return;
+        _navigating = true;
+        AddSuccessOverlay.IsVisible = false;
+        try
+        {
+            if (_continueShopping is not null) await _continueShopping();
+            else await AppNavigation.OpenDefaultCatalogAsync(Navigation, _services);
+        }
+        finally { _navigating = false; }
+    }
 
     // Mua ngay thêm lựa chọn vào giỏ hiện hữu rồi mở thanh toán, giữ các món đã có trong giỏ.
     private async void OnBuyNowClicked(object? sender, EventArgs e)
     {
-        if (_navigating) return;
+        if (_navigating || !_vm.CanBuy) return;
         _navigating = true;
         try
         {
@@ -78,7 +118,13 @@ public partial class ProductDetailPage : ContentPage
     }
 
     private async void OnCartClicked(object? sender, EventArgs e)
-        => await Navigation.PushAsync(_services.GetRequiredService<CartPage>());
+    {
+        if (_navigating || _vm.IsBusy) return;
+        _navigating = true;
+        AddSuccessOverlay.IsVisible = false;
+        try { await Navigation.PushAsync(_services.GetRequiredService<CartPage>()); }
+        finally { _navigating = false; }
+    }
 
     private async void OnReviewsClicked(object? sender, EventArgs e)
     {

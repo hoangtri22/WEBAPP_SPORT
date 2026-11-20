@@ -131,8 +131,8 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     }
 
 
-    // Lấy mã khách từ session, chưa đăng nhập thì trả 0.
-    static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? 0;
+    // Lấy mã khách từ session: khách đăng nhập (customer_id), chưa đăng nhập thì dùng hồ sơ khách mua không tài khoản (guest_id, tạo bởi GuestStore), không có thì trả 0.
+    static int CustomerOf(ISession s) => s.GetInt32("customer_id") ?? s.GetInt32("guest_id") ?? 0;
 
     // Lấy giỏ của khách trong session.
     public Dictionary<int, int> GetCart(ISession s) => CustomerOf(s) is > 0 and var id ? GetCart(id) : [];
@@ -356,6 +356,25 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             return (orderId, null, false);
         }
         catch (OrderError error) { return (null, error.Message, false); }
+    }
+
+    // Đặt đơn của khách mua bằng số điện thoại trong một transaction: đọc giỏ của hồ sơ đang dùng (guestId), ghi đơn cho hồ sơ theo số điện thoại (customerId, có thể là hồ sơ cũ của cùng số), áp mức giảm theo đơn rồi xóa giỏ; không dùng mã giảm giá.
+    public (int? OrderId, string? Error) PlaceGuestOrder(int guestId, int customerId, ReceiverInfo to, int payMethod)
+    {
+        using var c = Open();
+        c.Open();
+        using var tx = c.BeginTransaction();
+        try
+        {
+            foreach (var id in new[] { guestId, customerId }.Distinct().Order()) CartStore.LockCustomer(c, tx, id);
+            var cart = carts.ReadLocked(c, tx, guestId);
+            var order = WriteOrder(c, tx, customerId, to, payMethod, null, cart, orderPromo: true);
+            CartStore.WriteLocked(c, tx, guestId, []);
+            tx.Commit();
+            catalog.Clear();
+            return (order, null);
+        }
+        catch (OrderError error) { return (null, error.Message); }
     }
 
     // Đặt đơn cho web với giỏ truyền vào; dùng chung WriteOrder().

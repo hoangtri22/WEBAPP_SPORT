@@ -66,11 +66,31 @@ public class CustomerStore(IConfiguration config)
                     (SELECT ma_vai_tro FROM VAI_TRO WHERE ten_vai_tro = 'Khách hàng'), 'hoat_dong');
             SELECT LAST_INSERT_ID();
             """, new { username, email, phone, password = PasswordStorage.Hash(password) }, tx);
-        c.Execute("""
-            INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, so_dien_thoai) VALUES (@accountId, '', @username, @phone)
-            """, new { accountId, username, phone }, tx);
+        // Số điện thoại đã từng mua hàng không cần tài khoản (hoặc khách tại quầy): gắn tài khoản mới vào hồ sơ khách đó để giữ đơn đã mua, đã hủy, giỏ hàng, điểm và hạng thành viên.
+        var guest = c.QueryFirstOrDefault<GuestRow>("""
+            SELECT ma_khach_hang AS Id, ho_lot AS LastName, ten AS FirstName FROM KHACH_HANG
+            WHERE ma_tai_khoan IS NULL AND da_xoa = 0 AND so_dien_thoai = @phone ORDER BY ma_khach_hang LIMIT 1 FOR UPDATE
+            """, new { phone }, tx);
+        if (guest != null)
+        {
+            bool unnamed = guest.LastName == "Khách" && guest.FirstName == "Vãng lai";
+            c.Execute("UPDATE KHACH_HANG SET ma_tai_khoan = @accountId, ho_lot = @last, ten = @first WHERE ma_khach_hang = @id AND ma_tai_khoan IS NULL",
+                new { accountId, id = guest.Id, last = unnamed ? "" : guest.LastName, first = unnamed ? username : guest.FirstName }, tx);
+        }
+        else
+            c.Execute("""
+                INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, so_dien_thoai) VALUES (@accountId, '', @username, @phone)
+                """, new { accountId, username, phone }, tx);
         tx.Commit();
         return errors;
+    }
+
+    // Hồ sơ khách chưa có tài khoản tìm theo số điện thoại lúc đăng ký.
+    sealed class GuestRow
+    {
+        public int Id { get; set; }
+        public string LastName { get; set; } = "";
+        public string FirstName { get; set; } = "";
     }
 
 

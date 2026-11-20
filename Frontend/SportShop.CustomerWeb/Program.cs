@@ -24,6 +24,7 @@ builder.Services.AddSession(o =>
 builder.Services.AddSingleton<DbStatus>();
 builder.Services.AddScoped<CustomerStore>();
 builder.Services.AddScoped<ShopStore>();
+builder.Services.AddScoped<GuestStore>();
 builder.Services.AddSingleton<CartStore>();
 builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<LoginThrottle>();

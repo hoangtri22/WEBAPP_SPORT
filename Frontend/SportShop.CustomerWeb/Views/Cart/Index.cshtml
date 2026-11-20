@@ -84,7 +84,7 @@
                 @if (Model.Applied is { } applied) { <div class="sum-row"><span>Giảm theo đơn</span><b>-@Fmt.Money(discount)</b></div> }
                 <div class="sum-row"><span>Phí giao hàng</span><b>@(ship == 0 ? "Miễn phí" : Fmt.Money(ship))</b></div>
                 <div class="sum-row total"><span>Tổng cộng</span><b>@Fmt.Money(subtotal - discount + ship)</b></div>
-                <small class="muted">Mã giảm giá được chọn ở bước thanh toán và thay cho mức giảm theo đơn.</small>
+                @if (ViewData["Guest"] is not true) { <small class="muted">Mã giảm giá được chọn ở bước thanh toán và thay cho mức giảm theo đơn.</small> }
                 @if (lines.Any(l => !l.Enough)) { <p class="cart-warn">Vui lòng giảm số lượng các sản phẩm vượt tồn kho.</p> }
                 else { <a class="btn btn-primary" asp-action="Checkout">Tiến hành thanh toán</a> }
                 <a class="btn btn-secondary" asp-controller="Shop" asp-action="Index">Tiếp tục mua sắm</a>

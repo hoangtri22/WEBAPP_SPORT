@@ -26,6 +26,8 @@
                     }
                 </div>
             </div>
+            @if (!Model.IsGuest)
+            {
             <div class="card pad">
                 <h3>Mã giảm giá</h3>
                 @{ string chosen = Model.Voucher?.Trim() ?? ""; }
@@ -60,6 +62,7 @@
                 else if (Model.OrderPromo is { } auto) { <small class="field-ok">Đang áp dụng @auto.Name, giảm @Fmt.Money(Model.Discount). Chọn mã sẽ thay cho mức giảm này.</small> }
                 else if (Model.Discount > 0) { <small class="field-ok">Đã áp dụng mã @chosen, giảm @Fmt.Money(Model.Discount).</small> }
             </div>
+            }
         </div>
         <aside class="card cart-summary">
             <h3>Đơn hàng (@Model.Lines.Sum(l => l.Qty) sản phẩm)</h3>

@@ -11,8 +11,10 @@ public class AccountController : Controller
     readonly DbStatus _db;
     readonly CustomerStore _store;
     readonly LoginThrottle _throttle;
-    // Nhận DbStatus, CustomerStore và LoginThrottle.
-    public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle) { _db = db; _store = store; _throttle = throttle; }
+    readonly GuestStore _guests;
+    readonly ShopStore _shop;
+    // Nhận DbStatus, CustomerStore, LoginThrottle, GuestStore và ShopStore.
+    public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle, GuestStore guests, ShopStore shop) { _db = db; _store = store; _throttle = throttle; _guests = guests; _shop = shop; }
 
     // Hiển thị trang đăng nhập (Views/Account/Auth.cshtml); nhận thông báo từ TempData["LoginNotice"] do CartController.LoginRequired() gửi sang.
     [HttpGet]
@@ -55,6 +57,7 @@ public class AccountController : Controller
             }
             _throttle.Reset(username!, ip);
             HttpContext.Session.SetInt32("customer_id", customerId.Value);
+            MergeGuestCart(customerId.Value);
         }
 
         HttpContext.Session.SetString("customer", username!.Trim());
@@ -84,6 +87,17 @@ public class AccountController : Controller
         }
 
         return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Bạn có thể đăng nhập ngay." });
+    }
+
+    // Đăng nhập xong: chuyển giỏ của hồ sơ khách mua không tài khoản (guest_id) sang giỏ tài khoản, cộng dồn số lượng và giới hạn theo tồn kho, rồi bỏ hồ sơ tạm.
+    void MergeGuestCart(int customerId)
+    {
+        if (HttpContext.Session.GetInt32("guest_id") is not int guest) return;
+        HttpContext.Session.Remove("guest_id");
+        if (guest == customerId || !_guests.IsActive(guest)) return;
+        foreach (var (variant, qty) in _shop.GetCart(guest)) _shop.AddToCart(customerId, variant, qty);
+        _shop.ClearCart(guest);
+        _guests.DiscardPlaceholder(guest);
     }
 
     // Đăng xuất: xóa customer và customer_id khỏi Session rồi về trang chủ.

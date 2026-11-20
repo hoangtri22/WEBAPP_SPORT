@@ -184,3 +184,18 @@
 
 .shop-search-adv { flex: none; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--teal); font-size: 13px; font-weight: 700; white-space: nowrap; }
 .shop-search-adv:hover { background: #edf8f6; border-color: var(--teal); }
+
+/* Nút giỏ hàng cạnh nút Chọn mua trên thẻ sản phẩm */
+.quick-add.has-cart { right: 61px; }
+.quick-cart-form { position: absolute; right: 11px; bottom: 11px; z-index: 2; margin: 0; transform: translateY(58px); opacity: 0; transition: .25s ease; }
+.shop-product-card:hover .quick-cart-form, .quick-cart-form:focus-within { transform: translateY(0); opacity: 1; }
+.quick-cart { width: 42px; height: 42px; border: 1px solid var(--teal); border-radius: 9px; background: #fff; color: var(--teal); display: grid; place-items: center; cursor: pointer; transition: background .2s ease, color .2s ease; }
+.quick-cart:hover { background: var(--teal); color: #fff; }
+@media (max-width: 700px) {
+    .quick-add.has-cart { right: 52px; }
+    .quick-cart-form { transform: none; opacity: 1; }
+    .quick-cart { width: 36px; height: 36px; }
+}
+
+/* Cuộn tới thẻ sản phẩm (nút Quay lại) không bị thanh đầu trang che */
+.shop-product-card[id] { scroll-margin-top: 110px; }

@@ -34,6 +34,19 @@ public class CartController(DbStatus db, ShopStore shop) : Controller
         return Url.IsLocalUrl(back) ? Redirect(back) : RedirectToAction(nameof(Index));
     }
 
+    // Thêm nhanh từ thẻ sản phẩm: chọn biến thể còn hàng có giá thấp nhất của sản phẩm rồi gọi ShopStore.AddToCart() với số lượng 1; quay lại đúng trang và vị trí thẻ vừa bấm (back).
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult QuickAdd(int productId, string? back = null)
+    {
+        if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
+        if (!LoggedIn) return LoginRequired("thêm sản phẩm vào giỏ hàng");
+        var variant = shop.Product(productId)?.Variants.Where(v => v.Stock > 0).OrderBy(v => v.Price).ThenBy(v => v.Id).FirstOrDefault();
+        var error = variant == null ? "Sản phẩm đã hết hàng." : shop.AddToCart(HttpContext.Session, variant.Id, 1);
+        if (error != null) TempData["ShopError"] = error;
+        else TempData["ShopNotice"] = "Đã thêm vào giỏ hàng.";
+        return Url.IsLocalUrl(back) ? Redirect(back) : RedirectToAction(nameof(Index));
+    }
+
     // Sửa số lượng một dòng giỏ: giới hạn theo tồn kho rồi gọi ShopStore.SetQty().
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Update(int variantId, int qty)

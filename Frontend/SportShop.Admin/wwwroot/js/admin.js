@@ -465,6 +465,16 @@ document.addEventListener('click', function (e) {
 
     // Trang Master-Sub (.md-split, Quản lý hóa đơn): bấm dòng thì tải trang chi tiết (data-peek), lấy nội dung qua build() rồi hiện ở khung cố định #mdDetail thay cho khung xem nhanh.
     var master = document.getElementById('mdDetail');
+    // Sắp lại khung chi tiết hóa đơn: "Chi tiết đơn hàng" lên đầu, rồi "Vận chuyển / Cập nhật trạng thái", "Thông tin đơn hàng" xuống cuối.
+    function arrange(html) {
+        if (!html) return html;
+        var box = document.createElement('div'); box.innerHTML = html;
+        var grid = box.querySelector('.grid2'), detail = box.querySelector(':scope > section.card');
+        if (!grid || !detail || grid.children.length < 2) return html;
+        grid.appendChild(grid.children[0]);
+        grid.parentNode.insertBefore(detail, grid);
+        return box.innerHTML;
+    }
     if (master) {
         var pick = function (tr) {
             var url = tr.getAttribute('data-peek');
@@ -474,7 +484,7 @@ document.addEventListener('click', function (e) {
             fetch(url, { credentials: 'same-origin' })
                 .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
                 .then(function (html) {
-                    cache[url] = build(url, html);
+                    cache[url] = arrange(build(url, html));
                     if (current === url && cache[url]) { master.innerHTML = cache[url]; pagePlainTables(master); master.scrollTop = 0; }
                 })
                 .catch(function () { if (current === url) showToast('Không tải được chi tiết hóa đơn, vui lòng thử lại.', true); });

@@ -456,7 +456,7 @@ document.addEventListener('click', function (e) {
         fetch(url, { credentials: 'same-origin' })
             .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
             .then(function (html) {
-                cache[url] = build(url, html);
+                cache[url] = arrange(build(url, html));
                 if (current !== url) return;
                 if (cache[url]) show(url); else close();
             })
@@ -470,7 +470,8 @@ document.addEventListener('click', function (e) {
         if (!html) return html;
         var box = document.createElement('div'); box.innerHTML = html;
         var grid = box.querySelector('.grid2'), detail = box.querySelector(':scope > section.card');
-        if (!grid || !detail || grid.children.length < 2) return html;
+        var title = detail && detail.querySelector('.card-title');
+        if (!grid || !detail || grid.children.length < 2 || !title || title.textContent.trim() !== 'Chi tiết đơn hàng') return html;
         grid.appendChild(grid.children[0]);
         grid.parentNode.insertBefore(detail, grid);
         return box.innerHTML;

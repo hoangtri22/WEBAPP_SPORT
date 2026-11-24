@@ -6,8 +6,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test ViewModel của Trang chủ.
 public sealed class HomeTests
 {
+    // Kiểm tra Trang chủ dùng mã từ API và giữ sản phẩm cũ khi tải lại bị mất mạng.
     [Fact]
     public async Task HomeUsesServerIdsAndKeepsLastProductsAfterOfflineRefresh()
     {
@@ -27,6 +29,7 @@ public sealed class HomeTests
         Assert.Single(vm.Products);
     }
 
+    // Kiểm tra tải bị hủy thì không hiện dữ liệu dở dang và tải lại được.
     [Fact]
     public async Task CanceledHomeLoadDoesNotPublishPartialDataOrPreventRetry()
     {
@@ -42,6 +45,7 @@ public sealed class HomeTests
         Assert.True(vm.HasLoaded);
     }
 
+    // ICatalogApi giả cho Trang chủ.
     private sealed class HomeApi : ICatalogApi
     {
         public bool Fail { get; set; }

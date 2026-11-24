@@ -247,6 +247,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         return filter is not null;
     }
 
+    // Đọc giá nhập tay: nhận dấu chấm hoặc phẩy thập phân, từ 0 đến 9999999999.99, tối đa 2 số lẻ; trống là không giới hạn.
     private static bool TryPrice(string? text, out decimal? price)
     {
         price = null;
@@ -331,19 +332,23 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
 
 // Lựa chọn lọc/sắp xếp có nhãn tiếng Việt, chỉ mã được gửi lên API.
 public sealed record CategoryOption(int? Id, string Name);
+// Cách sắp xếp và mã gửi lên API.
 public sealed record CatalogSortOption(string Code, string Name)
 {
     public static IReadOnlyList<CatalogSortOption> All { get; } =
     [new("new", "Mới nhất"), new("price_asc", "Giá tăng dần"), new("price_desc", "Giá giảm dần"), new("name", "Tên A–Z")];
 }
+// Bộ lọc đã áp dụng, dùng lại khi tải thêm và thử lại.
 internal sealed record CatalogFilter(string? Query, int? CategoryId, string Sort, bool InStockOnly,
     decimal? MinPrice, decimal? MaxPrice, string[] Sizes, string[] Colors)
 {
+    // So hai bộ lọc, gồm cả danh sách size và màu.
     public bool Matches(CatalogFilter other) => Query == other.Query && CategoryId == other.CategoryId
         && Sort == other.Sort && InStockOnly == other.InStockOnly && MinPrice == other.MinPrice
         && MaxPrice == other.MaxPrice && Sizes.SequenceEqual(other.Sizes) && Colors.SequenceEqual(other.Colors);
 }
 
+// Một lựa chọn size hoặc màu.
 public sealed class CatalogFilterOption(string value) : INotifyPropertyChanged
 {
     private bool _isSelected;

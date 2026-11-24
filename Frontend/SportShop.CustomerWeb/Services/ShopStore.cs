@@ -35,7 +35,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
     // Khóa sắp xếp: như Fold nhưng "đ" đứng cùng "d" (cách MySQL xếp tên và màu: Cam, Đen, Đỏ, Hồng).
     static string SortKey(string? s) => Fold(s).Replace('đ', 'd');
 
-    // Tìm kiếm sản phẩm dùng chung (ProductQuery), lọc trên CatalogCache không truy vấn MySQL: mỗi từ khóa phải có trong tên sản phẩm hoặc tên loại; khoảng giá, size, màu áp lên biến thể còn bán và còn hàng; điều kiện Không (nq, ncat, nsize, ncolor) đảo hoặc loại trừ theo ProductQuery.
+    // Tìm sản phẩm theo ProductQuery trên CatalogCache để không truy vấn MySQL: từ khóa khớp tên hoặc loại; giá, size, màu áp lên biến thể còn bán và còn hàng; các điều kiện Không (nq, ncat, nsize, ncolor) loại trừ.
     public List<ShopProduct> Search(ProductQuery q)
     {
         if (q.MinPrice > 0 && q.MaxPrice > 0 && q.MinPrice > q.MaxPrice) (q.MinPrice, q.MaxPrice) = (q.MaxPrice, q.MinPrice);
@@ -117,7 +117,7 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
             .Select(r => new PromoInfo(S(r, "ma_voucher"), S(r, "ten_ctkm"), D(r, "phan_tram_giam"), ND(r, "gia_tri_giam_toi_da"), NS(r, "hang_ap_dung"), T(r, "ngay_ket_thuc"))).ToList();
     }
 
-    // Mã khách áp dụng được cho đơn hiện tại: lấy voucher đang hiệu lực từ Promos() rồi kiểm tra từng mã bằng ApplyVoucher() (hạng thành viên, lượt mua của mã khách mới, tháng sinh của mã sinh nhật, lượt dùng); trả về kèm số tiền giảm, sắp theo số tiền giảm nhiều nhất.
+    // Các mã khách dùng được cho đơn hiện tại: lấy voucher đang hiệu lực từ Promos(), kiểm tra từng mã bằng ApplyVoucher(), sắp theo số tiền giảm nhiều nhất.
     public List<UsablePromo> UsablePromos(int customerId, decimal subtotal)
     {
         var list = new List<UsablePromo>();
@@ -232,10 +232,10 @@ public class ShopStore(IConfiguration config, CartStore carts, CatalogCache cata
         return new ReceiverInfo(k == null ? "" : S(k, "ten"), k == null ? "" : S(k, "so_dien_thoai"), "");
     }
 
-    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng thành viên, mã khách mới chỉ dùng ở lần mua đầu (Catalog.IsNewCustomerPromo()), mã sinh nhật chỉ dùng trong tháng sinh (Catalog.IsBirthdayMonth()), còn lượt và chưa vượt giới hạn mỗi khách (Catalog.VoucherUseLimit()); trả về mã CTKM và số tiền giảm.
+    // Kiểm tra voucher (KM_THEO_VOUCHER, CTKM): còn hạn, đúng hạng, mã khách mới ở lần mua đầu, mã sinh nhật trong tháng sinh, còn lượt theo Catalog.VoucherUseLimit(); trả mã CTKM và số tiền giảm.
     (int CtkmId, decimal Discount) ApplyVoucher(MySqlConnection c, MySqlTransaction? tx, string code, int customerId, decimal subtotal)
     {
-        // Đang đặt hàng (có giao dịch): khóa dòng chương trình để nhiều khách đặt cùng lúc lần lượt kiểm tra lượt dùng, không vượt giới hạn
+        // Đang đặt hàng (có giao dịch): khóa dòng chương trình để nhiều khách đặt cùng lúc lần lượt kiểm tra lượt dùng, không vượt giới hạn.
         string lockRow = tx != null ? " FOR UPDATE OF ct" : "";
         var km = c.Query($"""
             SELECT k.ma_ctkm, ct.ten_ctkm, k.phan_tram_giam, ct.gia_tri_giam_toi_da, ct.hang_ap_dung, ct.so_luong_gioi_han, ct.so_luot_da_dung, ct.gioi_han_khach_hang

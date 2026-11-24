@@ -1,99 +1,88 @@
-# MobileApp
+# App bán hàng (Android)
 
-App điện thoại cho khách hàng (.NET MAUI), chức năng tương tự web mua hàng:
-đăng ký, đăng nhập, đăng xuất, xem sản phẩm, giỏ hàng, mua hàng, sửa thông tin, lịch sử mua hàng,
-gửi phản hồi, làm khảo sát.
-Đã có project MAUI Android `SportShop.Mobile` cho mốc đầu tiên: catalog thật từ API,
-ảnh sản phẩm từ backend, giá VNĐ, tìm kiếm, kéo làm mới, tải thêm và thử lại khi lỗi.
-REST API v1 được mở rộng ngày 01/11/2026 cho toàn bộ chức năng User đã phát hiện trong source:
-tài khoản/hồ sơ, catalog, giỏ MySQL chung web, checkout/voucher, đặt đơn có idempotency, theo dõi/hủy đơn, feedback, khảo sát và trang thông tin.
+App mua hàng cho khách, viết bằng .NET MAUI (`net10.0-android`, Android 7.0/API 24 trở lên). App chỉ gọi [REST API](../Backend/SportShop.Api/README.md), không kết nối MySQL. Các bước chạy chi tiết: [README tổng](../README.md).
 
-- [Phân tích mã nguồn hiện tại](../Backend/docs/project-analysis.md).
-- [Thiết kế API v1 và thứ tự triển khai](../Backend/docs/mobile-api-design.md).
-- [Các thay đổi CSDL dự kiến](../Backend/docs/database-readiness.md).
-- [API đã chạy được: cấu hình, endpoint và request mẫu](../Backend/SportShop.Api/README.md).
-- [Contract REST API hiện tại](../MOBILE_API_DOCUMENTATION.md).
-- [Hướng dẫn tích hợp theo từng màn hình](../MOBILE_INTEGRATION_GUIDE.md).
-- [Đối chiếu tính năng Web → Mobile](../Backend/docs/mobile-feature-parity.md).
-- [Bằng chứng kiểm thử và phần chưa xác minh](../MOBILE_API_TEST_REPORT.md).
+## Chức năng
 
-Hướng xây dựng: MAUI dùng HttpClient gọi API riêng qua HTTPS, lưu refresh token trong SecureStorage; không kết nối MySQL trực tiếp.
-Access token sống 15 phút; refresh tối đa 30 ngày, xoay token và phát hiện reuse. Chỉ chạy một refresh tại một thời điểm.
-`SessionManager` là nơi duy nhất làm mới token (30 giây trước khi hết hạn, hoặc khi API trả 401); API cần đăng nhập dùng `HttpClient` có `AuthorizedHandler`.
-Mất mạng khi mở app vẫn giữ phiên; chỉ khi API từ chối refresh token thì app xóa phiên và về màn hình đăng nhập.
-Checkout giữ các phương thức thanh toán mô phỏng như web, chưa có cổng thanh toán thật; giỏ đồng bộ DB với web.
-Đặt đơn gửi cùng Idempotency-Key/body khi retry; khách chỉ tự hủy đơn chờ chưa thanh toán.
+| Màn hình | File | Làm được gì |
+|---|---|---|
+| Đăng nhập, đăng ký | `AuthPage` | Đăng nhập, đăng ký, Google, dùng với tư cách khách |
+| Quên mật khẩu | `ForgotPasswordPage` | Nhận mã OTP qua email, đặt mật khẩu mới |
+| Trang chủ | `HomePage` | Danh mục, sản phẩm mới, khuyến mãi, thông tin |
+| Sản phẩm | `MainPage`, `CatalogFiltersPage` | Tìm, lọc, sắp xếp, tải thêm, thêm giỏ và mua nhanh |
+| Mua nhanh | `QuickPurchasePage` | Chọn biến thể và số lượng ngay từ danh sách |
+| Chi tiết sản phẩm | `ProductDetailPage` | Ảnh, biến thể, tồn kho, sản phẩm cùng loại |
+| Đánh giá | `ReviewsPage` | Xem đánh giá, gửi đánh giá khi đã nhận hàng |
+| Giỏ hàng, thanh toán | `CartPage`, `CheckoutPage` | Gợi ý mua thêm, voucher, đặt đơn |
+| Đơn hàng | `OrdersPage` | Danh sách, tìm, lọc, hủy đơn chờ chưa thanh toán |
+| Tài khoản | `ProfilePage`, `ChangePasswordPage` | Sửa hồ sơ, đổi mật khẩu, đăng xuất |
+| Khuyến mãi, thông tin | `PromotionsPage`, `InfoPagesPage` | Mã giảm giá, chính sách và hướng dẫn |
 
-API chạy riêng cổng 5080. Backend cần áp dụng migration 001–003 và local connection string trước khi dùng;
-Media:PublicBaseUrl phải truy cập được từ thiết bị. Màn hình ngoài cùng (`AuthPage`) đăng nhập, đăng ký qua API thật và cho dùng với tư cách khách
-(gửi tên thiết bị lên `POST /api/v1/guest-devices`, cần migration 004; Web Admin hiện ở trang Quản lý khách hàng).
-`HomePage` đọc danh mục và sản phẩm thật từ API, mở được danh mục, chi tiết, khuyến mãi và thông tin hỗ trợ.
-Tab Tài khoản mở `ProfilePage`: xem, sửa hồ sơ qua `GET/PUT /api/v1/me`, đăng xuất; `ChangePasswordPage` đổi mật khẩu qua `POST /api/v1/me/password`, API thu hồi mọi phiên nên app về màn hình đăng nhập.
-Màn hình đăng nhập có `ForgotPasswordPage`: gửi OTP 6 số qua email (`POST /api/v1/auth/password/forgot`), rồi đặt lại mật khẩu (`POST /api/v1/auth/password/reset`). Cần migration 005 và mục `Smtp` trong `appsettings.Local.json`; chưa cấu hình thì bản Development ghi mã ra log API.
-Nút Tiếp tục với Google mở `GET /api/v1/auth/google/start` trong trình duyệt; API đổi mã với Google rồi trả vé một lần qua `sportshop://auth`, app đổi vé bằng `POST /api/v1/auth/google/exchange`. Cần migration 006 và mục `Google` trong `appsettings.Local.json`.
-`MainPage` có tìm kiếm, lọc danh mục, sắp xếp mới nhất/giá tăng/giá giảm/tên A–Z, tùy chọn chỉ còn hàng và phân trang.
-`ProductDetailPage` hiển thị biến thể size/màu, ảnh, giá, tồn kho và số lượng; thêm giỏ/mua ngay dùng service giỏ hàng và checkout hiện có.
-`PromotionsPage` đọc voucher đang hiệu lực và cho sao chép mã. `InfoPagesPage` đọc các chính sách và hướng dẫn từ backend.
-`ReviewsPage` xem đánh giá công khai, sao trung bình và trả lời của cửa hàng; khách đã đăng nhập và nhận hàng được gửi đánh giá 1–5 sao,
-theo dõi cả phản hồi đã gửi trong lịch sử riêng. Nội dung công khai tuân theo cờ hiển thị của cửa hàng.
-Backend mới có `GET /api/v1/products/{id}/reviews`; cập nhật API cùng app, không cần migration mới cho luồng này.
-Xem [kiểm kê và kết quả kiểm tra luồng khám phá sản phẩm](PRODUCT_DISCOVERY_REPORT.md).
-Tìm kiếm nâng cao (giá, nhiều size/màu) và sản phẩm cùng loại: xem [phạm vi thay đổi, API và kết quả kiểm thử](ADVANCED_CATALOG_REPORT.md).
-Không coi test API là bằng chứng app native đã chạy.
+**Cách hoạt động:**
+- **Phiên đăng nhập:** token giữ trong `SecureStorage`. `SessionManager` làm mới token trước khi hết hạn 30 giây; API trả 401 thì `AuthorizedHandler` làm mới rồi gửi lại đúng một lần.
+- **Khách vãng lai:** app gửi mã thiết bị (`DeviceIdentity`) để dùng giỏ hàng, thanh toán và đơn hàng.
+- **Bộ nhớ đệm:** danh sách đơn hàng giữ 10 phút trong RAM, tải lại khi giỏ hoặc đơn thay đổi, xóa khi đăng xuất.
 
-## Chạy Android thật từ VS Code qua USB
+## Cấu hình
 
-Yêu cầu .NET 10 SDK, workload MAUI/Android, Android SDK API 36 và **JDK 21**.
-Android workload `36.1.43` hiện có trên máy không hỗ trợ JDK 25.
-App nhắm Android 7.0/API 24 trở lên; mốc đầu tiên build Android ARM64.
+| Nội dung | Vị trí |
+|---|---|
+| Địa chỉ API, hiện là `http://localhost:5080/` | `Services/ApiSettings.cs` |
+| HTTP không mã hóa chỉ cho `localhost` và `127.0.0.1` | `Platforms/Android/Resources/xml/network_security_config.xml` |
+| Link quay về sau đăng nhập Google: `sportshop://auth` | `Platforms/Android/WebAuthenticationCallbackActivity.cs` |
+| Mã app `vn.sportshop.mobile`, phiên bản, font, ảnh | `SportShop.Mobile/SportShop.Mobile.csproj` |
 
-1. Cài extension **.NET MAUI** và **C# Dev Kit** theo đề xuất trong VS Code.
-2. Trên điện thoại: bật Tùy chọn nhà phát triển → Gỡ lỗi USB; cắm cáp truyền dữ liệu,
-   mở khóa và chọn **Cho phép** khi điện thoại hỏi tin cậy máy tính.
-3. Chuẩn bị DB và `Backend/SportShop.Api/appsettings.Local.json` theo README API.
-   API cần `/health/ready` trả `200`, `Media:PublicBaseUrl` là `http://localhost:5080`.
-4. Tại thư mục repo, chạy:
+Vì app gọi `localhost:5080`, máy ảo và điện thoại cần lệnh `adb reverse tcp:5080 tcp:5080` (script bên dưới tự chạy). Dùng trên máy khác thì đổi `ApiSettings.cs` sang địa chỉ HTTPS của API.
+
+## Cách chạy và build
+
+Cần .NET 10 SDK, workload MAUI Android, Android SDK API 36, JDK 21 và API đã có `appsettings.Local.json`. Chạy tại thư mục `WEBAPP_SPORT`, khi đã mở máy ảo hoặc cắm điện thoại:
 
 ```powershell
-powershell -NoProfile -File .\MobileApp\run-android.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MobileApp\run-android.ps1 -AndroidSdkDirectory "C:\Program Files (x86)\Android\android-sdk"
 ```
 
-Hoặc bấm **Ctrl+Shift+B** → `Mobile: Chạy trên Android thật (USB)`.
-Script tìm SDK/JDK, chọn điện thoại, build APK có sẵn assembly, chạy API nếu cần,
-kiểm tra DB/ảnh, cài và mở SportShop. Chạy lại APK đã build bằng `-SkipBuild`.
-Nếu có nhiều thiết bị, truyền `-DeviceSerial SERIAL`.
+| Tham số | Công dụng |
+|---|---|
+| `-SkipBuild` | Cài lại bản đã build |
+| `-DeviceSerial` | Chọn thiết bị khi có nhiều máy |
+| `-AndroidSdkDirectory`, `-JavaSdkDirectory` | Chỉ rõ Android SDK, JDK 21 |
 
-Script ưu tiên JDK 21 đã có trong `JAVA_HOME`, `C:/Program Files/Microsoft` hoặc
-`.test-artifacts/tools/jdk21`. Có thể truyền `-JavaSdkDirectory` / `-AndroidSdkDirectory`.
-JDK local trong `.test-artifacts` được Git bỏ qua; không thay đổi Java toàn hệ thống.
-
-Kết nối USB dùng:
+Chỉ build file APK:
 
 ```powershell
-& 'C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe' reverse tcp:5080 tcp:5080
+dotnet build MobileApp/SportShop.Mobile/SportShop.Mobile.csproj -f net10.0-android
 ```
 
-Nhờ `adb reverse`, `http://localhost:5080` trên điện thoại đi qua USB tới API máy tính,
-bao gồm URL `/images` và `/uploads` trả về trong JSON. Giữ cáp USB và API chạy khi dùng app.
-Rút/cắm cáp thì chạy lại script. Không cần cùng Wi-Fi hoặc mở firewall cho LAN.
-
-Cấu hình endpoint ở `SportShop.Mobile/Services/ApiSettings.cs`. Debug chỉ cho HTTP tới
-loopback qua network security config; không tắt kiểm tra chứng chỉ HTTPS.
-Trước khi phát hành, cấu hình API HTTPS công khai. Chưa nghiệm thu bản Release.
-Không đưa thông tin MySQL vào app.
-
-## Kiểm thử client
+Chạy test (không cần máy ảo hay API):
 
 ```powershell
-dotnet test .\MobileApp\SportShop.Mobile.Tests\SportShop.Mobile.Tests.csproj
+dotnet test MobileApp/SportShop.Mobile.Tests/SportShop.Mobile.Tests.csproj
 ```
 
-Kiểm thử độc lập Android kiểm tra JSON/URL ảnh, encode từ khóa, lỗi server/timeout,
-cancellation, phân trang/retry, chống request trùng và thay kết quả khi tìm kiếm.
-Nghiệm thu native cần mở app trên điện thoại, thấy tên/giá/ảnh, tìm kiếm và kéo làm mới.
+## Cây thư mục
 
-[Báo cáo chạy trên Joy 4 / Android 11 và phạm vi đã xác minh](ANDROID_DEVICE_TEST_REPORT.md).
-
-Tài liệu chính thức: [thiết lập Android thật](https://learn.microsoft.com/dotnet/maui/android/device/setup?view=net-maui-10.0),
-[cài MAUI cho VS Code](https://learn.microsoft.com/dotnet/maui/get-started/installation?view=net-maui-10.0&tabs=visual-studio-code),
-[Microsoft OpenJDK](https://learn.microsoft.com/java/openjdk/download).
+```text
+MobileApp/
+├── run-android.ps1             # Build, chạy API nếu cần, nối cổng, cài và mở app
+├── PRODUCT_DISCOVERY_REPORT.md # Báo cáo luồng sản phẩm và nội dung
+├── SportShop.Mobile/
+│   ├── App.xaml(.cs)           # Chuyển giữa màn hình đăng nhập và Trang chủ
+│   ├── MauiProgram.cs          # Đăng ký service, ViewModel, trang
+│   ├── AppNavigation.cs        # Điều hướng danh sách sản phẩm, tránh mở chồng
+│   ├── *Page.xaml(.cs)         # Các màn hình ở bảng trên
+│   ├── Services/
+│   │   ├── AuthApi.cs, GoogleSignIn.cs, PasswordResetApi.cs # Đăng nhập, Google, quên mật khẩu
+│   │   ├── AccountApi.cs       # Hồ sơ, đổi mật khẩu
+│   │   ├── CatalogApi.cs, ContentApi.cs # Sản phẩm, nội dung, đánh giá
+│   │   ├── CommerceApi.cs      # Giỏ hàng, thanh toán, đơn hàng
+│   │   ├── SessionManager.cs, SessionStore.cs, AuthorizedHandler.cs # Phiên và token
+│   │   ├── DeviceIdentity.cs   # Mã thiết bị của khách vãng lai
+│   │   ├── AppMemoryCache.cs   # Bộ nhớ đệm
+│   │   ├── AdvancedOrderSearch.cs # Tìm đơn nâng cao
+│   │   └── ApiSettings.cs      # Địa chỉ API
+│   ├── ViewModels/             # Trạng thái và thao tác của từng màn hình
+│   ├── Platforms/Android/      # Manifest, MainActivity, cấu hình mạng
+│   └── Resources/              # Icon, ảnh, font, màu và style
+└── SportShop.Mobile.Tests/     # Test Services và ViewModels
+```

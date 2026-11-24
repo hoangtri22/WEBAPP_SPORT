@@ -112,7 +112,7 @@ public sealed class CartUpsellItemViewModel(UpsellItemDto dto)
     public string ActionButtonText => CanQuickAdd ? "Thêm vào giỏ" : "Chọn mua";
 }
 
-// ViewModel cho Giỏ hàng & Thanh toán (Checkout) — đồng bộ 100% chức năng và hiển thị với SportShop.CustomerWeb (Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml), hỗ trợ cả Khách hàng có tài khoản và Khách hàng vãng lai (Guest).
+// Trạng thái và thao tác của giỏ hàng, thanh toán trên app, tương ứng Views/Cart/Index.cshtml, Checkout.cshtml, Done.cshtml của web khách; dùng cho khách có tài khoản và khách vãng lai.
 public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = null) : INotifyPropertyChanged
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -199,7 +199,6 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     public bool HasStatus => !string.IsNullOrEmpty(_statusMessage);
     public string? StatusMessage => _statusMessage;
 
-    // Các thuộc tính của màn hình Checkout.cshtml
     public string ReceiverName
     {
         get => _receiverName;
@@ -440,7 +439,7 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
         SelectedPaymentMethod = option.Dto;
     }
 
-    // Chọn một mã giảm giá (hoặc "Không dùng mã") và tự động tính lại tổng tiền giống hệt script trên Checkout.cshtml.
+    // Chọn một mã giảm giá (hoặc "Không dùng mã") rồi tính lại tổng tiền qua API, như script của Checkout.cshtml.
     public async Task SelectVoucherOptionAsync(VoucherOptionItem option, CancellationToken cancellationToken = default)
     {
         _selectedVoucher = option.Dto;

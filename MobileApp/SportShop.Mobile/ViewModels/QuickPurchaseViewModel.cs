@@ -104,6 +104,7 @@ public sealed class QuickPurchaseViewModel(ICatalogApi catalog, ICommerceApi com
         }
     }
 
+    // Tải sản phẩm qua ICatalogApi.GetProductAsync(); dữ liệu sai thì báo lỗi, đã hủy thì bỏ kết quả về muộn.
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         if (IsBusy || HasSucceeded) return;
@@ -178,6 +179,7 @@ public sealed class QuickPurchaseViewModel(ICatalogApi catalog, ICommerceApi com
         finally { _isSubmitting = false; NotifyAll(); }
     }
 
+    // Đưa sản phẩm vừa tải vào màn hình, giữ biến thể đã chọn và giới hạn số lượng theo tồn kho.
     private void Apply(ProductDetailDto product)
     {
         var previousVariantId = _selectedVariant?.Id;
@@ -192,10 +194,12 @@ public sealed class QuickPurchaseViewModel(ICatalogApi catalog, ICommerceApi com
         _quantityText = _quantity.ToString(CultureInfo.InvariantCulture);
     }
 
+    // Đọc số lượng nhập tay, từ 1 đến MaximumQuantity.
     private bool TryQuantity(out int quantity)
         => int.TryParse(_quantityText, NumberStyles.None, CultureInfo.InvariantCulture, out quantity)
             && quantity >= 1 && quantity <= MaximumQuantity;
 
+    // Báo giao diện mọi thuộc tính.
     private void NotifyAll()
     {
         foreach (var name in new[] { nameof(ProductId), nameof(Name), nameof(ImageUrl), nameof(PriceText),
@@ -207,6 +211,7 @@ public sealed class QuickPurchaseViewModel(ICatalogApi catalog, ICommerceApi com
             nameof(Quantity), nameof(QuantityText) }) Notify(name);
     }
 
+    // Báo giao diện một thuộc tính đã đổi.
     private void Notify([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

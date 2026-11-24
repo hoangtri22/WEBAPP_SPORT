@@ -10,7 +10,7 @@ using SportShop.Infrastructure;
 
 namespace SportShop.Api.Auth;
 
-// Thông tin người dùng Google trả về sau khi đổi mã đăng nhập, dùng ở GoogleLoginStore.FindOrCreateAsync().
+// Thông tin người dùng Google trả về sau khi đổi mã đăng nhập, dùng ở GoogleAccountStore.FindOrCreateAsync().
 public sealed record GoogleUser(string Sub, string Email, bool EmailVerified, string? GivenName, string? FamilyName, string? Name);
 
 // Giao tiếp với Google OAuth, tách interface để test thay bằng bản giả.

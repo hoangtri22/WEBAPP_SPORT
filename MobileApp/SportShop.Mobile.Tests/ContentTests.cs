@@ -9,8 +9,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test API và ViewModel của khuyến mãi, trang thông tin, đánh giá.
 public sealed class ContentTests
 {
+    // Kiểm tra nội dung công khai không dùng client đăng nhập và slug được mã hóa.
     [Fact]
     public async Task PublicContentNeverUsesAuthorizedClientAndSlugsAreEncoded()
     {
@@ -23,6 +25,7 @@ public sealed class ContentTests
         Assert.Empty(privateHandler.Paths);
     }
 
+    // Kiểm tra phản hồi cá nhân dùng client đăng nhập và lọc theo sản phẩm trước khi phân trang.
     [Fact]
     public async Task FeedbackUsesPrivateClientAndFiltersHistoryBeforePaging()
     {
@@ -33,6 +36,7 @@ public sealed class ContentTests
         Assert.Contains("productId=7&page=2&pageSize=20", privateHandler.Paths.Single());
     }
 
+    // Kiểm tra JSON hỏng và máy chủ 503 đều thành lỗi có thể thử lại.
     [Fact]
     public async Task InvalidJsonAndUnavailableServerProduceRetryableContentErrors()
     {
@@ -43,6 +47,7 @@ public sealed class ContentTests
         Assert.Contains("thử lại", (await Assert.ThrowsAsync<ContentException>(() => api.GetPagesAsync())).Message);
     }
 
+    // Kiểm tra dữ liệu đánh giá sai thì báo lỗi, không làm hỏng trang.
     [Theory]
     [InlineData("{\"items\":null,\"page\":1,\"pageSize\":20,\"totalItems\":0,\"averageStars\":null}")]
     [InlineData("{\"items\":[{\"id\":1,\"author\":\"Khách\",\"stars\":99,\"content\":\"Tốt\",\"sentAt\":\"2026-11-08T00:00:00Z\"}],\"page\":1,\"pageSize\":20,\"totalItems\":1,\"averageStars\":5}")]
@@ -54,6 +59,7 @@ public sealed class ContentTests
         Assert.Contains("chưa hợp lệ", (await Assert.ThrowsAsync<ContentException>(() => api.GetReviewsAsync(7, 1))).Message);
     }
 
+    // Kiểm tra trang thông tin thiếu mục hoặc đoạn văn thì báo lỗi.
     [Theory]
     [InlineData("{\"eyebrow\":\"Hỗ trợ\",\"title\":\"Size\",\"intro\":\"Nội dung\",\"sections\":null}")]
     [InlineData("{\"eyebrow\":\"Hỗ trợ\",\"title\":\"Size\",\"intro\":\"Nội dung\",\"sections\":[{\"heading\":\"Giày\",\"paragraphs\":null}]}")]
@@ -64,6 +70,7 @@ public sealed class ContentTests
         Assert.Contains("chưa hợp lệ", (await Assert.ThrowsAsync<ContentException>(() => api.GetPageAsync("chon-size"))).Message);
     }
 
+    // Kiểm tra khách chưa đăng nhập xem và tải thêm đánh giá, không gọi API cá nhân.
     [Fact]
     public async Task GuestCanReadAndPaginatePublicReviewsWithoutAccountRequests()
     {
@@ -81,6 +88,7 @@ public sealed class ContentTests
         Assert.Equal([1, 2], api.ReviewPages);
     }
 
+    // Kiểm tra tải thêm lỗi thì giữ đánh giá đang có và thử lại đúng trang đó.
     [Fact]
     public async Task FailedAppendPreservesExistingReviewsAndRetriesTheSamePage()
     {
@@ -97,6 +105,7 @@ public sealed class ContentTests
         Assert.Equal(2, vm.Reviews.Count);
     }
 
+    // Kiểm tra chưa mua thì không gửi được nhưng vẫn xem được phản hồi cũ của mình.
     [Fact]
     public async Task NotPurchasedCannotSendAndHistoryStillShowsPrivateReview()
     {
@@ -111,6 +120,7 @@ public sealed class ContentTests
         Assert.True(vm.HasError);
     }
 
+    // Kiểm tra số sao hoặc nội dung sai thì không gửi lên API.
     [Theory]
     [InlineData(0, "Đánh giá")]
     [InlineData(6, "Đánh giá")]
@@ -126,6 +136,7 @@ public sealed class ContentTests
         Assert.True(vm.HasError);
     }
 
+    // Kiểm tra gửi xong thì xóa form, tải lại lỗi cũng không mời gửi lại.
     [Fact]
     public async Task SentReviewClearsFormAndDoesNotInviteDuplicateSubmissionWhenRefreshFails()
     {
@@ -142,6 +153,7 @@ public sealed class ContentTests
         Assert.Single(vm.MyReviews);
     }
 
+    // Kiểm tra gửi lỗi thì giữ nội dung đang viết; lỗi dữ liệu cá nhân không che đánh giá công khai.
     [Fact]
     public async Task FailedSendKeepsDraftAndAccountNetworkErrorDoesNotHidePublicReviews()
     {
@@ -160,6 +172,7 @@ public sealed class ContentTests
         Assert.Contains("Chưa kiểm tra", vm.EligibilityText);
     }
 
+    // Kiểm tra lỗi đánh giá công khai không chặn xem phản hồi của mình.
     [Fact]
     public async Task PublicReviewOutageDoesNotPreventReadingPrivateHistory()
     {
@@ -171,6 +184,7 @@ public sealed class ContentTests
         Assert.Single(vm.MyReviews);
     }
 
+    // Kiểm tra mở trang thông tin khác bị lỗi thì giữ trang đang xem.
     [Fact]
     public async Task InfoFailureDoesNotReplaceAnAlreadyVisiblePage()
     {
@@ -184,6 +198,7 @@ public sealed class ContentTests
         Assert.True(vm.HasError);
     }
 
+    // Kiểm tra trang khuyến mãi có trạng thái trống và lỗi, không dùng dữ liệu mẫu.
     [Fact]
     public async Task PromotionsExposeEmptyAndRetryStatesWithoutDemoData()
     {
@@ -201,6 +216,7 @@ public sealed class ContentTests
     private static HttpClient Client(HttpMessageHandler handler) => new(handler) { BaseAddress = new Uri("https://shop.test/") };
     private static HttpResponseMessage Json<T>(T body) => new(HttpStatusCode.OK) { Content = JsonContent.Create(body) };
 
+    // HttpMessageHandler giả ghi lại đường dẫn đã gọi.
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> response) : HttpMessageHandler
     {
         public Func<HttpRequestMessage, HttpResponseMessage> Response { get; set; } = response;
@@ -212,6 +228,7 @@ public sealed class ContentTests
         }
     }
 
+    // IContentApi giả, giả lỗi theo cài đặt.
     private sealed class FakeContent : IContentApi
     {
         public List<int> ReviewPages { get; } = [];
@@ -256,6 +273,7 @@ public sealed class ContentTests
         }
     }
 
+    // ISessionManager giả theo trạng thái đăng nhập.
     private sealed class Session(bool signedIn) : ISessionManager
     {
         public bool IsSignedIn => signedIn;

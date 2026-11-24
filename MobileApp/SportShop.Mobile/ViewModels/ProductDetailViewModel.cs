@@ -237,6 +237,7 @@ public sealed class ProductDetailViewModel(ICatalogApi catalog, ICommerceApi com
             nameof(ShowRelatedEmpty),
             nameof(SelectedVariant), nameof(Quantity), nameof(QuantityText) }) Notify(property);
     }
+    // Báo giao diện một thuộc tính đã đổi.
     private void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

@@ -26,7 +26,7 @@ public sealed class OrderSubLineItem(OrderItemDto dto, int index)
     public bool HasImage => !string.IsNullOrWhiteSpace(dto.ImageUrl);
 }
 
-// Thẻ đơn hàng (đồng bộ 100% với Frontend/SportShop.CustomerWeb/Views/Customer/Orders.cshtml).
+// Thẻ đơn hàng trên app, tương ứng Views/Customer/Orders.cshtml của web khách.
 public sealed class OrderMasterCard : INotifyPropertyChanged
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -78,7 +78,7 @@ public sealed class OrderMasterCard : INotifyPropertyChanged
     public int ItemCount => Dto.Items.Sum(i => i.Quantity);
     public bool CanCancel => Dto.CanCancel;
 
-    // 4 bước tiến trình giống hệt Views/Customer/Orders.cshtml (Chờ xác nhận -> Đang chuẩn bị -> Đang giao -> Đã giao)
+    // 4 bước tiến trình như Views/Customer/Orders.cshtml: Chờ xác nhận, Đang chuẩn bị, Đang giao, Đã giao.
     public int Step => Dto.Status switch
     {
         "cho_xac_nhan" => 0,
@@ -249,7 +249,7 @@ public sealed class OrderStatusTabItem : INotifyPropertyChanged
     }
 }
 
-// ViewModel cho Đơn hàng của tôi (Views/Customer/Orders.cshtml) — tích hợp bộ nhớ đệm 10 phút, Main-Sub Form, Tìm kiếm nâng cao và Hủy đơn đúng điều kiện.
+// Màn hình Đơn hàng của tôi trên app, tương ứng Views/Customer/Orders.cshtml: lấy đơn qua ICommerceApi, giữ trong AppMemoryCache 10 phút, lọc, tìm và hủy đơn chờ xác nhận chưa thanh toán.
 public sealed class OrdersViewModel : INotifyPropertyChanged
 {
     private readonly ICommerceApi _api;
@@ -273,7 +273,6 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // Danh sách tab lọc trạng thái
     public ObservableCollection<OrderStatusTabItem> StatusTabs { get; } =
     [
         new("all", "Tất cả", true),
@@ -290,7 +289,6 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
     // Danh sách dòng hàng CHI_TIET_DON_HANG của đơn đang chọn (Sub Form)
     public ObservableCollection<OrderSubLineItem> SelectedOrderLines { get; } = [];
 
-    // Các dòng điều kiện Tìm kiếm nâng cao
     public ObservableCollection<SearchConditionRow> SearchConditions { get; } = [];
 
     public IReadOnlyList<OrderDto> AllOrders => _allOrders;
@@ -311,7 +309,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
 
     public bool HasSelectedOrder => _selectedOrder is not null;
 
-    // Khi người dùng gõ n từ khóa trong 1 phút, lọc trực tiếp trên biến bộ nhớ _allOrders mà không chạy lại câu truy vấn SQL.
+    // Đổi từ khóa thì lọc trên _allOrders trong bộ nhớ, tránh gọi lại API mỗi lần gõ.
     public string SearchKeyword
     {
         get => _searchKeyword;
@@ -360,7 +358,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
     public bool HasStatus => !string.IsNullOrEmpty(_statusMessage);
     public string? StatusMessage => _statusMessage;
 
-    // Tải lịch sử đơn hàng; nếu trong vòng 10 phút thì tái sử dụng biến bộ nhớ đệm mà không gọi lại API/DB.
+    // Tải đơn hàng: còn trong AppMemoryCache (10 phút) thì dùng lại, forceReload = true thì luôn gọi API.
     public async Task LoadOrdersAsync(bool forceReload = false, CancellationToken cancellationToken = default)
     {
         if (_isBusy) return;
@@ -423,7 +421,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         }
         catch
         {
-            // Bỏ qua lỗi mạng tạm thời khi polling ngầm để không làm gián đoạn trải nghiệm người dùng.
+            // Lỗi mạng khi kiểm tra ngầm thì bỏ qua, tránh hiện lỗi trong lúc khách đang xem đơn.
             return [];
         }
     }
@@ -461,6 +459,7 @@ public sealed class OrdersViewModel : INotifyPropertyChanged
         return notifications;
     }
 
+    // So hai danh sách đơn theo trạng thái, thanh toán, vận chuyển, hóa đơn để biết có cần vẽ lại không.
     private static bool HasOrderDataChanged(IReadOnlyList<OrderDto> previous, IReadOnlyList<OrderDto> current)
     {
         if (previous.Count != current.Count) return true;

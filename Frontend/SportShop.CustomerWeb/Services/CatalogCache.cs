@@ -14,7 +14,7 @@ public record CatalogProduct(int Id, int CategoryId, string Name, string Categor
 // Toàn bộ danh mục và sản phẩm trong bộ nhớ đệm.
 public record CatalogSnapshot(List<(int Id, string Name)> Categories, List<CatalogProduct> Products);
 
-// Bộ nhớ đệm danh mục singleton: nạp LOAI_SP, SAN_PHAM, BIEN_THE_SP một lần, giữ 10 phút cho ShopStore.Search / Categories / FilterOptions; đặt / hủy đơn gọi Clear(); trang quản trị ghi file dấu StampFile trong thư mục Uploads dùng chung sau mỗi thay đổi nên danh mục được nạp lại ngay ở lần xem sau (không cần chờ 10 phút).
+// Bộ nhớ đệm danh mục (singleton, dùng chung web khách và API): giữ LOAI_SP, SAN_PHAM, BIEN_THE_SP 10 phút; đặt, hủy đơn gọi Clear(); Web Admin ghi file StampFile sau khi lưu để nạp lại ngay.
 public class CatalogCache(IConfiguration config, IWebHostEnvironment? env = null)
 {
     // Tên file dấu trong thư mục Uploads; trang quản trị ghi lại file này (ShopCommands.TouchCatalogStamp) mỗi khi dữ liệu thay đổi.

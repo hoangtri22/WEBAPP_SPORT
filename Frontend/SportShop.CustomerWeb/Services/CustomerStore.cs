@@ -346,7 +346,7 @@ public class CustomerStore(IConfiguration config)
         return null;
     }
 
-    /// <summary>Bộ kiểm tra dùng chung cho JSON mobile và form khảo sát web.</summary>
+    // Bộ kiểm tra dùng chung cho JSON của app và form khảo sát của web khách.
     public static string? ValidateSurveyAnswers(List<SurveyQ> questions, Dictionary<int, (List<int> Options, string? Text)> answers)
     {
         if (answers.Keys.Any(id => questions.All(q => q.Id != id))) return "Câu hỏi không thuộc khảo sát này.";

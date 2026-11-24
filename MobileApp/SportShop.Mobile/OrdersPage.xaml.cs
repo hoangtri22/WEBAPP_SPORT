@@ -72,6 +72,7 @@ public partial class OrdersPage : ContentPage
         StopOrderStatusPolling();
     }
 
+    // Bắt đầu kiểm tra trạng thái đơn theo PollInterval.
     private void StartOrderStatusPolling()
     {
         _pollCts?.Cancel();
@@ -90,6 +91,7 @@ public partial class OrdersPage : ContentPage
             _pollTimer.Start();
     }
 
+    // Dừng timer và hủy request kiểm tra đang chạy.
     private void StopOrderStatusPolling()
     {
         if (_pollTimer is { IsRunning: true })
@@ -100,11 +102,13 @@ public partial class OrdersPage : ContentPage
         _pollCts = null;
     }
 
+    // Đến hạn thì kiểm tra trạng thái đơn.
     private async void OnPollTimerTick(object? sender, EventArgs e)
     {
         await PollOrderStatusesAsync();
     }
 
+    // Lấy thay đổi qua OrdersViewModel.RefreshOrdersSilentlyAsync() và báo cho khách; _isPollingInFlight chặn hai lượt chạy chồng nhau.
     private async Task PollOrderStatusesAsync()
     {
         if (!_isPageActive || _isPollingInFlight) return;

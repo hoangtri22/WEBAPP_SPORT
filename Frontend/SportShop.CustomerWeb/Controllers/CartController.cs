@@ -20,7 +20,7 @@ public class CartController(DbStatus db, ShopStore shop, GuestStore guests) : Co
         if (ShopperId == 0) HttpContext.Session.SetInt32("guest_id", guests.CreatePlaceholder());
     }
 
-    // Giỏ hàng: lấy các dòng giỏ qua ShopStore.CartLines() (số lượng lưu ở CUSTOMER_CART_ITEM qua CartStore, giá và tồn kho đọc từ BIEN_THE_SP), mức giảm đang đạt qua ShopStore.BestOrderPromo() và gợi ý mua thêm qua ShopStore.OrderUpsell(); khách chưa đăng nhập xem giỏ của hồ sơ tạm (không có thì giỏ trống).
+    // Trang giỏ: dòng giỏ từ ShopStore.CartLines(), mức giảm đang đạt từ BestOrderPromo(), gợi ý mua thêm từ OrderUpsell(); khách chưa đăng nhập xem giỏ của hồ sơ tạm.
     public IActionResult Index()
     {
         if (!db.IsConnected) return View("~/Views/Shop/NoDb.cshtml");
@@ -138,7 +138,7 @@ public class CartController(DbStatus db, ShopStore shop, GuestStore guests) : Co
         return View(order);
     }
 
-    // Đặt hàng của khách không tài khoản: kiểm tra họ tên, số điện thoại, địa chỉ; số đã thuộc tài khoản thì yêu cầu đăng nhập; chọn hồ sơ theo số điện thoại (GuestStore.Resolve(), dùng lại hồ sơ cũ của số đó nếu có) rồi ghi đơn qua ShopStore.PlaceGuestOrder(); xong thì hồ sơ theo số điện thoại thành hồ sơ đang dùng của session và hồ sơ tạm thừa được xóa.
+    // Đặt hàng không tài khoản: kiểm tra người nhận, số đã thuộc tài khoản thì yêu cầu đăng nhập; chọn hồ sơ qua GuestStore.Resolve(), ghi đơn qua ShopStore.PlaceGuestOrder() rồi xóa hồ sơ tạm thừa.
     (int? OrderId, string? Error) PlaceAsGuest(ReceiverInfo to, int payMethod)
     {
         string phone = to.Phone.Trim();
@@ -162,7 +162,7 @@ public class CartController(DbStatus db, ShopStore shop, GuestStore guests) : Co
         return RedirectToAction("Login", "Account");
     }
 
-    // Tính tạm tính, giảm giá (ShopStore.PreviewVoucher(); không chọn mã thì dùng ShopStore.BestOrderPromo()), danh sách mã dùng được (ShopStore.UsablePromos()), phí ship (ShopStore.ShippingFor()) và lấy phương thức thanh toán (ShopStore.PaymentMethods()) cho view Checkout.cshtml.
+    // Dữ liệu cho Checkout.cshtml: giảm giá qua ShopStore.PreviewVoucher() (không chọn mã thì BestOrderPromo()), mã dùng được qua UsablePromos(), phí ship qua ShippingFor(), phương thức qua PaymentMethods().
     CheckoutVm BuildCheckout(List<CartLine> lines, ReceiverInfo to, int payMethod, string? voucher)
     {
         decimal subtotal = lines.Sum(l => l.Amount), discount = 0; string? voucherError = null;

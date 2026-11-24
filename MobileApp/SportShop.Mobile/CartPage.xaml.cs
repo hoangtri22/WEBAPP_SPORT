@@ -96,9 +96,7 @@ public partial class CartPage : ContentPage
             await OpenProductDetailAsync(item.ProductId);
     }
 
-    // Nhấn nút hành động trên sản phẩm gợi ý mua thêm:
-    // - Nếu chỉ có 1 biến thể còn hàng (VariantId > 0): thêm thẳng vào giỏ hàng.
-    // - Nếu có nhiều biến thể (VariantId == null): mở ProductDetailPage để chọn size/màu.
+    // Nút trên sản phẩm gợi ý mua thêm: một biến thể còn hàng thì thêm thẳng vào giỏ, nhiều biến thể thì mở ProductDetailPage để chọn size, màu.
     private async void OnUpsellItemActionClicked(object? sender, EventArgs e)
     {
         if (sender is not Button { CommandParameter: CartUpsellItemViewModel item })
@@ -116,6 +114,7 @@ public partial class CartPage : ContentPage
         }
     }
 
+    // Mở ProductDetailPage của một sản phẩm.
     private async Task OpenProductDetailAsync(int productId)
     {
         if (productId <= 0) return;

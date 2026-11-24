@@ -3,10 +3,12 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
+// Trang thông tin và hỗ trợ, dùng InfoPagesViewModel.
 public partial class InfoPagesPage : ContentPage
 {
     private readonly InfoPagesViewModel _vm;
     private string? _requestedSlug;
+    // Gắn InfoPagesViewModel vào trang.
     public InfoPagesPage(InfoPagesViewModel vm)
     {
         InitializeComponent();
@@ -20,6 +22,7 @@ public partial class InfoPagesPage : ContentPage
         return _vm.LoadAsync(slug);
     }
 
+    // Mở bài viết theo slug của nút đã bấm.
     private async void OnPageClicked(object? sender, EventArgs e)
     {
         if (sender is Button { BindingContext: ContentPageSummary page }) await LoadAsync(page.Slug);

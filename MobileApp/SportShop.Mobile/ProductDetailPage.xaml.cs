@@ -12,6 +12,7 @@ public partial class ProductDetailPage : ContentPage
     private bool _navigating;
     private Func<Task>? _continueShopping;
 
+    // Gắn ProductDetailViewModel vào trang.
     public ProductDetailPage(ProductDetailViewModel vm, IServiceProvider services)
     {
         InitializeComponent();
@@ -38,6 +39,7 @@ public partial class ProductDetailPage : ContentPage
         if (_productId > 0) await _vm.LoadAsync(_productId, _lifetime.Token);
     }
 
+    // Rời trang thì ẩn thông báo đã thêm và hủy request đang chạy.
     protected override void OnDisappearing()
     {
         AddSuccessOverlay.IsVisible = false;
@@ -45,6 +47,7 @@ public partial class ProductDetailPage : ContentPage
         base.OnDisappearing();
     }
 
+    // Nút Back đóng thông báo đã thêm trước, sau đó mới rời trang.
     protected override bool OnBackButtonPressed()
     {
         if (!AddSuccessOverlay.IsVisible) return base.OnBackButtonPressed();
@@ -53,6 +56,7 @@ public partial class ProductDetailPage : ContentPage
     }
 
     private async void OnRetryClicked(object? sender, EventArgs e) => await LoadAsync(_productId);
+    // Tải lại riêng danh sách sản phẩm cùng loại.
     private async void OnRetryRelatedClicked(object? sender, EventArgs e)
         => await _vm.LoadRelatedAsync(_lifetime?.Token ?? default);
 
@@ -74,6 +78,7 @@ public partial class ProductDetailPage : ContentPage
 
     private void OnDecreaseClicked(object? sender, EventArgs e) => _vm.Quantity--;
     private void OnIncreaseClicked(object? sender, EventArgs e) => _vm.Quantity++;
+    // Thêm biến thể đang chọn vào giỏ, thành công thì hiện thông báo; _navigating chặn bấm nhiều lần.
     private async void OnAddClicked(object? sender, EventArgs e)
     {
         if (_navigating || !_vm.CanBuy) return;
@@ -88,9 +93,11 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
+    // Đóng thông báo đã thêm vào giỏ.
     private void OnDismissAddedClicked(object? sender, EventArgs e)
         => AddSuccessOverlay.IsVisible = false;
 
+    // Quay về danh sách nguồn, không có thì mở danh sách mặc định.
     private async void OnContinueShoppingClicked(object? sender, EventArgs e)
     {
         if (_navigating) return;
@@ -117,6 +124,7 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
+    // Mở giỏ hàng.
     private async void OnCartClicked(object? sender, EventArgs e)
     {
         if (_navigating || _vm.IsBusy) return;
@@ -126,6 +134,7 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
+    // Mở trang đánh giá của sản phẩm.
     private async void OnReviewsClicked(object? sender, EventArgs e)
     {
         if (_navigating || _vm.ProductId <= 0) return;
@@ -139,6 +148,7 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
+    // Mở hướng dẫn chọn size (slug chon-size).
     private async void OnSizeGuideClicked(object? sender, EventArgs e)
     {
         var page = _services.GetRequiredService<InfoPagesPage>();

@@ -14,12 +14,14 @@ public partial class QuickPurchasePage : ContentPage
 
     public Task<bool> Completion => _completion.Task;
 
+    // Tạo QuickPurchaseViewModel cho sản phẩm; buyNow quyết định thêm giỏ hay mua ngay.
     public QuickPurchasePage(ICatalogApi catalog, ICommerceApi commerce, int productId, bool buyNow)
     {
         InitializeComponent();
         BindingContext = _vm = new QuickPurchaseViewModel(catalog, commerce, productId, buyNow);
     }
 
+    // Tải sản phẩm một lần khi mở modal.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -28,6 +30,7 @@ public partial class QuickPurchasePage : ContentPage
         await _vm.LoadAsync(_lifetime.Token);
     }
 
+    // Đóng modal thì hủy request và trả kết quả chưa thêm nếu chưa hoàn tất.
     protected override void OnDisappearing()
     {
         _lifetime.Cancel();
@@ -36,6 +39,7 @@ public partial class QuickPurchasePage : ContentPage
         base.OnDisappearing();
     }
 
+    // Nút Back đóng modal, trừ lúc đang gửi để không bỏ dở thao tác thêm giỏ.
     protected override bool OnBackButtonPressed()
     {
         if (!_vm.IsSubmitting) _ = CloseAsync(false);
@@ -47,12 +51,14 @@ public partial class QuickPurchasePage : ContentPage
     private void OnDecreaseClicked(object? sender, EventArgs e) => _vm.Quantity--;
     private void OnIncreaseClicked(object? sender, EventArgs e) => _vm.Quantity++;
 
+    // Thêm vào giỏ qua QuickPurchaseViewModel.SubmitAsync(), thành công thì đóng modal.
     private async void OnSubmitClicked(object? sender, EventArgs e)
     {
         if (_closing) return;
         if (await _vm.SubmitAsync(_lifetime.Token)) await CloseAsync(true);
     }
 
+    // Đóng modal một lần và trả kết quả qua Completion.
     private async Task CloseAsync(bool added)
     {
         if (_closing || (!added && _vm.IsSubmitting)) return;

@@ -9,7 +9,7 @@ public class ShopData
     readonly string _cs;
     readonly DataCache _cache;
 
-    // Đọc dữ liệu cho các trang quản trị từ MySQL (ConnectionStrings:Default): mỗi danh sách nạp bằng Load...() khi dùng lần đầu trong request (Lazy); sản phẩm, biến thể, nhân viên, khách, đơn, chăm sóc, phản hồi được đặt luôn vào DataCache cho trang Báo cáo dùng lại.
+    // Nhận chuỗi kết nối và DataCache: mỗi danh sách nạp bằng Load...() khi dùng lần đầu trong request (Lazy); sản phẩm, biến thể, nhân viên, khách, đơn, chăm sóc, phản hồi cất vào DataCache để trang Báo cáo dùng lại.
     public ShopData(IConfiguration config, DataCache cache)
     {
         _cache = cache;

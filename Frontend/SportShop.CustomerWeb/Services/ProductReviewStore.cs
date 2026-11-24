@@ -55,12 +55,14 @@ public sealed class ProductReviewStore(IConfiguration config, ICatalogClock cloc
             commandTimeout: 5, cancellationToken: cancellationToken);
     }
 
+    // Tổng số đánh giá và sao trung bình, đọc bằng Dapper.
     sealed class ReviewTotals
     {
         public long TotalItems { get; set; }
         public decimal? AverageStars { get; set; }
     }
 
+    // Một dòng đánh giá kèm trả lời mới nhất, đọc bằng Dapper.
     sealed class ReviewRow
     {
         public int Id { get; set; }

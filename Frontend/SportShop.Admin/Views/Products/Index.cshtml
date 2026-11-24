@@ -129,6 +129,7 @@
             var search = document.getElementById('prodSearch');
             var empty = document.getElementById('prodEmpty');
 
+            // Chuyển giữa dạng lưới và dạng danh sách.
             function setView(isGrid) {
                 grid.hidden = !isGrid; list.hidden = isGrid;
                 btnGrid.classList.toggle('active', isGrid); btnList.classList.toggle('active', !isGrid);
@@ -136,6 +137,7 @@
             btnGrid.onclick = function () { setView(true); };
             btnList.onclick = function () { setView(false); };
 
+            // Lọc thẻ và dòng sản phẩm theo ô tìm kiếm, bộ lọc nâng cao; báo số kết quả.
             function apply() {
                 var q = search.value, shown = 0;
                 document.querySelectorAll('#prodGrid .prod, #prodList tbody tr').forEach(function (el) {
@@ -152,7 +154,7 @@
             search.addEventListener('input', apply);
             apply();
 
-            // Nhập Excel: chọn file xong gửi luôn; kết quả lần nhập trước (TempData) báo bằng thông báo nhỏ
+            // Nhập Excel: chọn file xong gửi luôn; kết quả lần nhập trước (TempData) báo bằng thông báo nhỏ.
             document.getElementById('importFile').addEventListener('change', function () { if (this.files.length) document.getElementById('importForm').submit(); });
             var importOk = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ImportOk"] as string)), importError = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ImportError"] as string));
             if (importOk) showToast(importOk); else if (importError) showToast(importError, true);

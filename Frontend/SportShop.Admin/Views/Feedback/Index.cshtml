@@ -140,11 +140,13 @@
             var details = Array.prototype.slice.call(document.querySelectorAll('.inbox-detail .detail'));
             var tab = 'pending';
 
+            // Mở phản hồi theo mã: tô dòng đang chọn và hiện khung chi tiết tương ứng.
             function select(id) {
                 items.forEach(function (m) { m.classList.toggle('active', m.dataset.id === id); });
                 details.forEach(function (d) { d.hidden = d.dataset.id !== id; });
             }
 
+            // Lọc danh sách theo tab, ô tìm kiếm và bộ lọc nâng cao rồi mở phản hồi đầu tiên còn lại.
             function render() {
                 var q = document.getElementById('fbSearch').value;
                 var first = null, shown = 0;

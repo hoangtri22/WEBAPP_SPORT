@@ -29,7 +29,7 @@ public class TrackController(DbStatus db, ShopStore shop, GuestStore guests) : C
         return View(Lookup((phone ?? "").Trim()));
     }
 
-    // Gom đơn của mọi hồ sơ khách chưa tài khoản có số điện thoại này (GuestStore.FindByPhone()), mới nhất trước.
+    // Gom đơn của mọi hồ sơ khách chưa tài khoản có số điện thoại này (GuestStore.FindAllByPhone()), mới nhất trước.
     TrackVm Lookup(string phone)
     {
         if (!Regex.IsMatch(phone, @"^0\d{9}$")) return new TrackVm { Phone = phone, Error = "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0." };

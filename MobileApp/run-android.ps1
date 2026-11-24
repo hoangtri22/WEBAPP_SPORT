@@ -1,3 +1,4 @@
+# Build, cài và mở app trên điện thoại hoặc máy ảo, chạy API nếu cần: powershell -ExecutionPolicy Bypass -File .\MobileApp\run-android.ps1
 param(
     [string]$DeviceSerial,
     [string]$AndroidSdkDirectory,
@@ -9,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $PSScriptRoot 'SportShop.Mobile/SportShop.Mobile.csproj'
 
-# Tim SDK hien co; khong doi JAVA_HOME hoac cau hinh he thong.
+# Tìm SDK đang có, không đổi JAVA_HOME hoặc cấu hình hệ thống.
 if (-not $AndroidSdkDirectory) {
     $AndroidSdkDirectory = @(
         $env:ANDROID_HOME, $env:ANDROID_SDK_ROOT,
@@ -63,7 +64,7 @@ if (-not $SkipBuild) {
     if ($LASTEXITCODE -ne 0) { throw 'Build APK chua thanh cong.' }
 }
 
-# Khoi dong lai API local neu ban build chua co code moi hoac chua chay; log va PID chi luu trong thu muc Git bo qua.
+# Khởi động lại API nếu bản build cũ hơn code hoặc chưa chạy; log và PID lưu trong .test-artifacts mà Git bỏ qua.
 $artifacts = Join-Path $repositoryRoot '.test-artifacts'
 $pidFile = Join-Path $artifacts 'mobile-api.pid'
 $apiDll = Join-Path $repositoryRoot 'Backend/SportShop.Api/bin/Debug/net10.0/SportShop.Api.dll'
@@ -104,7 +105,7 @@ try {
 }
 catch { throw 'API/DB/anh chua san sang. Xem Backend/SportShop.Api/README.md va kiem tra appsettings.Local.json, migration, Media:PublicBaseUrl.' }
 
-# Reverse localhost cho ca API JSON lan URL anh tu backend; khong can mo cong LAN.
+# Nối cổng 5080 cho cả API và URL ảnh, tránh phải mở cổng trong mạng LAN.
 & $adb -s $DeviceSerial reverse tcp:5080 tcp:5080
 if ($LASTEXITCODE -ne 0) { throw 'Khong tao duoc ket noi USB toi API.' }
 $apk = Join-Path $PSScriptRoot "SportShop.Mobile/bin/Debug/net10.0-android/$runtimeId/vn.sportshop.mobile-Signed.apk"

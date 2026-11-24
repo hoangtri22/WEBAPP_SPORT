@@ -12,6 +12,7 @@ public class ReportStore
     readonly string _dir;
     readonly object _lock = new();
 
+    // Đặt thư mục lưu báo cáo là reports trong Paths:Uploads.
     public ReportStore(IConfiguration config, IWebHostEnvironment env)
         => _dir = Path.Combine(Path.GetFullPath(Path.Combine(env.ContentRootPath, config["Paths:Uploads"] ?? "../Uploads")), "reports");
 

@@ -30,7 +30,7 @@ builder.Services.AddControllersWithViews(o => { o.Filters.Add(new AuthorizeFilte
 
 var app = builder.Build();
 
-// Mỗi tab trình duyệt một phiên đăng nhập riêng (Models/TabCookies.cs + wwwroot/js/tab-session.js); phải đứng đầu để các bước sau thấy đúng cookie của tab
+// Mỗi tab trình duyệt một phiên đăng nhập (Models/TabCookies.cs, wwwroot/js/tab-session.js); phải đứng đầu để các bước sau thấy đúng cookie của tab.
 app.UseMiddleware<TabCookieMiddleware>("sportshop-admin-tab");
 
 app.Services.GetRequiredService<ShopCommands>().ReconcileCancelled();

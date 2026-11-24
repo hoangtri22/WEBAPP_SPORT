@@ -75,6 +75,7 @@ public partial class MainPage : ContentPage
         finally { _openingFilters = false; }
     }
 
+    // Chọn cách sắp xếp rồi tải lại danh sách từ trang đầu.
     private async void OnSortClicked(object? sender, EventArgs e)
     {
         if (_openingSort) return;
@@ -109,6 +110,7 @@ public partial class MainPage : ContentPage
         finally { _openingProduct = false; }
     }
 
+    // Quay về danh sách đã mở chi tiết và khôi phục vị trí cuộn; trang đó không còn thì mở danh sách mặc định.
     private async Task ReturnToCatalogAsync()
     {
         _returnState.RequestRestore();
@@ -117,16 +119,19 @@ public partial class MainPage : ContentPage
         else QueueScrollRestoration();
     }
 
+    // Nút Thêm vào giỏ hàng trên thẻ sản phẩm.
     private async void OnCardAddClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: ProductCard product }) await PurchaseFromCardAsync(product, false);
     }
 
+    // Nút Mua ngay trên thẻ sản phẩm.
     private async void OnCardBuyClicked(object? sender, EventArgs e)
     {
         if (sender is Button { CommandParameter: ProductCard product }) await PurchaseFromCardAsync(product, true);
     }
 
+    // Mở QuickPurchasePage để chọn biến thể; thêm xong thì báo thành công hoặc mở CheckoutPage nếu mua ngay.
     private async Task PurchaseFromCardAsync(ProductCard product, bool buyNow)
     {
         if (_purchasing || _openingProduct || _viewModel.IsBusy || !product.InStock) return;
@@ -154,6 +159,7 @@ public partial class MainPage : ContentPage
 
     private void OnDismissQuickSuccess(object? sender, EventArgs e) => QuickAddSuccess.IsVisible = false;
 
+    // Ghi lại vị trí đang xem để khôi phục sau khi mở chi tiết.
     private void OnProductsScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
         _firstVisibleIndex = Math.Max(0, e.FirstVisibleItemIndex);
@@ -161,6 +167,7 @@ public partial class MainPage : ContentPage
         _scrollY = e.VerticalOffset;
     }
 
+    // Lưu sản phẩm, vị trí và bộ lọc hiện tại vào ProductListReturnState trước khi rời danh sách.
     private void CaptureReturnPoint(int productId)
     {
         var index = _viewModel.Products.ToList().FindIndex(product => product.Id == productId);
@@ -186,6 +193,7 @@ public partial class MainPage : ContentPage
 
     private void OnProductLayoutReady(object? sender, EventArgs e) => QueueScrollRestoration();
 
+    // Hẹn khôi phục vị trí trước lần vẽ kế tiếp, tránh hiện danh sách ở đầu rồi mới nhảy.
     private void QueueScrollRestoration()
     {
         if (!_isVisible || !_returnState.IsPending) return;
@@ -207,6 +215,7 @@ public partial class MainPage : ContentPage
     }
 
 #if ANDROID
+    // Cuộn về sản phẩm đã bấm; trả 0 khi chưa sẵn sàng, 1 khi xong, 2 khi vừa yêu cầu layout mới.
     private int RestoreCatalogPosition(AndroidX.RecyclerView.Widget.RecyclerView recycler)
     {
         var ready = recycler.Width > 0 && recycler.Height > 0 && recycler.ChildCount > 0;
@@ -239,10 +248,12 @@ public partial class MainPage : ContentPage
         return 1;
     }
 
+    // Listener của Android chạy khôi phục vị trí trước khi vẽ rồi tự gỡ.
     private sealed class RestoreBeforeDraw(AndroidX.RecyclerView.Widget.RecyclerView view, Func<int> restore)
         : Java.Lang.Object, Android.Views.ViewTreeObserver.IOnPreDrawListener
     {
         private bool _detached;
+        // Chạy khôi phục; trả false để bỏ một frame khi vị trí chưa đúng.
         public bool OnPreDraw()
         {
             if (_detached) return true;
@@ -251,6 +262,7 @@ public partial class MainPage : ContentPage
             // ScrollToPositionWithOffset xin layout mới; không vẽ một frame ở vị trí cũ.
             return result != 2;
         }
+        // Gỡ listener, gọi nhiều lần vẫn an toàn.
         public void Detach()
         {
             if (_detached) return;
@@ -267,9 +279,11 @@ public partial class MainPage : ContentPage
             if (Navigation.NavigationStack.Count > 1) await Navigation.PopToRootAsync();
         });
 
+    // Mở giỏ hàng từ thanh tab.
     private async void OnCartNavClicked(object? sender, EventArgs e)
         => await NavigateTabAsync(() => Navigation.PushAsync(_services.GetRequiredService<CartPage>()));
 
+    // Mở hồ sơ nếu đã đăng nhập, chưa thì hỏi về màn hình đăng nhập.
     private async void OnAccountNavClicked(object? sender, EventArgs e)
         => await NavigateTabAsync(async () =>
         {
@@ -279,6 +293,7 @@ public partial class MainPage : ContentPage
                 await auth.LeaveAsync();
         });
 
+    // Chạy một lần chuyển tab; _navigatingTab chặn bấm nhiều lần.
     private async Task NavigateTabAsync(Func<Task> navigate)
     {
         if (_navigatingTab) return;

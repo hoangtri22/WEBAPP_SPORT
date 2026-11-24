@@ -3,7 +3,7 @@ namespace SportShop.Admin.Models;
 // Một dòng của bảng dữ liệu.
 public record Row(string[] Cells, string? Url = null, int Id = 0, bool? Locked = null, Dictionary<string, string>? Data = null);
 
-// Một ô lọc của "Tìm kiếm nâng cao". Kind: select (ô chọn, so bằng) | number (từ - đến, dùng >= và <=) | date (từ ngày - đến ngày) | text (chứa). Giá trị lấy từ cột bảng (Col) hoặc từ data-f-<Data> của dòng; Options trống thì lấy các giá trị khác nhau của cột.
+// Một ô lọc nâng cao. Kind: select (so bằng) | number, date (từ - đến) | text (chứa); giá trị lấy từ cột Col hoặc data-f theo Data; Options trống thì lấy các giá trị khác nhau của cột.
 public record FilterField(string Key, string Label, string Kind, int Col = -1, string? Data = null, string[]? Options = null);
 
 // Nút "Lọc nhanh": bật sẵn một điều kiện. Op: eq | gte | lte | contains.

@@ -11,7 +11,7 @@
     <Color x:Key="SecondaryDarkText">#9880e5</Color>
     <Color x:Key="Tertiary">#2B0B98</Color>
 
-    <!-- Bảng màu Web Admin (Frontend/SportShop.Admin/wwwroot/css/admin.css) -->
+    <!-- Bảng màu tương ứng Frontend/SportShop.Admin/wwwroot/css/admin.css. -->
     <Color x:Key="Teal">#0F766E</Color>
     <Color x:Key="TealDark">#0B5F58</Color>
     <Color x:Key="TealSoft">#E4F3F0</Color>

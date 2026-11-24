@@ -262,6 +262,7 @@
             else if (v === 'month') start = new Date(end.getFullYear(), end.getMonth(), 1);
             else if (v === 'quarter') start = new Date(end.getFullYear(), Math.floor(end.getMonth() / 3) * 3, 1);
             else if (v === 'year') start = new Date(end.getFullYear(), 0, 1);
+            // Đổi ngày theo giờ máy sang yyyy-MM-dd cho ô ngày, tránh toISOString() vì lệch múi giờ.
             function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
             document.getElementById('fromDate').value = iso(start);
             document.getElementById('toDate').value = iso(end);

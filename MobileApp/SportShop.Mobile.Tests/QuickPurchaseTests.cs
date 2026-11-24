@@ -7,8 +7,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test ViewModel của modal mua nhanh.
 public sealed class QuickPurchaseTests
 {
+    // Kiểm tra nhiều biến thể thì phải chọn rõ và gửi đúng biến thể, số lượng đã chọn.
     [Fact]
     public async Task MultipleVariantsRequireExplicitChoiceAndUseChosenVariantAndQuantity()
     {
@@ -33,6 +35,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal(new[] { 1 }, catalog.Requested);
     }
 
+    // Kiểm tra một biến thể thì chọn sẵn nhưng chỉ thêm khi khách xác nhận, không gọi API giỏ nào khác.
     [Fact]
     public async Task OneVariantIsPreselectedButNeverAddedWithoutConfirmation()
     {
@@ -45,9 +48,9 @@ public sealed class QuickPurchaseTests
         Assert.Equal("Mua ngay", vm.ActionTitle);
         Assert.True(await vm.SubmitAsync());
         Assert.Equal((41, 1), Assert.Single(commerce.Added));
-        // Every commerce operation other than AddCartItem throws in the stub.
     }
 
+    // Kiểm tra không có biến thể hoặc hết hàng thì không thêm được.
     [Fact]
     public async Task EmptyOrSoldOutVariantsCannotBeAdded()
     {
@@ -65,6 +68,7 @@ public sealed class QuickPurchaseTests
         }
     }
 
+    // Kiểm tra không nhận biến thể lạ; số lượng không vượt tồn kho và 999.
     [Fact]
     public async Task ForeignVariantCannotBeSubmittedAndQuantityRespectsStockAndBackendLimit()
     {
@@ -82,6 +86,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal(1, vm.Quantity);
     }
 
+    // Kiểm tra số lượng nhập sai vẫn sửa được và không gửi lên API.
     [Theory]
     [InlineData("0")]
     [InlineData("")]
@@ -106,6 +111,7 @@ public sealed class QuickPurchaseTests
         Assert.False(vm.HasSucceeded);
     }
 
+    // Kiểm tra xóa trống ô số lượng rồi nhập 2 không bị ép về 1.
     [Fact]
     public async Task BackspacingQuantityAllowsEmptyThenTypingTwoWithoutForcingOne()
     {
@@ -125,6 +131,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal((11, 2), Assert.Single(commerce.Added));
     }
 
+    // Kiểm tra sửa số lượng sai thành đúng thì gửi đúng số đã nhập.
     [Fact]
     public async Task ValidTypedQuantityRecoversFromInvalidInputWithoutChangingRequestedAmountSilently()
     {
@@ -142,6 +149,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal((11, 3), Assert.Single(commerce.Added));
     }
 
+    // Kiểm tra nút tăng giảm và đổi biến thể đưa ô số lượng về số hợp lệ.
     [Fact]
     public async Task SteppersAndVariantChangesRestoreCanonicalQuantityText()
     {
@@ -159,6 +167,7 @@ public sealed class QuickPurchaseTests
         Assert.True(vm.HasValidQuantity);
     }
 
+    // Kiểm tra bấm nhiều lần khi đang gửi và sau khi xong chỉ gửi một lần, không đổi nội dung đang gửi.
     [Fact]
     public async Task RepeatedSubmitDuringAndAfterSuccessSendsOneMutationAndFreezesPayload()
     {
@@ -182,6 +191,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal((11, 3), Assert.Single(commerce.Added));
     }
 
+    // Kiểm tra thêm lỗi thì hiện lỗi và cho thử lại, không báo thành công.
     [Fact]
     public async Task FailedAddShowsErrorAndAllowsExplicitRetryWithoutReportingSuccess()
     {
@@ -200,6 +210,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal(2, commerce.Added.Count);
     }
 
+    // Kiểm tra API báo 409 thì tải lại tồn kho, không tự gửi lại.
     [Fact]
     public async Task StockConflictRefreshesInventoryWithoutAutomaticallyRepeatingAdd()
     {
@@ -220,6 +231,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal(new[] { 1, 1 }, catalog.Requested);
     }
 
+    // Kiểm tra lỗi tồn kho không mất khi giao diện ghi ngược giá trị không đổi.
     [Fact]
     public async Task StockConflictErrorSurvivesUnchangedPickerAndQuantityBindingEchoes()
     {
@@ -233,11 +245,11 @@ public sealed class QuickPurchaseTests
         Assert.False(await vm.SubmitAsync());
         var selected = vm.SelectedVariant;
 
-        // MAUI ghi ngược giá trị hiện tại sau NotifyAll; đây không phải một chỉnh sửa của người mua.
+        // MAUI ghi ngược giá trị hiện tại sau NotifyAll(), số 999 cũng được chuẩn hóa về số lượng hiện tại; đây không phải chỉnh sửa của người mua nên không được xóa lỗi.
         vm.SelectedVariant = selected;
         vm.Quantity = vm.Quantity;
         vm.QuantityText = vm.QuantityText;
-        vm.Quantity = 999; // Cũng chuẩn hóa về số lượng hiện tại, không được xóa lỗi.
+        vm.Quantity = 999;
 
         Assert.Same(selected, vm.SelectedVariant);
         Assert.Equal(2, vm.Quantity);
@@ -247,6 +259,7 @@ public sealed class QuickPurchaseTests
         Assert.Single(commerce.Added);
     }
 
+    // Kiểm tra lỗi tồn kho chỉ mất khi khách thật sự đổi số lượng.
     [Fact]
     public async Task TypedOneBindingEchoPreservesStockConflictUntilActualQuantityEdit()
     {
@@ -268,6 +281,7 @@ public sealed class QuickPurchaseTests
         Assert.Single(commerce.Added);
     }
 
+    // Kiểm tra đổi biến thể hoặc số lượng thì xóa lỗi tồn kho.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -290,6 +304,7 @@ public sealed class QuickPurchaseTests
         Assert.Single(commerce.Added);
     }
 
+    // Kiểm tra đã hủy mà phản hồi về muộn thì không báo thành công.
     [Fact]
     public async Task LateCanceledAddDoesNotReportSuccessEvenWhenTransportIgnoresCancellation()
     {
@@ -307,6 +322,7 @@ public sealed class QuickPurchaseTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra tải bị hủy thì bỏ dữ liệu về muộn và tải lại được.
     [Fact]
     public async Task CanceledLoadDoesNotApplyLateDataAndCanBeRetried()
     {
@@ -329,6 +345,7 @@ public sealed class QuickPurchaseTests
         Assert.Equal(2, catalog.Requested.Count);
     }
 
+    // Kiểm tra mã sản phẩm sai thì không gọi API.
     [Fact]
     public async Task InvalidProductIdDoesNotCallCatalogOrCart()
     {
@@ -345,6 +362,7 @@ public sealed class QuickPurchaseTests
     private static ProductDetailDto Product(int id) => new(id, "Áo thể thao", 3, "Áo", "chiếc", null, "product.jpg", 150_000, 250_000, true,
         [new(11, "M", "Trắng", 150_000, 4, "white.jpg"), new(12, "L", "Đen", 250_000, 2, "black.jpg")]);
 
+    // ICatalogApi giả chỉ hỗ trợ lấy chi tiết sản phẩm.
     private sealed class CatalogStub : ICatalogApi
     {
         public ProductDetailDto Product { get; set; } = QuickPurchaseTests.Product(1);
@@ -361,6 +379,7 @@ public sealed class QuickPurchaseTests
             => throw new NotSupportedException("Quick purchase must not load related products.");
     }
 
+    // ICommerceApi giả chỉ hỗ trợ thêm vào giỏ, hàm khác ném lỗi.
     private sealed class CommerceStub : ICommerceApi
     {
         public List<(int, int)> Added { get; } = [];

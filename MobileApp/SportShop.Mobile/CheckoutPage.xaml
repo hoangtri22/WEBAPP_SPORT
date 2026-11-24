@@ -10,7 +10,7 @@
     <ScrollView>
         <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
 
-            <!-- Form Thanh toán & Đặt hàng (giống hệt Views/Cart/Checkout.cshtml) -->
+            <!-- Form thanh toán, tương ứng Views/Cart/Checkout.cshtml. -->
             <VerticalStackLayout IsVisible="{Binding ShowCheckoutForm}" Spacing="16">
 
                 <VerticalStackLayout Spacing="2">
@@ -23,7 +23,6 @@
                     <Label Text="{Binding ErrorMessage}" TextColor="#B91C1C" FontSize="13" />
                 </Border>
 
-                <!-- 1. Thông tin nhận hàng -->
                 <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                         StrokeShape="RoundRectangle 18" Padding="16">
                     <VerticalStackLayout Spacing="12">
@@ -52,7 +51,6 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 2. Phương thức thanh toán -->
                 <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                         StrokeShape="RoundRectangle 18" Padding="16">
                     <VerticalStackLayout Spacing="10">
@@ -79,7 +77,6 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 3. Mã giảm giá -->
                 <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                         StrokeShape="RoundRectangle 18" Padding="16">
                     <VerticalStackLayout Spacing="10">
@@ -134,7 +131,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 4. Tóm tắt Đơn hàng (cart-summary giống hệt Views/Cart/Checkout.cshtml dòng 63-75) -->
+                <!-- Tóm tắt đơn hàng, tương ứng khối cart-summary của Views/Cart/Checkout.cshtml. -->
                 <Border BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                         StrokeShape="RoundRectangle 18" Padding="18">
                     <VerticalStackLayout Spacing="10">
@@ -187,7 +184,7 @@
                 </Border>
             </VerticalStackLayout>
 
-            <!-- Màn hình Đặt hàng thành công (giống hệt Views/Cart/Done.cshtml) -->
+            <!-- Đặt hàng thành công, tương ứng Views/Cart/Done.cshtml. -->
             <Border IsVisible="{Binding HasPlacedOrder}" BackgroundColor="White" Stroke="#E2E8F0" StrokeThickness="1"
                     StrokeShape="RoundRectangle 18" Padding="22,28">
                 <VerticalStackLayout Spacing="14" HorizontalOptions="Center">

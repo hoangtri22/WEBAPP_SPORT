@@ -486,7 +486,6 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
 }
 .import-form { display: inline-flex; margin: 0; }
 
-/* Tìm kiếm nâng cao theo mẫu thiết kế: hàng Lọc nhanh, khung ô lọc, dòng kết quả */
 .toolbar .js-adv.open { background: var(--teal-soft); border-color: var(--teal); color: var(--teal-dark); }
 .adv-panel.adv-modern { padding: 0; border: 0; background: transparent; }
 .adv-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -515,7 +514,6 @@ body.peek-open .tbl tbody tr.peek-on td.col-act { background: var(--teal-soft); 
 #prodCard .toolbar .search { flex: 1 1 220px; min-width: 220px; }
 #prodCard .toolbar .search kbd { display: none; }
 
-/* Hộp thoại Tạo báo cáo và liên kết tải xuống trong bảng */
 .cell-link { color: var(--teal); font-weight: 600; text-decoration: none; }
 .cell-link:hover { text-decoration: underline; }
 .report-dlg { width: min(480px, 92vw); padding: 0; border: 0; border-radius: 16px; box-shadow: 0 20px 50px rgba(16, 24, 40, .25); }

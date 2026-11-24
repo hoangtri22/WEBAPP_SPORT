@@ -12,6 +12,7 @@ public partial class CatalogFiltersPage : ContentPage
     private bool _isOnScreen;
     private CancellationTokenSource? _lifetime;
 
+    // Gắn CatalogViewModel và ghi lại bộ lọc lúc mở để khôi phục khi khách không áp dụng.
     public CatalogFiltersPage(CatalogViewModel viewModel)
     {
         _initialFilters = new FilterDraft(viewModel.SelectedCategory?.Id, viewModel.InStockOnly,
@@ -22,6 +23,7 @@ public partial class CatalogFiltersPage : ContentPage
         BindingContext = _viewModel = viewModel;
     }
 
+    // Tải danh sách size, màu qua CatalogViewModel.PrepareFiltersAsync(); rời trang thì hủy.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -32,6 +34,7 @@ public partial class CatalogFiltersPage : ContentPage
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
     }
 
+    // Rời trang mà chưa áp dụng thì khôi phục bộ lọc cũ.
     protected override void OnDisappearing()
     {
         _isOnScreen = false;
@@ -40,6 +43,7 @@ public partial class CatalogFiltersPage : ContentPage
         base.OnDisappearing();
     }
 
+    // Trả bộ lọc về giá trị lúc mở trang (_initialFilters).
     private void RestoreInitialFilters()
     {
         _viewModel.ClearAdvancedFilters();
@@ -54,12 +58,14 @@ public partial class CatalogFiltersPage : ContentPage
 
     private void OnClearClicked(object? sender, EventArgs e) => _viewModel.ClearAdvancedFilters();
 
+    // Bấm nhãn size hoặc màu thì đổi trạng thái chọn.
     private void OnOptionLabelTapped(object? sender, TappedEventArgs e)
     {
         if (sender is BindableObject { BindingContext: CatalogFilterOption option })
             option.IsSelected = !option.IsSelected;
     }
 
+    // Áp dụng bộ lọc qua CatalogViewModel.ApplyFiltersAsync(); không lỗi thì đóng trang.
     private async void OnApplyClicked(object? sender, EventArgs e)
     {
         if (_applying || _viewModel.IsBusy || _viewModel.IsPreparingFilters) return;
@@ -81,6 +87,7 @@ public partial class CatalogFiltersPage : ContentPage
         }
     }
 
+    // Bộ lọc lúc mở trang, dùng để khôi phục.
     private sealed record FilterDraft(int? CategoryId, bool InStockOnly, string MinPrice, string MaxPrice,
         HashSet<string> Sizes, HashSet<string> Colors);
 }

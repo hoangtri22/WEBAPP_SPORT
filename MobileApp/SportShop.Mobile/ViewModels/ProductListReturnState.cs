@@ -6,17 +6,20 @@ public sealed record ProductListReturnPoint(string SourceRoute, int ProductId, i
     int? ProductTopPixels, int? FirstTopPixels, int LoadedCount, int ResultVersion,
     string SearchText, string AppliedFilters, string SortCode);
 
+// Giữ vị trí cần quay về của danh sách sản phẩm.
 public sealed class ProductListReturnState
 {
     public ProductListReturnPoint? Saved { get; private set; }
     public bool IsPending { get; private set; }
 
+    // Lưu vị trí trước khi rời danh sách.
     public void Capture(ProductListReturnPoint point)
     {
         Saved = point;
         IsPending = true;
     }
 
+    // Yêu cầu khôi phục lại vị trí đã lưu.
     public void RequestRestore() => IsPending = Saved is not null;
 
     // Chỉ dùng neo một lần sau khi layout có dữ liệu; kết quả mới không nhận vị trí của bộ lọc cũ.

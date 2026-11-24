@@ -8,8 +8,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test số lượng hiện trên biểu tượng giỏ hàng.
 public sealed class CartBadgeTests
 {
+    // Kiểm tra biểu tượng giỏ dùng tổng số lượng, quá 99 thì hiện 99+, xóa được cho phiên sau.
     [Fact]
     public void BadgeUsesTotalQuantityAndNotNumberOfLinesAndClearsForNextSession()
     {
@@ -36,6 +38,7 @@ public sealed class CartBadgeTests
         Assert.False(badge.HasItems);
     }
 
+    // Kiểm tra xem, thêm, sửa, bỏ khỏi giỏ đều cập nhật số lượng theo API.
     [Theory]
     [InlineData("get")]
     [InlineData("add")]
@@ -60,6 +63,7 @@ public sealed class CartBadgeTests
         Assert.Equal(7, badge.Count);
     }
 
+    // Kiểm tra mở thanh toán và tính lại tiền cũng cập nhật số lượng giỏ.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -79,6 +83,7 @@ public sealed class CartBadgeTests
         Assert.Equal(7, badge.Count);
     }
 
+    // Kiểm tra thêm giỏ bị từ chối thì giữ số lượng cũ.
     [Fact]
     public async Task RejectedAddKeepsExistingQuantity()
     {
@@ -93,6 +98,7 @@ public sealed class CartBadgeTests
         Assert.Equal(7, badge.Count);
     }
 
+    // Kiểm tra xóa giỏ hoặc đặt đơn thành công thì số lượng về 0.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -112,6 +118,7 @@ public sealed class CartBadgeTests
         Assert.Equal(0, badge.Count);
     }
 
+    // Kiểm tra xóa giỏ hoặc đặt đơn lỗi thì giữ số lượng cũ.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -142,12 +149,14 @@ public sealed class CartBadgeTests
     private static HttpClient Client(Func<HttpRequestMessage, HttpResponseMessage> response) =>
         new(new Server(response)) { BaseAddress = new Uri("http://localhost:5080/") };
 
+    // HttpMessageHandler giả trả phản hồi theo hàm truyền vào.
     private sealed class Server(Func<HttpRequestMessage, HttpResponseMessage> response) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(response(request));
     }
 
+    // ISessionManager giả của khách chưa đăng nhập.
     private sealed class GuestSession : ISessionManager
     {
         public bool IsSignedIn => false;

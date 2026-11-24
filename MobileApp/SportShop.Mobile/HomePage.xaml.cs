@@ -39,6 +39,7 @@ public partial class HomePage : ContentPage
         await RestoreHomeScrollAsync();
     }
 
+    // Rời Trang chủ thì hủy request đang chạy.
     protected override void OnDisappearing()
     {
         _isVisible = false;
@@ -46,6 +47,7 @@ public partial class HomePage : ContentPage
         base.OnDisappearing();
     }
 
+    // Tải lại danh mục và sản phẩm qua HomeViewModel.LoadAsync().
     private async void OnRefreshClicked(object? sender, EventArgs e)
         => await _viewModel.LoadAsync(_lifetime?.Token ?? default);
 
@@ -55,6 +57,7 @@ public partial class HomePage : ContentPage
         await NavigateAsync(async () => { if (_catalog.Parent is null) await Navigation.PushAsync(_catalog); });
     }
 
+    // Mở danh sách sản phẩm của danh mục đã bấm.
     private async void OnCategoryClicked(object? sender, EventArgs e)
     {
         if (sender is not Button { CommandParameter: int categoryId }) return;
@@ -65,6 +68,7 @@ public partial class HomePage : ContentPage
         });
     }
 
+    // Mở chi tiết sản phẩm và nhớ vị trí cuộn để quay về đúng chỗ.
     private async void OnProductTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is not int productId) return;
@@ -84,6 +88,7 @@ public partial class HomePage : ContentPage
 
     private async void OnHomeScrollReady(object? sender, EventArgs e) => await RestoreHomeScrollAsync();
 
+    // Cuộn về vị trí đã nhớ một lần, chỉ khi trang đang hiện và đã có kích thước.
     private async Task RestoreHomeScrollAsync()
     {
         if (!_isVisible || _returnScroll is not { } point || HomeScroll.Height <= 0 || HomeScroll.Content.Height <= 0) return;
@@ -91,9 +96,11 @@ public partial class HomePage : ContentPage
         await HomeScroll.ScrollToAsync(point.X, point.Y, animated: false);
     }
 
+    // Mở trang khuyến mãi.
     private async void OnPromotionsClicked(object? sender, EventArgs e)
         => await NavigateAsync(() => Navigation.PushAsync(_services.GetRequiredService<PromotionsPage>()));
 
+    // Mở trang thông tin và hỗ trợ.
     private async void OnInfoClicked(object? sender, EventArgs e)
         => await NavigateAsync(async () =>
         {

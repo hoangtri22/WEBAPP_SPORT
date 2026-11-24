@@ -1,4 +1,4 @@
--- Thêm bảng phiên đăng nhập mobile;
+-- Thêm bảng phiên đăng nhập và token làm mới đã dùng của app; chạy lại được, giữ nguyên dữ liệu cũ.
 CREATE TABLE IF NOT EXISTS MOBILE_AUTH_SESSION (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,

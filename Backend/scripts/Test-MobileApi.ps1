@@ -117,7 +117,8 @@ try {
             $ping = & $mysqlExecutable @clientArguments '--execute=SELECT 1' 2>$null
             $pingExitCode = $LASTEXITCODE
         }
-        catch { } # Windows PowerShell can turn the expected startup connection error into an exception.
+        # Windows PowerShell có thể đổi lỗi kết nối lúc server đang khởi động thành exception nên bỏ qua để thử lại.
+        catch { }
         if ($pingExitCode -eq 0 -and (($ping | Out-String).Trim() -eq '1')) { $ready = $true; break }
         Start-Sleep -Milliseconds 250
     }

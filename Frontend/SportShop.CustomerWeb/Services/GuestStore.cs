@@ -3,7 +3,7 @@ using MySqlConnector;
 
 namespace SportShop.CustomerWeb.Services;
 
-// Khách mua hàng không cần tài khoản: mỗi người là một dòng KHACH_HANG chưa có tài khoản (ma_tai_khoan = NULL), nhận diện bằng số điện thoại. Giỏ hàng và đơn hàng gắn vào dòng này nên khi khách đăng ký tài khoản bằng cùng số điện thoại (CustomerStore.Register) thì đơn đã mua, đã hủy và giỏ hàng còn nguyên trong tài khoản.
+// Khách mua không cần tài khoản: một dòng KHACH_HANG có ma_tai_khoan = NULL, nhận diện bằng số điện thoại; đăng ký cùng số (CustomerStore.Register()) thì giữ nguyên giỏ và đơn đã mua.
 public class GuestStore(IConfiguration config)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";

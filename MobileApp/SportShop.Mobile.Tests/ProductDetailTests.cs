@@ -7,9 +7,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test ViewModel của trang chi tiết sản phẩm.
 public sealed class ProductDetailTests
 {
-    // Chọn đúng biến thể cập nhật giá, ảnh, tồn kho và số lượng gửi sang giỏ.
+    // Kiểm tra chọn biến thể cập nhật đúng giá, ảnh, tồn kho và số lượng gửi sang giỏ.
     [Fact]
     public async Task SelectingVariantUpdatesPriceImageStockAndCartPayload()
     {
@@ -37,7 +38,7 @@ public sealed class ProductDetailTests
         Assert.Single(cart.Added);
     }
 
-    // Dữ liệu tồn kho thay đổi thì refresh đúng sản phẩm, giữ lựa chọn và không tự gửi lại thao tác thêm.
+    // Kiểm tra tồn kho thay đổi thì tải lại đúng sản phẩm, giữ lựa chọn và không tự gửi lại thao tác thêm.
     [Fact]
     public async Task StockConflictRefreshesSelectionWithoutRepeatingMutation()
     {
@@ -56,7 +57,7 @@ public sealed class ProductDetailTests
         Assert.Single(cart.Added);
     }
 
-    // Hai lần bấm trong khi request chưa kết thúc không tạo hai thao tác giỏ.
+    // Kiểm tra bấm hai lần khi request chưa xong chỉ tạo một thao tác giỏ.
     [Fact]
     public async Task ConcurrentAddDoesNotDuplicateCartRequest()
     {
@@ -76,6 +77,7 @@ public sealed class ProductDetailTests
         Assert.Equal("Đã thêm sản phẩm vào giỏ hàng thành công!", vm.StatusMessage);
     }
 
+    // Kiểm tra thêm giỏ lỗi thì xóa thông báo thành công cũ và giữ lỗi.
     [Fact]
     public async Task FailedAddClearsPreviousSuccessAndKeepsErrorVisible()
     {
@@ -96,6 +98,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra đã hủy mà phản hồi về muộn thì không báo thành công.
     [Fact]
     public async Task CanceledAddDoesNotReportSuccessWhenTransportReturnsLate()
     {
@@ -116,6 +119,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra đã hủy từ trước thì không gửi thao tác thêm giỏ.
     [Fact]
     public async Task AlreadyCanceledAddDoesNotSendCartMutation()
     {
@@ -133,7 +137,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.IsBusy);
     }
 
-    // Giới hạn backend 999 vẫn được giữ khi kho lớn; đổi sản phẩm không giữ lựa chọn cũ.
+    // Kiểm tra số lượng không vượt 999 dù kho lớn; đổi sản phẩm thì không giữ lựa chọn cũ.
     [Fact]
     public async Task QuantityNeverExceedsStockOrBackendLimitAndNewProductResetsState()
     {
@@ -153,6 +157,7 @@ public sealed class ProductDetailTests
         Assert.Equal(1, vm.Quantity);
     }
 
+    // Kiểm tra sản phẩm không có biến thể thì không thêm được.
     [Fact]
     public async Task ProductWithoutVariantsCannotBeAdded()
     {
@@ -166,7 +171,7 @@ public sealed class ProductDetailTests
         Assert.Empty(cart.Added);
     }
 
-    // Gợi ý dùng card hiện hữu, chỉ giữ ID khác, cùng danh mục và còn hàng.
+    // Kiểm tra sản phẩm cùng loại bỏ mục trùng, khác danh mục và hết hàng.
     [Fact]
     public async Task RelatedProductsExcludeCurrentDuplicatesOtherCategoriesAndUnavailableItems()
     {
@@ -187,6 +192,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.ShowRelatedEmpty);
     }
 
+    // Kiểm tra không có sản phẩm cùng loại thì hiện trạng thái trống riêng.
     [Fact]
     public async Task EmptyRelatedProductsHaveTheirOwnEmptyState()
     {
@@ -198,7 +204,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.HasRelatedError);
     }
 
-    // Lỗi gợi ý không ảnh hưởng chi tiết/giỏ; thử lại chỉ gọi lại danh sách gợi ý.
+    // Kiểm tra lỗi gợi ý không ảnh hưởng chi tiết và giỏ; thử lại chỉ gọi lại danh sách gợi ý.
     [Fact]
     public async Task RelatedFailureCanRetryWithoutReloadingDetailOrBlockingCart()
     {
@@ -218,7 +224,7 @@ public sealed class ProductDetailTests
         Assert.Equal(1, catalog.Loads);
     }
 
-    // Đổi sản phẩm hủy lượt gợi ý cũ kể cả API bỏ qua cancellation.
+    // Kiểm tra đổi sản phẩm thì hủy lượt gợi ý cũ dù API bỏ qua lệnh hủy.
     [Fact]
     public async Task OldRelatedCompletionCannotOverwriteNewProductSuggestions()
     {
@@ -246,7 +252,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.IsRelatedLoading);
     }
 
-    // Trang sản phẩm mới phải thắng request chi tiết cũ dù phản hồi đến sai thứ tự.
+    // Kiểm tra sản phẩm mới không bị request chi tiết cũ về muộn ghi đè.
     [Fact]
     public async Task OldDetailCompletionCannotOverwriteNewProduct()
     {
@@ -262,6 +268,7 @@ public sealed class ProductDetailTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra thử lại gợi ý khi đang tải không gọi thêm request.
     [Fact]
     public async Task ConcurrentRelatedRetryDoesNotDuplicateRequests()
     {
@@ -276,6 +283,7 @@ public sealed class ProductDetailTests
         Assert.True(vm.ShowRelatedEmpty);
     }
 
+    // Kiểm tra chi tiết đã hủy thì không áp dụng dữ liệu về muộn và tải lại được.
     [Fact]
     public async Task CanceledDetailDoesNotApplyLateDataAndCanBeRetried()
     {
@@ -297,6 +305,7 @@ public sealed class ProductDetailTests
         Assert.True(vm.CanBuy);
     }
 
+    // Kiểm tra gợi ý đã hủy thì không hiện kết quả về muộn.
     [Fact]
     public async Task CanceledRelatedRequestDoesNotDisplayLateResults()
     {
@@ -314,7 +323,7 @@ public sealed class ProductDetailTests
         Assert.True(vm.CanBuy);
     }
 
-    // Trở lại cùng trang cập nhật tồn kho nhưng giữ biến thể và số lượng đã chọn.
+    // Kiểm tra trở lại trang thì cập nhật tồn kho, giữ biến thể và số lượng đã chọn.
     [Fact]
     public async Task ReloadingSameProductKeepsVariantAndQuantityAndRefreshesRelatedProducts()
     {
@@ -329,7 +338,7 @@ public sealed class ProductDetailTests
         Assert.Equal(new[] { 1, 1 }, catalog.RelatedCalls);
     }
 
-    // Mô phỏng Picker MAUI bỏ SelectedItem khi danh sách bị Clear trong lần tải lại sau Back.
+    // Kiểm tra tải lại giữ số lượng dù Picker của MAUI bỏ lựa chọn khi danh sách bị xóa, chỉ giảm theo tồn kho mới.
     [Theory]
     [InlineData(4, 3)]
     [InlineData(2, 2)]
@@ -355,6 +364,7 @@ public sealed class ProductDetailTests
         Assert.Equal(refreshedStock > 0, vm.CanBuy);
     }
 
+    // Kiểm tra quay lại trang thì request mới thay request đã hủy chưa kết thúc.
     [Fact]
     public async Task ReturningToPageReplacesCanceledDetailRequestBeforeItFinishes()
     {
@@ -385,6 +395,7 @@ public sealed class ProductDetailTests
             [new(id * 10, "S", "Trắng", 150_000, 3, null)]);
 
     private static CartDto EmptyCart => new([], 0, 0);
+    // ICatalogApi giả cho chi tiết và sản phẩm cùng loại.
     private sealed class DetailApi : ICatalogApi
     {
         public int Loads { get; private set; }
@@ -410,6 +421,7 @@ public sealed class ProductDetailTests
         public Task<PagedResponse<ProductSummaryDto>> GetProductsAsync(string? query, int page, CancellationToken token)
             => throw new NotSupportedException();
     }
+    // ICommerceApi giả chỉ hỗ trợ thêm vào giỏ.
     private sealed class CartApi : ICommerceApi
     {
         public List<(int, int)> Added { get; } = [];

@@ -83,6 +83,7 @@
         // Chọn biến thể: giá, ảnh, tồn kho lấy từ data-* của ô chọn; nút tăng giảm giới hạn theo tồn kho.
         (function () {
             var qty = document.getElementById('qty'); if (!qty) return;
+            // Cập nhật giá, ảnh, tồn kho theo biến thể đang chọn; số lượng không vượt tồn kho.
             function sync() {
                 var r = document.querySelector('.variant input:checked'); if (!r) return;
                 document.getElementById('detailPrice').textContent = r.dataset.price;

@@ -10,7 +10,7 @@ namespace SportShop.Api.Tests;
 // Kiểm tra endpoint đánh giá công khai và tương thích của bộ lọc lịch sử đánh giá riêng.
 public sealed class ProductReviewsApiTests
 {
-    // Các tham số lỗi bị chặn trước khi truy cập CSDL hoặc yêu cầu đăng nhập.
+    // Kiểm tra tham số sai bị chặn trước khi truy cập CSDL hoặc yêu cầu đăng nhập.
     [Theory]
     [InlineData("0/reviews")]
     [InlineData("-1/reviews")]
@@ -29,7 +29,7 @@ public sealed class ProductReviewsApiTests
             HttpStatusCode.BadRequest, "VALIDATION_ERROR");
     }
 
-    // Không cấu hình CSDL phải báo 503 rõ ràng thay vì giả danh sách đánh giá rỗng.
+    // Kiểm tra chưa cấu hình CSDL thì báo 503 thay vì trả danh sách đánh giá rỗng.
     [Fact]
     public async Task PublicReviewsWithoutConfiguredDatabaseReturnServiceUnavailable()
     {
@@ -39,7 +39,7 @@ public sealed class ProductReviewsApiTests
             HttpStatusCode.ServiceUnavailable, "DATABASE_UNAVAILABLE");
     }
 
-    // Bộ lọc productId mới của lịch sử riêng không chấp nhận mã sản phẩm không hợp lệ.
+    // Kiểm tra bộ lọc productId của lịch sử cá nhân không nhận mã sản phẩm sai.
     [Theory]
     [InlineData("0")]
     [InlineData("-1")]
@@ -52,7 +52,7 @@ public sealed class ProductReviewsApiTests
             HttpStatusCode.BadRequest, "VALIDATION_ERROR");
     }
 
-    // OpenAPI công bố schema phản hồi và không yêu cầu bearer cho đánh giá công khai.
+    // Kiểm tra OpenAPI công bố schema phản hồi và không yêu cầu bearer cho đánh giá công khai.
     [Fact]
     public async Task OpenApiDocumentsPublicProductReviewsWithoutAuthentication()
     {

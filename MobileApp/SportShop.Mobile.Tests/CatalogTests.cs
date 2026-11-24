@@ -121,7 +121,7 @@ public sealed class CatalogTests
         Assert.False(vm.HasMore);
     }
 
-    // Bộ lọc đang nhập không làm thay đổi điều kiện của trang tải thêm/retry.
+    // Kiểm tra bộ lọc đang nhập không làm thay đổi điều kiện của trang tải thêm và thử lại.
     [Fact]
     public async Task PagingKeepsAppliedCategorySortAndStockFilterUntilNewSearch()
     {
@@ -142,7 +142,7 @@ public sealed class CatalogTests
         Assert.Equal(("chưa áp dụng", 1, (int?)null, "new", true), api.Calls[^1]);
     }
 
-    // Lỗi danh mục không chặn sản phẩm; bấm áp dụng sẽ tải lại bộ lọc.
+    // Kiểm tra lỗi danh mục không chặn sản phẩm; bấm áp dụng sẽ tải lại bộ lọc.
     [Fact]
     public async Task CategoryFailureKeepsProductsAvailableAndCanBeRetried()
     {
@@ -158,7 +158,7 @@ public sealed class CatalogTests
         Assert.Equal(2, vm.Categories.Count);
     }
 
-    // Khi tìm mới lỗi, tải thêm vẫn dùng điều kiện của kết quả đang hiện.
+    // Kiểm tra tìm mới bị lỗi thì tải thêm vẫn dùng điều kiện của kết quả đang hiện.
     [Fact]
     public async Task FailedNewSearchDoesNotMixPreviousResultsWithNewFilter()
     {
@@ -176,7 +176,7 @@ public sealed class CatalogTests
         Assert.Equal(2, vm.Products.Count);
     }
 
-    // Chọn danh mục từ Trang chủ trong khi catalog còn tải không làm mất lựa chọn mới.
+    // Kiểm tra chọn danh mục từ Trang chủ trong khi catalog còn tải không làm mất lựa chọn mới.
     [Fact]
     public async Task OpeningCategoryWaitsForPreviousRequestThenAppliesRequestedCategory()
     {
@@ -194,7 +194,7 @@ public sealed class CatalogTests
         Assert.Equal(("", 1, (int?)3, "new", true), api.Calls[^1]);
     }
 
-    // Query gửi API thực sự chứa đủ bộ lọc và không làm hỏng từ khóa tiếng Việt.
+    // Kiểm tra query gửi API chứa đủ bộ lọc và giữ đúng từ khóa tiếng Việt.
     [Fact]
     public async Task FilteredRequestUsesBackendCategoryAndSortParameters()
     {
@@ -211,7 +211,7 @@ public sealed class CatalogTests
         Assert.Contains("q=%C3%A1o%20%26%20gi%C3%A0y", requested.AbsoluteUri);
     }
 
-    // API chi tiết không chấp nhận nhầm ID sản phẩm hoặc dữ liệu biến thể thiếu.
+    // Kiểm tra API chi tiết không nhận nhầm ID sản phẩm hoặc dữ liệu biến thể thiếu.
     [Fact]
     public async Task DetailRejectsMismatchedProductOrMissingVariants()
     {
@@ -246,6 +246,7 @@ public sealed class CatalogTests
             => get(query, page, token);
     }
 
+    // ICatalogApi giả có lọc và giả lỗi theo cài đặt.
     private sealed class FilteringApi : ICatalogApi
     {
         public bool FailCategories { get; set; }

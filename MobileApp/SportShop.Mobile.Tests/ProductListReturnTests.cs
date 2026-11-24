@@ -6,11 +6,13 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test khôi phục vị trí danh sách sản phẩm khi quay về.
 public sealed class ProductListReturnTests
 {
     private static ProductListReturnPoint Point() => new("catalog", 25, 24, 23, 22, 0, 2450,
         38, -20, 40, 3, "giày", "Danh mục Giày · Size 42", "price_asc");
 
+    // Kiểm tra vị trí chỉ dùng một lần sau khi layout sẵn sàng, giữ đủ bộ lọc nguồn.
     [Fact]
     public void WaitsForLayoutThenConsumesExactlyOnceWithoutLosingSourceState()
     {
@@ -28,6 +30,7 @@ public sealed class ProductListReturnTests
         Assert.False(state.TryConsume(3, true, out _));
     }
 
+    // Kiểm tra kết quả mới thì bỏ vị trí cũ, không cuộn nhầm bộ lọc khác.
     [Fact]
     public void NewResultsDiscardOldAnchorInsteadOfMovingAnotherFilter()
     {
@@ -37,6 +40,7 @@ public sealed class ProductListReturnTests
         Assert.False(state.IsPending);
     }
 
+    // Kiểm tra yêu cầu khôi phục lại thì dùng được vị trí cũ lần nữa.
     [Fact]
     public void ExplicitContinuationCanRequestTheSameSourceAgain()
     {
@@ -48,6 +52,7 @@ public sealed class ProductListReturnTests
         Assert.Equal(2450, point!.ScrollY);
     }
 
+    // Kiểm tra vị trí cũ chỉ mất hiệu lực khi kết quả mới đã về.
     [Fact]
     public async Task SuccessfulReplacementInvalidatesTheOldAnchorOnlyAfterNewResultsArrive()
     {
@@ -79,6 +84,7 @@ public sealed class ProductListReturnTests
         Assert.False(source.IsPending);
     }
 
+    // Kiểm tra tải thêm lỗi rồi thử lại vẫn giữ sản phẩm, vị trí và bộ lọc đã áp dụng.
     [Fact]
     public async Task FailedAppendAndRetryPreserveLoadedObjectsSourceAnchorAndAppliedSearch()
     {
@@ -135,6 +141,7 @@ public sealed class ProductListReturnTests
         Assert.Equal("price_asc", restored.SortCode);
     }
 
+    // Kiểm tra tìm mới bị lỗi thì vị trí cũ vẫn dùng được.
     [Fact]
     public async Task FailedReplacementKeepsTheExistingResultVersionAndReturnPointUsable()
     {
@@ -164,7 +171,9 @@ public sealed class ProductListReturnTests
     private static PagedResponse<ProductSummaryDto> Page(int page, params ProductSummaryDto[] products)
         => new(products, page, 2, 4);
 
+    // Tham số của một lần gọi API.
     private sealed record SourceCall(string? Query, int Page, int? CategoryId, string Sort, bool InStockOnly);
+    // ICatalogApi giả ghi lại các lần gọi.
     private sealed class SourceApi(Func<SourceCall, Task<PagedResponse<ProductSummaryDto>>> respond) : ICatalogApi
     {
         public List<SourceCall> Calls { get; } = [];

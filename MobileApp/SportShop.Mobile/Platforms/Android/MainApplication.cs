@@ -8,8 +8,10 @@ namespace SportShop.Mobile;
 #else
 [Application]
 #endif
+// Ứng dụng Android; bản Debug cho HTTP tới localhost theo network_security_config.xml.
 public class MainApplication : MauiApplication
 {
+	// Constructor bắt buộc của Android.
 	public MainApplication(IntPtr handle, JniHandleOwnership ownership)
 		: base(handle, ownership)
 	{

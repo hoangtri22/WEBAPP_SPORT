@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 
 namespace SportShop.Mobile.Services;
 
-// Bộ nhớ đệm dùng chung trên app (singleton, mặc định 10 phút = LongAge): dùng lại danh sách trong RAM thay vì gọi lại API; hết hạn hoặc khi đặt, hủy đơn thì tải lại.
+// Bộ nhớ đệm trong RAM dùng chung trên app (singleton, DefaultAge 10 phút): hiện giữ danh sách đơn hàng; InvalidateCommerce() xóa khi giỏ hoặc đơn thay đổi, Clear() khi rời phiên.
 public sealed class AppMemoryCache(Func<long>? clockMs = null)
 {
     public static readonly TimeSpan DefaultAge = TimeSpan.FromMinutes(10);

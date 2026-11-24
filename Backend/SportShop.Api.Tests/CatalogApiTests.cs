@@ -47,7 +47,7 @@ public sealed class CatalogApiTests
         Assert.Equal(10, search.PageSize);
     }
 
-    // Các mảng lặp được bind và chuẩn hóa cùng các điều kiện cũ, không thay contract phân trang.
+    // Kiểm tra mảng size, màu lặp được nhận và chuẩn hóa cùng điều kiện cũ, không đổi contract phân trang.
     [Fact]
     public async Task ProductList_ForwardsCombinedAdvancedFilters()
     {
@@ -68,7 +68,7 @@ public sealed class CatalogApiTests
         Assert.Equal(3, search.PageSize);
     }
 
-    // Danh sách chọn size/màu có route riêng, hỗ trợ cả biến thể hết hàng nếu yêu cầu.
+    // Kiểm tra danh sách size, màu có route riêng và gồm cả biến thể hết hàng khi yêu cầu.
     [Fact]
     public async Task FilterOptions_ReturnsValuesAndHonorsStockFlag()
     {
@@ -82,7 +82,7 @@ public sealed class CatalogApiTests
         Assert.False(factory.Reader.LastOptionsInStockOnly);
     }
 
-    // Endpoint liên quan suy ra danh mục từ sản phẩm và loại ID trước khi giới hạn kết quả.
+    // Kiểm tra endpoint liên quan suy ra danh mục từ sản phẩm và loại ID đó trước khi giới hạn kết quả.
     [Fact]
     public async Task Related_UsesCurrentCategoryExcludesCurrentProductAndPreservesSummaryContract()
     {
@@ -101,7 +101,7 @@ public sealed class CatalogApiTests
         Assert.Equal(1, search.PageSize);
     }
 
-    // Sản phẩm không công khai/không tồn tại không cung cấp gợi ý.
+    // Kiểm tra sản phẩm ẩn hoặc không tồn tại thì không trả gợi ý.
     [Fact]
     public async Task Related_UnknownProductReturns404WithoutListingCatalog()
     {
@@ -112,7 +112,7 @@ public sealed class CatalogApiTests
         Assert.Equal(0, factory.Reader.ProductListCalls);
     }
 
-    // Giới hạn query trên endpoint mới vẫn dùng ProblemDetails validation chuẩn của API.
+    // Kiểm tra query sai giới hạn thì trả ProblemDetails validation như các endpoint khác.
     [Theory]
     [InlineData("/api/v1/products/0/related")]
     [InlineData("/api/v1/products/7/related?limit=0")]
@@ -127,7 +127,7 @@ public sealed class CatalogApiTests
         Assert.Equal(0, factory.Reader.ProductListCalls);
     }
 
-    // Quá nhiều lựa chọn không tạo danh sách tham số SQL không giới hạn.
+    // Kiểm tra quá nhiều lựa chọn bị chặn để không tạo danh sách tham số SQL không giới hạn.
     [Theory]
     [InlineData("sizes")]
     [InlineData("colors")]

@@ -124,11 +124,13 @@ else
             if (total === 0) return;
             var next = document.getElementById('nextQ'), prev = document.getElementById('prevQ');
 
+            // Câu thứ i đã có câu trả lời hoặc lựa chọn chưa.
             function answered(i) {
                 var s = steps[i], t = s.querySelector('textarea');
                 if (t) return t.value.trim() !== '';
                 return s.querySelectorAll('input:checked').length > 0;
             }
+            // Hiện câu thứ n, cập nhật tiến độ và chữ trên nút.
             function show(n) {
                 step = n;
                 steps.forEach(function (s, i) { s.hidden = i !== n; });

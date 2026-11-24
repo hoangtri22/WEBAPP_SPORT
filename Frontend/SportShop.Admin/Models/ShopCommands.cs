@@ -301,7 +301,7 @@ public class ShopCommands
         return "Đã cập nhật tài khoản " + username + ".";
     }
 
-    // Thêm/sửa khách hàng trong KHACH_HANG: thêm mới bắt buộc tạo kèm TAI_KHOAN (khách chưa có tài khoản chỉ được tạo cùng đơn mua trực tiếp qua FindOrCreateWalkIn()), cập nhật email / địa chỉ qua UpdateCustomerAccountAndAddress() và ghi lại KHACH_HANG_SO_THICH.
+    // Thêm/sửa KHACH_HANG và KHACH_HANG_SO_THICH: thêm mới phải tạo kèm TAI_KHOAN (khách chưa có tài khoản chỉ tạo cùng đơn qua FindOrCreateWalkIn()); sửa email, địa chỉ qua UpdateCustomerAccountAndAddress().
     string SaveCustomer(MySqlConnection c, MySqlTransaction tx, int id, Form f)
     {
         string last = f.S("ho_lot"), first = f.S("ten"), phone = f.S("so_dien_thoai");
@@ -612,7 +612,7 @@ public class ShopCommands
             """, new { last = last.Length > 70 ? last[..70] : last, first = first.Length > 30 ? first[..30] : first, phone }, tx);
     }
 
-    // Tạo đơn tại quầy: khách mua trực tiếp lấy qua FindOrCreateWalkIn(), tính tiền theo giá BIEN_THE_SP, áp voucher (KM_THEO_VOUCHER + CTKM, lượt dùng theo Catalog.VoucherUseLimit(), mã sinh nhật chỉ dùng trong tháng sinh theo Catalog.IsBirthdayMonth()), ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI và trừ tồn kho; đã thanh toán thì lập hóa đơn qua CreateInvoice().
+    // Tạo đơn tại quầy trong transaction: lấy khách qua FindOrCreateWalkIn(), khóa và kiểm tra voucher, ghi DON_HANG, CHI_TIET_DON_HANG, VAN_CHUYEN, LUOT_SU_DUNG_KHUYEN_MAI, trừ tồn kho; đã thanh toán thì gọi CreateInvoice().
     string CreateOrder(MySqlConnection c, MySqlTransaction tx, Form f, Ctx me)
     {
         bool walkIn = f.S("ma_khach_hang") == WalkInCode;
@@ -978,7 +978,7 @@ public class ShopCommands
     }
 
 
-    // Xóa theo entity (gọi từ CrudController.Delete): tài khoản, khách hàng (KHACH_HANG.da_xoa), nhân viên, nhà cung cấp, khuyến mãi chỉ chuyển trạng thái (xóa mềm) để khôi phục được qua Act("restore_..."); các mục khác xóa hẳn hoặc báo lỗi nếu đã phát sinh lịch sử.
+    // Xóa theo entity (CrudController.Delete): tài khoản, khách (KHACH_HANG.da_xoa), nhân viên, nhà cung cấp, khuyến mãi là xóa mềm để khôi phục được qua Act(); mục khác xóa hẳn hoặc báo lỗi nếu đã có lịch sử.
     public Result Delete(string entity, int id, Ctx me) => Run((c, tx) =>
     {
         switch (entity)

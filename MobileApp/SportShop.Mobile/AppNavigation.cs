@@ -7,6 +7,7 @@ public static class AppNavigation
 {
     private static readonly ConditionalWeakTable<INavigation, CatalogNavigationState> CatalogStates = new();
 
+    // Mở danh sách sản phẩm với bộ lọc mặc định qua CatalogViewModel.ResetAsync().
     public static async Task OpenDefaultCatalogAsync(INavigation navigation, IServiceProvider services)
     {
         await services.GetRequiredService<SportShop.Mobile.ViewModels.CatalogViewModel>().ResetAsync();
@@ -26,6 +27,7 @@ public static class AppNavigation
         return true;
     }
 
+    // Mở MainPage hoặc quay về MainPage đang có trong ngăn xếp; IsOpening chặn bấm nhiều lần để không mở chồng trang.
     public static async Task OpenCatalogAsync(INavigation navigation, IServiceProvider services)
     {
         var state = CatalogStates.GetValue(navigation, static _ => new CatalogNavigationState());
@@ -49,6 +51,7 @@ public static class AppNavigation
         finally { Volatile.Write(ref state.IsOpening, 0); }
     }
 
+    // Cờ đang mở danh sách của từng INavigation.
     private sealed class CatalogNavigationState
     {
         public int IsOpening;

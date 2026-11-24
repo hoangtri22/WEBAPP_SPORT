@@ -129,7 +129,7 @@ public class ReportsController(ShopData db, ReportStore reports) : Controller
     // Định dạng số cho tọa độ biểu đồ SVG.
     static string F(double v) => v.ToString("0.##", Inv);
 
-    // Báo cáo thống kê from–to (mặc định 30 ngày): nửa tải mới từ MySQL (thẻ số liệu + biểu đồ qua ShopData.ReportOrders(), bán chạy + lợi nhuận qua ShopData.ReportProducts(), khuyến mãi qua ShopData.PromoStats()), nửa dùng lại dữ liệu trang khác đã nạp qua ShopData.Reused... / DataCache (nhóm tuổi, sở thích, hiệu suất nhân viên, tồn kho nhiều).
+    // Báo cáo thống kê from–to (mặc định 30 ngày): số liệu trong kỳ đọc mới qua ShopData.ReportOrders(), ReportProducts(), PromoStats(); khách, nhân viên, tồn kho dùng lại các danh sách Reused của ShopData để tránh truy vấn lại.
     public IActionResult Index(DateTime? from, DateTime? to)
     {
         ViewBag.Menu = "reports";

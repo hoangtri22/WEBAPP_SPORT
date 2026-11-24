@@ -15,7 +15,7 @@
         var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]*)'));
         return m ? m[1] : '';
     }
-    // Ghi cookie mã tab của tab này (nếu đang là của tab khác); trả về true khi cookie đã đúng
+    // Ghi cookie mã tab của tab này (nếu đang là của tab khác); trả về true khi cookie đã đúng.
     function claim() {
         if (current() !== id) document.cookie = COOKIE + '=' + id + '; path=/; SameSite=Lax';
         return current() === id;
@@ -53,6 +53,6 @@
     document.addEventListener('visibilitychange', function () { if (!document.hidden) claim(); });
     window.addEventListener('focus', claim);
     window.addEventListener('pageshow', claim);
-    // Trang ở tab khác vừa tải xong có thể giành lại cookie: nhận lại ngay khi người dùng bấm / gõ phím / chạm trong tab này, trước khi mở liên kết hoặc gửi biểu mẫu
+    // Trang ở tab khác vừa tải xong có thể giành lại cookie: nhận lại ngay khi người dùng bấm / gõ phím / chạm trong tab này, trước khi mở liên kết hoặc gửi biểu mẫu.
     ['mousedown', 'keydown', 'touchstart', 'submit'].forEach(function (type) { document.addEventListener(type, claim, true); });
 })();

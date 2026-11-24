@@ -17,6 +17,7 @@ public abstract class ContentViewModel : INotifyPropertyChanged
     public string? ErrorMessage { get; protected set; }
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
     public bool HasLoaded { get; protected set; }
+    // Báo giao diện một thuộc tính đã đổi.
     protected void Notify([CallerMemberName] string? property = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 
@@ -33,12 +34,14 @@ public abstract class ContentViewModel : INotifyPropertyChanged
         finally { IsBusy = false; Changed(); }
     }
 
+    // Báo giao diện các trạng thái tải chung.
     protected virtual void Changed()
     {
         foreach (var property in new[] { nameof(IsBusy), nameof(IsIdle), nameof(HasLoaded), nameof(HasError), nameof(ErrorMessage) }) Notify(property);
     }
 }
 
+// Thẻ khuyến mãi hiển thị trên PromotionsPage.
 public sealed record PromotionCard(PromotionDto Promotion)
 {
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -52,10 +55,12 @@ public sealed record PromotionCard(PromotionDto Promotion)
     public string Limit => Promotion.PerCustomerLimit is int limit ? $"Tối đa {limit} lượt mỗi khách" : "Kiểm tra điều kiện khi thanh toán";
 }
 
+// Trạng thái và thao tác của trang khuyến mãi.
 public sealed class PromotionsViewModel(IContentApi api) : ContentViewModel
 {
     public ObservableCollection<PromotionCard> Promotions { get; } = [];
     public bool ShowEmpty => HasLoaded && !HasError && Promotions.Count == 0;
+    // Tải khuyến mãi qua IContentApi.GetPromotionsAsync().
     public Task LoadAsync(CancellationToken cancellationToken = default) => RunAsync(async () =>
     {
         var items = await api.GetPromotionsAsync(cancellationToken);
@@ -64,9 +69,11 @@ public sealed class PromotionsViewModel(IContentApi api) : ContentViewModel
         HasLoaded = true;
     }, cancellationToken);
 
+    // Báo thêm trạng thái trống của trang khuyến mãi.
     protected override void Changed() { base.Changed(); Notify(nameof(ShowEmpty)); }
 }
 
+// Trạng thái và thao tác của trang thông tin.
 public sealed class InfoPagesViewModel(IContentApi api) : ContentViewModel
 {
     public ObservableCollection<ContentPageSummary> Pages { get; } = [];
@@ -96,6 +103,7 @@ public sealed class InfoPagesViewModel(IContentApi api) : ContentViewModel
         HasLoaded = true;
     }, cancellationToken);
 
+    // Báo thêm trạng thái của trang thông tin.
     protected override void Changed()
     {
         base.Changed();
@@ -103,6 +111,7 @@ public sealed class InfoPagesViewModel(IContentApi api) : ContentViewModel
     }
 }
 
+// Thẻ đánh giá công khai.
 public sealed record ReviewCard(ProductReviewDto Review)
 {
     public string Author => Review.Author;
@@ -113,6 +122,7 @@ public sealed record ReviewCard(ProductReviewDto Review)
     public bool HasReply => !string.IsNullOrWhiteSpace(Reply);
 }
 
+// Thẻ phản hồi của chính khách.
 public sealed record MyReviewCard(FeedbackResponse Feedback)
 {
     public string Stars => Feedback.Stars is >= 1 and <= 5 ? new string('★', Feedback.Stars.Value) : "Phản hồi";
@@ -129,6 +139,7 @@ public sealed record MyReviewCard(FeedbackResponse Feedback)
     public bool HasReply => !string.IsNullOrWhiteSpace(Reply);
 }
 
+// Trạng thái và thao tác của trang đánh giá.
 public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) : ContentViewModel
 {
     private int _productId;
@@ -191,8 +202,10 @@ public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) :
         if (publicError is not null) throw publicError;
     }, cancellationToken);
 
+    // Tải lại đánh giá của sản phẩm đang xem.
     public Task RefreshAsync(CancellationToken cancellationToken = default) => LoadAsync(_productId, ProductName, cancellationToken);
 
+    // Tải trang đánh giá kế tiếp, bỏ mục trùng mã.
     public Task LoadMoreAsync(CancellationToken cancellationToken = default) => RunAsync(async () =>
     {
         if (!HasMore) return;
@@ -204,6 +217,7 @@ public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) :
         _average = page.AverageStars;
     }, cancellationToken);
 
+    // Tải trang phản hồi kế tiếp của khách, bỏ mục trùng mã.
     public Task LoadMoreMineAsync(CancellationToken cancellationToken = default) => RunAsync(async () =>
     {
         if (!HasMoreMine) return;
@@ -230,6 +244,7 @@ public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) :
         catch (ContentException) { /* Đánh giá đã gửi thành công; không mời gửi lại nếu refresh bị lỗi. */ }
     }, cancellationToken);
 
+    // Thay danh sách đánh giá bằng trang vừa tải.
     private void ReplaceReviews(ProductReviewsResponse page)
     {
         Reviews.Clear();
@@ -239,6 +254,7 @@ public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) :
         _average = page.AverageStars;
     }
 
+    // Tải quyền đánh giá và phản hồi của khách; lỗi ghi vào AccountError để không che đánh giá công khai.
     private async Task LoadAccountAsync(CancellationToken cancellationToken)
     {
         AccountError = null;
@@ -257,6 +273,7 @@ public sealed class ReviewsViewModel(IContentApi api, ISessionManager session) :
         catch (ContentException ex) { AccountError = ex.Message; }
     }
 
+    // Báo thêm trạng thái của trang đánh giá.
     protected override void Changed()
     {
         base.Changed();

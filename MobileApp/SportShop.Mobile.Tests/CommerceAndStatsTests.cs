@@ -130,12 +130,10 @@ public sealed class CommerceAndStatsTests
         Assert.Equal("Nguyễn Minh An", cartVm.ReceiverName);
         Assert.True(cartVm.HasVouchers);
 
-        // Chọn mã giảm giá RUN15
         var promoOpt = cartVm.VoucherOptions.First(v => v.Code == "RUN15");
         await cartVm.SelectVoucherOptionAsync(promoOpt);
         Assert.True(cartVm.Discount > 0);
 
-        // Đặt hàng kèm Idempotency-Key -> chuyển sang trạng thái Đặt hàng thành công (Done.cshtml)
         var order = await cartVm.PlaceOrderAsync();
         Assert.NotNull(order);
         Assert.True(cartVm.HasPlacedOrder);
@@ -169,14 +167,12 @@ public sealed class CommerceAndStatsTests
         var multiVariantQuickAdd = await cartVm.AddUpsellItemAsync(cartVm.UpsellItems[1]);
         Assert.False(multiVariantQuickAdd);
 
-        // Vào màn hình Thanh toán: chưa chọn mã thì tự áp dụng khuyến mãi theo đơn
         await cartVm.LoadCheckoutAsync();
         Assert.False(cartVm.HasAppliedVoucher);
         Assert.True(cartVm.HasCheckoutOrderPromo);
         Assert.Equal(170_000m, cartVm.Discount);
         Assert.Contains("Ưu đãi đơn từ 2 triệu", cartVm.CheckoutOrderPromoText);
 
-        // Khi chọn mã giảm giá RUN15 thì mã thay cho khuyến mãi theo đơn
         var promoOpt = cartVm.VoucherOptions.First(v => v.Code == "RUN15");
         await cartVm.SelectVoucherOptionAsync(promoOpt);
         Assert.True(cartVm.HasAppliedVoucher);
@@ -195,7 +191,6 @@ public sealed class CommerceAndStatsTests
         await vm.LoadOrdersAsync();
         Assert.Equal("cho_xac_nhan", vm.Orders.First(o => o.Code == "DH00001").Status);
 
-        // Cửa hàng cập nhật trạng thái đơn DH00001 sang Đang giao và đơn DH00003 sang Đã giao
         fakeApi.AdvanceOrderStatus(1, "dang_giao", "Đang giao");
         fakeApi.AdvanceOrderStatus(3, "da_giao", "Đã giao");
 

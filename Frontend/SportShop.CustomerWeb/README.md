@@ -1,21 +1,86 @@
-# SportShop.CustomerWeb
+# Web bán hàng
 
-Web mua hàng dành cho khách hàng (ASP.NET Core Razor), giao diện theo thiết kế Figma.
-Dùng khi khách không muốn tải app; chức năng tương tự app (`MobileApp`).
+Web mua hàng cho khách (ASP.NET Core MVC, .NET 10). Chuẩn bị CSDL và các bước chạy chi tiết: [README tổng](../../README.md).
 
-## Đã có
-- Trang chủ cửa hàng: khuyến mãi, danh mục, sản phẩm nổi bật, banner, đăng ký nhận ưu đãi.
-- Đăng nhập, đăng ký (kiểm tra dữ liệu nhập giống Figma).
-- Khu vực khách hàng: chỉnh sửa thông tin, gửi phản hồi về sản phẩm (xem lại phản hồi đã gửi), làm khảo sát.
-- Nút "Trang quản trị" chuyển sang web admin (địa chỉ cấu hình ở `appsettings.json` → `Links:AdminUrl`).
+## Chức năng
 
-## Cơ sở dữ liệu (MySQL)
-- Chưa có CSDL: bấm các chức năng cần dữ liệu sẽ hiện thông báo "Chức năng này sẽ hoạt động khi hệ thống được kết nối cơ sở dữ liệu".
-- Có CSDL: đăng nhập, đăng ký, chỉnh sửa thông tin, gửi phản hồi, làm khảo sát đọc / ghi dữ liệu thật
-  (`Services/CustomerStore.cs`); các nút của chức năng chưa làm (giỏ hàng, sản phẩm...) hiện "đang phát triển".
-  Cờ kết nối nằm ở `Services/DbStatus.cs` (mở thử kết nối MySQL, nhớ kết quả 15 giây).
-- Chuỗi kết nối điền ở `appsettings.json` → `ConnectionStrings:Default` (mỗi máy tự điền, không đưa mật khẩu lên GitHub).
+| Nhóm | Làm được gì |
+|---|---|
+| Sản phẩm | Trang chủ, danh sách, tìm kiếm và lọc nâng cao (giá, kích cỡ, màu, loại trừ), chi tiết theo biến thể, trang khuyến mãi |
+| Giỏ hàng | Thêm nhanh từ thẻ sản phẩm, sửa số lượng theo tồn kho, gợi ý mua thêm để đạt mức giảm giá |
+| Thanh toán | Địa chỉ nhận, phương thức thanh toán (giả lập), voucher, tự áp mức giảm theo đơn tốt nhất |
+| Đơn hàng | Theo dõi trạng thái, tự hủy đơn chờ xác nhận chưa thanh toán, đánh giá sản phẩm đã nhận |
+| Tài khoản | Đăng ký, đăng nhập, hồ sơ, sở thích, đổi mật khẩu, phản hồi, khảo sát |
+| Thông tin | Đổi trả, giao hàng, chọn size, liên hệ, về chúng tôi, hệ thống cửa hàng, tuyển dụng |
 
-## Chạy
-Mở `SportShop.slnx` bằng Visual Studio, chọn dự án `SportShop.CustomerWeb`, bấm F5 (cổng http 5003).
-Muốn nút "Trang quản trị" hoạt động thì chạy thêm `SportShop.Admin` (cổng 5188).
+**Hai cách mua hàng:**
+- **Có tài khoản:** dùng được voucher, xem đơn ở "Đơn hàng của tôi".
+- **Không có tài khoản:** nhận diện bằng số điện thoại, không dùng voucher, tra cứu đơn ở `/Track`. Số đã thuộc tài khoản thì phải đăng nhập. Đăng ký bằng số này sẽ gắn tài khoản vào hồ sơ và đơn đã mua. Đăng nhập thì giỏ của khách được gộp vào giỏ tài khoản.
+
+**Quy tắc chính:**
+- Phí giao hàng 30.000đ, miễn phí từ 500.000đ.
+- Nhập sai mật khẩu 5 lần thì khóa 5 phút. Phiên web hết hạn sau 2 giờ không thao tác. Mỗi tab trình duyệt giữ một tài khoản riêng.
+- Giỏ hàng lưu ở `CUSTOMER_CART_ITEM`, dùng chung với app.
+- Danh mục sản phẩm lưu đệm 10 phút; Web Admin lưu dữ liệu hoặc khách đặt, hủy đơn trên web này thì nạp lại ngay.
+- Chưa kết nối CSDL thì trang chủ dùng dữ liệu mẫu, chức năng cần dữ liệu hiện thông báo.
+
+## Cấu hình
+
+Đọc lần lượt `appsettings.json`, `appsettings.Development.json`, `appsettings.Local.json` (git bỏ qua) rồi biến môi trường; nguồn sau ghi đè nguồn trước.
+
+| Khóa | Ý nghĩa | Mặc định |
+|---|---|---|
+| `ConnectionStrings:Default` | Kết nối MySQL; để trống là chạy không có CSDL | – |
+| `Links:AdminUrl` | Địa chỉ nút "Trang quản trị" | `http://localhost:5188` |
+| `Paths:Images` | Thư mục ảnh sản phẩm | `../../Backend/Images` |
+| `Paths:Uploads` | Thư mục ảnh tải lên | `../Uploads` |
+| `Commerce:LegacyCartPath` | File giỏ hàng JSON cũ, nhập một lần theo khách | `App_Data/carts.json` |
+
+## Cách chạy
+
+```powershell
+dotnet run --project Frontend/SportShop.CustomerWeb --launch-profile http
+```
+
+Chạy tại thư mục `WEBAPP_SPORT`, rồi mở http://localhost:5003. Profile `https` dùng thêm cổng 7258.
+
+## Cây thư mục
+
+`Services/` và `Models/` được biên dịch trong `SportShop.Shared` để API dùng chung, nên sửa ở đây sẽ ảnh hưởng cả API.
+
+```text
+SportShop.CustomerWeb/
+├── Program.cs                  # Khởi tạo, session, ảnh tĩnh
+├── appsettings.json            # Cấu hình mặc định
+├── Properties/launchSettings.json # Cổng chạy
+├── Controllers/
+│   ├── HomeController.cs       # Trang chủ, trang lỗi
+│   ├── ShopController.cs       # Danh sách, chi tiết sản phẩm, khuyến mãi
+│   ├── CartController.cs       # Giỏ hàng, thanh toán, đặt hàng
+│   ├── TrackController.cs      # Tra cứu đơn bằng số điện thoại
+│   ├── CustomerController.cs   # Hồ sơ, đơn hàng, phản hồi, khảo sát
+│   ├── AccountController.cs    # Đăng ký, đăng nhập, đăng xuất
+│   ├── InfoController.cs       # Trang thông tin
+│   ├── CustomerSessionFilter.cs # Kiểm tra tài khoản còn hoạt động
+│   └── LayoutDataFilter.cs     # Dữ liệu chung của khung trang
+├── Services/
+│   ├── ShopStore.cs            # Sản phẩm, voucher, đặt và hủy đơn
+│   ├── CustomerStore.cs        # Tài khoản, hồ sơ, phản hồi, khảo sát
+│   ├── CartStore.cs            # Giỏ hàng trong MySQL
+│   ├── GuestStore.cs           # Khách mua không cần tài khoản
+│   ├── CatalogCache.cs         # Bộ nhớ đệm danh mục
+│   ├── ProductReviewStore.cs   # Đánh giá công khai cho API
+│   ├── LoginThrottle.cs        # Giới hạn đăng nhập sai
+│   ├── PasswordStorage.cs      # Mã hóa và kiểm tra mật khẩu
+│   ├── DbStatus.cs             # Kiểm tra kết nối CSDL
+│   └── TabCookies.cs           # Mỗi tab một phiên đăng nhập
+├── Models/                     # Kiểu dữ liệu, quy tắc voucher và hạng, nội dung trang thông tin
+├── Views/
+│   ├── Shop/, Cart/, Track/    # Mua hàng
+│   ├── Customer/, Account/     # Tài khoản
+│   ├── Home/, Info/            # Trang chủ, thông tin
+│   └── Shared/                 # Khung trang, đầu trang, chân trang, tìm kiếm
+└── wwwroot/
+    ├── css/                    # shop.css, shop-store.css
+    └── js/                     # shop.js, tab-session.js
+```

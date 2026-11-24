@@ -79,7 +79,6 @@ var SearchKit = (function () {
         }
     }
 
-    // ===== Bộ lọc nâng cao theo từng trang: ô chọn, khoảng Từ - Đến, khoảng ngày, nút Lọc nhanh =====
 
     // Dữ liệu riêng của một dòng / thẻ (thuộc tính data-f, dạng JSON), đọc một lần rồi nhớ lại.
     function dataOf(el) {
@@ -121,8 +120,7 @@ var SearchKit = (function () {
         return fold(raw) === fold(value);
     }
 
-    // Dựng khung "Lọc nhanh" + bảng bộ lọc cho một danh sách phần tử (dòng bảng hoặc thẻ) theo cấu hình spec; onChange() báo khi bộ lọc đổi.
-    // Trả về { matches(el), count(), setResult(n) }: một phần tử thỏa khi mọi ô lọc đang nhập đều đúng (Và) và mọi nút Lọc nhanh đang bật đều đúng (Và).
+    // Dựng khung "Lọc nhanh" và bảng bộ lọc theo cấu hình spec; trả { matches(el), count(), setResult(n) }: phần tử thỏa khi mọi ô lọc và nút Lọc nhanh đang bật đều đúng (Và).
     function filterPanel(btn, panel, items, spec, onChange) {
         var fields = spec.fields || [], quick = spec.quick || [];
         var storeKey = 'advfilter:' + spec.id;
@@ -154,7 +152,6 @@ var SearchKit = (function () {
             return ruleTest(kind, rule.op, raw, rule.value);
         }
 
-        // Hàng "Lọc nhanh"
         if (quick.length) {
             var row = document.createElement('div');
             row.className = 'adv-quick';
@@ -169,7 +166,6 @@ var SearchKit = (function () {
             panel.appendChild(row);
         }
 
-        // Khung các ô lọc
         var box = document.createElement('div');
         box.className = 'adv-box';
         var grid = document.createElement('div');
@@ -212,7 +208,6 @@ var SearchKit = (function () {
         });
         box.appendChild(grid);
 
-        // Dòng kết quả và hai nút Xóa bộ lọc / Lưu bộ lọc
         var bar = document.createElement('div');
         bar.className = 'adv-bar';
         result = document.createElement('span');

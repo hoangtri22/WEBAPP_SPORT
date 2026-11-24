@@ -6,8 +6,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test API sản phẩm cùng loại.
 public sealed class RelatedCatalogApiTests
 {
+    // Kiểm tra gọi đúng sản phẩm đang xem với limit=8 và giữ nguyên dữ liệu thẻ.
     [Fact]
     public async Task RelatedRequestUsesViewedProductIdAndPreservesBackendCardData()
     {
@@ -25,6 +27,7 @@ public sealed class RelatedCatalogApiTests
         Assert.Equal(item, Assert.Single(result));
     }
 
+    // Kiểm tra dữ liệu gợi ý sai thì báo CatalogException.
     [Theory]
     [InlineData("null")]
     [InlineData("[null]")]
@@ -38,6 +41,7 @@ public sealed class RelatedCatalogApiTests
         await Assert.ThrowsAsync<CatalogException>(() => new CatalogApi(http).GetRelatedProductsAsync(17));
     }
 
+    // Kiểm tra mã sản phẩm sai thì không gọi API.
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -53,6 +57,7 @@ public sealed class RelatedCatalogApiTests
         Assert.Equal(0, calls);
     }
 
+    // Kiểm tra lỗi máy chủ không lộ chi tiết kỹ thuật.
     [Fact]
     public async Task RelatedFailureDoesNotExposeServerDiagnostics()
     {
@@ -62,6 +67,7 @@ public sealed class RelatedCatalogApiTests
         Assert.DoesNotContain("database diagnostics", error.Message);
     }
 
+    // Kiểm tra mất mạng và hết giờ thành lỗi thử lại được, hủy vẫn là hủy.
     [Fact]
     public async Task RelatedNetworkFailureAndTimeoutAreRetryableButCancellationRemainsCancellation()
     {
@@ -78,6 +84,7 @@ public sealed class RelatedCatalogApiTests
     private static HttpClient Client(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)
         => new(new Handler(respond)) { BaseAddress = new Uri("http://localhost:5080/") };
 
+    // HttpMessageHandler giả trả phản hồi theo hàm truyền vào.
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

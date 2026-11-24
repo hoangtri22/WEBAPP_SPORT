@@ -1,3 +1,4 @@
+-- Tạo CSDL gốc sports_shop gồm 35 bảng và dữ liệu demo; chạy một lần trên server chưa có schema này, sau đó chạy Migrations 001 đến 008.
 CREATE DATABASE sports_shop CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 USE sports_shop;

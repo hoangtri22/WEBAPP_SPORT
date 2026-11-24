@@ -1,4 +1,4 @@
-﻿-- Thêm bảng giỏ hàng và đặt đơn mobile;
+﻿-- Thêm bảng giỏ hàng dùng chung web và app, bảng chống đặt đơn trùng; chạy lại được, giữ nguyên dữ liệu cũ.
 CREATE TABLE IF NOT EXISTS CUSTOMER_CART_STATE (
  customer_id INT NOT NULL PRIMARY KEY,
  legacy_imported TINYINT(1) NOT NULL DEFAULT 1,

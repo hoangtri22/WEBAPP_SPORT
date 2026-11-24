@@ -9,8 +9,10 @@ using Xunit;
 
 namespace SportShop.Mobile.Tests;
 
+// Test bộ lọc nâng cao, tải thêm và lỗi mạng của trang sản phẩm.
 public sealed class AdvancedCatalogTests
 {
+    // Kiểm tra lỗi mạng của Android thành CatalogException có thể thử lại, không lộ chi tiết kỹ thuật.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -26,6 +28,7 @@ public sealed class AdvancedCatalogTests
         Assert.Equal(listError.Message, relatedError.Message);
     }
 
+    // Kiểm tra lỗi mạng do hủy request vẫn là hủy, không thành lỗi kết nối.
     [Fact]
     public async Task CanceledAndroidTransportFailureRemainsCancellation()
     {
@@ -39,6 +42,7 @@ public sealed class AdvancedCatalogTests
             .GetProductsAsync(null, 1, cancellation.Token));
     }
 
+    // Kiểm tra size, màu lấy từ filter-options với inStockOnly=false để có cả lựa chọn đã hết hàng.
     [Fact]
     public async Task OptionsComeFromDedicatedEndpointIncludingVisibleSoldOutChoices()
     {
@@ -55,6 +59,7 @@ public sealed class AdvancedCatalogTests
         Assert.Equal("Đỏ", Assert.Single(options.Colors));
     }
 
+    // Kiểm tra dữ liệu size, màu sai thì báo CatalogException.
     [Theory]
     [InlineData("{\"sizes\":null,\"colors\":[]}")]
     [InlineData("{\"sizes\":[],\"colors\":[null]}")]
@@ -66,6 +71,7 @@ public sealed class AdvancedCatalogTests
         await Assert.ThrowsAsync<CatalogException>(() => new CatalogApi(http).GetFilterOptionsAsync());
     }
 
+    // Kiểm tra query gửi API dùng dấu chấm thập phân dù máy đặt vi-VN, lặp tham số và mã hóa ký tự đúng.
     [Fact]
     public async Task AdvancedQueryUsesInvariantPricesAndRepeatedEncodedValues()
     {
@@ -93,6 +99,7 @@ public sealed class AdvancedCatalogTests
         Assert.Contains("q=%C3%A1o%20%26%20gi%C3%A0y", requested.AbsoluteUri);
     }
 
+    // Kiểm tra tải thêm và thử lại vẫn dùng bộ lọc đã áp dụng dù khách đang sửa bộ lọc khác.
     [Fact]
     public async Task AllAppliedFiltersSurvivePagingRetryAndDraftChanges()
     {
@@ -124,6 +131,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.HasError);
     }
 
+    // Kiểm tra giá nhập sai thì báo lỗi, không gọi API và giữ kết quả cũ.
     [Theory]
     [InlineData("-1", "")]
     [InlineData("abc", "")]
@@ -145,6 +153,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.IsBusy);
     }
 
+    // Kiểm tra giá 0 và đổi sắp xếp vẫn giữ danh mục, tải lại từ trang đầu.
     [Fact]
     public async Task ZeroBoundAndSortKeepCategoryAndResetToFirstPage()
     {
@@ -160,6 +169,7 @@ public sealed class AdvancedCatalogTests
         Assert.Single(vm.Products);
     }
 
+    // Kiểm tra xóa bộ lọc nâng cao giữ danh mục và từ khóa, đặt lại thì về mặc định.
     [Fact]
     public async Task ClearAdvancedPreservesCategoryAndFullResetRestoresDefaults()
     {
@@ -179,6 +189,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.HasValidationError);
     }
 
+    // Kiểm tra phản hồi hoặc lỗi cũ về muộn không ghi đè kết quả mới.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -201,6 +212,7 @@ public sealed class AdvancedCatalogTests
         Assert.Contains("new", vm.AppliedFilterSummary);
     }
 
+    // Kiểm tra trang tải thêm cũ không nhập vào tìm kiếm mới, bấm tải thêm hai lần chỉ gọi một lần.
     [Fact]
     public async Task OldAppendCannotJoinNewSearchAndDuplicateAppendIsIgnored()
     {
@@ -220,6 +232,7 @@ public sealed class AdvancedCatalogTests
         Assert.Equal(3, api.Calls.Count);
     }
 
+    // Kiểm tra đặt lại khi đang tải thêm thì về trang đầu dù bộ lọc đã là mặc định.
     [Fact]
     public async Task ResetDuringAppendReturnsToFirstPageEvenWhenFiltersAlreadyMatchDefaults()
     {
@@ -235,6 +248,7 @@ public sealed class AdvancedCatalogTests
         Assert.Equal(1, Assert.Single(vm.Products).Id);
     }
 
+    // Kiểm tra request đã hủy mà vẫn trả dữ liệu thì không được áp dụng.
     [Fact]
     public async Task CanceledRequestIgnoringTokenDoesNotApplyData()
     {
@@ -250,6 +264,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.HasError);
     }
 
+    // Kiểm tra trang cuối toàn mục trùng thì dừng tải thêm, tìm không ra thì hiện trạng thái trống.
     [Fact]
     public async Task DuplicateOnlyLastPageStopsPagingAndEmptySearchShowsEmpty()
     {
@@ -268,6 +283,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.HasProducts);
     }
 
+    // Kiểm tra lỗi tải size, màu không chặn sản phẩm và lần áp dụng sau sẽ thử lại.
     [Fact]
     public async Task OptionsFailureDoesNotBlockProductsAndApplyRetriesOptions()
     {
@@ -283,6 +299,7 @@ public sealed class AdvancedCatalogTests
         Assert.Equal(new[] { "M", "L" }, vm.Sizes.Select(option => option.Value));
     }
 
+    // Kiểm tra mở trang lọc chỉ tải size, màu và giữ lựa chọn khi mở lại.
     [Fact]
     public async Task FilterPageCanLoadOptionsWithoutQueryingProductsAndKeepDraftOnReopen()
     {
@@ -297,6 +314,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.IsPreparingFilters);
     }
 
+    // Kiểm tra áp dụng cùng bộ lọc hai lần thì chờ request đang chạy, không gọi thêm.
     [Fact]
     public async Task ApplyingSameDraftAwaitsExistingRequestWithoutDuplicatingIt()
     {
@@ -313,6 +331,7 @@ public sealed class AdvancedCatalogTests
         Assert.Single(vm.Products);
     }
 
+    // Kiểm tra trang lọc tải lại được size, màu sau khi danh sách bị hủy.
     [Fact]
     public async Task FilterPageRecoversOptionsAfterCatalogLifetimeIsCanceled()
     {
@@ -328,6 +347,7 @@ public sealed class AdvancedCatalogTests
         Assert.False(vm.IsPreparingFilters);
     }
 
+    // ICatalogApi giả treo ở lần tải size, màu đầu tiên.
     private sealed class DelayedOptionsApi : ICatalogApi
     {
         public int OptionCalls { get; private set; }
@@ -340,6 +360,7 @@ public sealed class AdvancedCatalogTests
             => Task.FromResult(Page(page, 0));
     }
 
+    // Kiểm tra lỗi về sau khi hủy vẫn là hủy và tải lại được.
     [Fact]
     public async Task CanceledMetadataErrorRemainsCancellationAndCanBeRetried()
     {
@@ -357,6 +378,7 @@ public sealed class AdvancedCatalogTests
         Assert.Single(vm.Sizes);
     }
 
+    // ICatalogApi giả trả kết quả lần đầu theo task truyền vào.
     private sealed class FailedCanceledOptionsApi(Task<ProductFilterOptionsDto> first) : ICatalogApi
     {
         private int _calls;
@@ -369,8 +391,10 @@ public sealed class AdvancedCatalogTests
     private static ProductSummaryDto Product(int id) => new(id, "Áo", 3, "Áo", "cái", null, 100, 200, true);
     private static PagedResponse<ProductSummaryDto> Page(int page, int total, params ProductSummaryDto[] products)
         => new(products, page, 1, total);
+    // Tham số của một lần gọi API.
     private sealed record Call(string? Query, int Page, int? Category, string Sort, bool Stock,
         decimal? Min, decimal? Max, string Sizes, string Colors);
+    // ICatalogApi giả ghi lại các lần gọi.
     private sealed class Api : ICatalogApi
     {
         public List<Call> Calls { get; } = [];
@@ -396,6 +420,7 @@ public sealed class AdvancedCatalogTests
             return Respond?.Invoke(call) ?? Task.FromResult(Page(page, 3, Product(page)));
         }
     }
+    // HttpMessageHandler giả trả phản hồi theo hàm truyền vào.
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

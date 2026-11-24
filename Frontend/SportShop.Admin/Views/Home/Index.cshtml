@@ -21,9 +21,9 @@
     <div>
         <div class="eyebrow">SPORTSHOP ADMIN</div>
         <h1 class="page-title sm">Tổng quan hệ thống</h1>
-        <p class="page-sub">Theo dõi hoạt động kinh doanh hôm nay</p>
+        <p class="page-sub">Hoạt động kinh doanh hôm nay và báo cáo thống kê theo kỳ</p>
     </div>
-    <a class="btn-primary" asp-controller="Reports" asp-action="Index">@Icons.Svg("bar-chart", 20) Xem báo cáo</a>
+    <a class="btn-primary" href="#report">@Icons.Svg("bar-chart", 20) Xem báo cáo</a>
 </div>
 
 <div class="stats">
@@ -109,3 +109,43 @@
         </table>
     </div>
 </section>
+
+<partial name="_Report" model="Model.Report" />
+
+@section Scripts {
+    <script>
+        // Hộp thoại "Tạo báo cáo": gửi form đến HomeController.CreateReport, thành công thì tải lại trang để báo cáo mới hiện trong danh sách.
+        (function () {
+            var dlg = document.getElementById('reportDlg'), openBtn = document.getElementById('newReport'), form = document.getElementById('reportForm');
+            if (!dlg || !openBtn) return;
+            var err = document.getElementById('reportErr');
+            openBtn.addEventListener('click', function () { err.hidden = true; dlg.showModal(); });
+            document.getElementById('reportCancel').addEventListener('click', function () { dlg.close(); });
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var btn = form.querySelector('[type=submit]');
+                btn.disabled = true;
+                postForm('/Home/CreateReport', new FormData(form)).then(function (res) {
+                    btn.disabled = false;
+                    handleResult(res, function (m) { err.textContent = m; err.hidden = false; });
+                });
+            });
+        })();
+
+        // Chọn nhanh kỳ báo cáo: điền ngày from/to rồi gửi form GET đến HomeController.Index.
+        document.getElementById('period').addEventListener('change', function () {
+            var v = this.value; if (!v) return;
+            var end = new Date(), start = new Date();
+            if (v === '7') start.setDate(end.getDate() - 6);
+            else if (v === '30') start.setDate(end.getDate() - 29);
+            else if (v === 'month') start = new Date(end.getFullYear(), end.getMonth(), 1);
+            else if (v === 'quarter') start = new Date(end.getFullYear(), Math.floor(end.getMonth() / 3) * 3, 1);
+            else if (v === 'year') start = new Date(end.getFullYear(), 0, 1);
+            // Đổi ngày theo giờ máy sang yyyy-MM-dd cho ô ngày, tránh toISOString() vì lệch múi giờ.
+            function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+            document.getElementById('fromDate').value = iso(start);
+            document.getElementById('toDate').value = iso(end);
+            document.getElementById('rangeForm').submit();
+        });
+    </script>
+}

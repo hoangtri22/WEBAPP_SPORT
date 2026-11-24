@@ -277,7 +277,8 @@ public sealed class CartViewModel(ICommerceApi api, ISessionManager? session = n
     public string PlacedOrderCode => _lastPlacedOrder?.Code ?? "";
     public string PlacedOrderMessage => _lastPlacedOrder is null
         ? ""
-        : $"Mã đơn hàng của bạn là {_lastPlacedOrder.Code}. Cửa hàng sẽ xác nhận và giao hàng cho {_lastPlacedOrder.Receiver.Name}, bạn theo dõi trạng thái trong mục \"Đơn hàng của tôi\".";
+        : $"Mã đơn hàng của bạn là {_lastPlacedOrder.Code}. Cửa hàng sẽ xác nhận và giao hàng cho {_lastPlacedOrder.Receiver.Name}, bạn theo dõi trạng thái trong mục \"Đơn hàng của tôi\"."
+          + (IsGuest ? $" Đăng ký tài khoản bằng số {_lastPlacedOrder.Receiver.Phone} để lưu lịch sử mua hàng và địa chỉ này." : "");
     public string PlacedOrderPaymentMethod => _lastPlacedOrder?.PaymentMethod ?? "";
     public string PlacedOrderTotalText => (_lastPlacedOrder?.Total ?? 0m).ToString("N0", Vi) + " ₫";
 

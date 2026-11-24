@@ -9,6 +9,7 @@
         @if (ViewData["Guest"] is true)
         {
             <p>Mã đơn hàng của bạn là <b>@Model.Code</b>. Cửa hàng sẽ gọi số @Model.Phone để xác nhận và giao hàng cho @Model.Receiver.</p>
+            <p class="muted">Đăng ký tài khoản bằng số @Model.Phone để lưu lịch sử mua hàng và địa chỉ này.</p>
         }
         else
         {

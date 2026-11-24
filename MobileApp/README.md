@@ -20,7 +20,7 @@ App mua hàng cho khách, viết bằng .NET MAUI (`net10.0-android`, Android 7.
 
 **Cách hoạt động:**
 - **Phiên đăng nhập:** token giữ trong `SecureStorage`. `SessionManager` làm mới token trước khi hết hạn 30 giây; API trả 401 thì `AuthorizedHandler` làm mới rồi gửi lại đúng một lần.
-- **Khách vãng lai:** app gửi mã thiết bị (`DeviceIdentity`) để dùng giỏ hàng, thanh toán và đơn hàng.
+- **Khách vãng lai:** app gửi mã thiết bị (`DeviceIdentity`) để dùng giỏ hàng, thanh toán và đơn hàng, không cần đăng nhập. Đăng ký bằng số đã đặt hàng thì đơn và địa chỉ tự vào tài khoản.
 - **Bộ nhớ đệm:** danh sách đơn hàng giữ 10 phút trong RAM, tải lại khi giỏ hoặc đơn thay đổi, xóa khi đăng xuất.
 
 ## Cấu hình

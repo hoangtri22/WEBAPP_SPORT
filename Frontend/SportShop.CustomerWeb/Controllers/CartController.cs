@@ -138,14 +138,13 @@ public class CartController(DbStatus db, ShopStore shop, GuestStore guests) : Co
         return View(order);
     }
 
-    // Đặt hàng không tài khoản: kiểm tra người nhận, số đã thuộc tài khoản thì yêu cầu đăng nhập; chọn hồ sơ qua GuestStore.Resolve(), ghi đơn qua ShopStore.PlaceGuestOrder() rồi xóa hồ sơ tạm thừa.
+    // Đặt hàng không tài khoản: kiểm tra người nhận, chọn hồ sơ theo số điện thoại qua GuestStore.Resolve(), ghi đơn qua ShopStore.PlaceGuestOrder() rồi xóa hồ sơ tạm thừa.
     (int? OrderId, string? Error) PlaceAsGuest(ReceiverInfo to, int payMethod)
     {
         string phone = to.Phone.Trim();
         if (string.IsNullOrWhiteSpace(to.Name) || to.Name.Length > 100 || string.IsNullOrWhiteSpace(to.Address) || to.Address.Length > 255)
             return (null, "Vui lòng nhập họ tên (tối đa 100 ký tự) và địa chỉ (tối đa 255 ký tự).");
         if (!Regex.IsMatch(phone, @"^0\d{9}$")) return (null, "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
-        if (guests.PhoneHasAccount(phone)) return (null, "Số điện thoại này đã đăng ký tài khoản. Vui lòng đăng nhập để đặt hàng.");
         int owner = guests.Resolve(GuestId, to.Name, phone);
         var (orderId, error) = shop.PlaceGuestOrder(GuestId, owner, to, payMethod);
         if (orderId == null) return (null, error);

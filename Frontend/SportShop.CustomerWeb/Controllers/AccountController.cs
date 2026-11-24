@@ -64,7 +64,7 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    // Đăng ký khách hàng: kiểm tra form bằng Validate(), gọi CustomerStore.Register() thêm TAI_KHOAN và KHACH_HANG vào MySQL; thành công thì quay về form đăng nhập.
+    // Đăng ký khách hàng: kiểm tra form bằng Validate(), gọi CustomerStore.Register() thêm TAI_KHOAN và KHACH_HANG vào MySQL, đồng bộ đơn đã mua bằng số điện thoại đó; thành công thì quay về form đăng nhập.
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Register(string username, string email, string phone, string password)
     {
@@ -86,7 +86,7 @@ public class AccountController : Controller
             return View("Auth", vm);
         }
 
-        return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Bạn có thể đăng nhập ngay." });
+        return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Lịch sử mua hàng của số điện thoại này (nếu có) đã được đồng bộ, bạn có thể đăng nhập ngay." });
     }
 
     // Đăng nhập xong: chuyển giỏ của hồ sơ khách mua không tài khoản (guest_id) sang giỏ tài khoản, cộng dồn số lượng và giới hạn theo tồn kho, rồi bỏ hồ sơ tạm.

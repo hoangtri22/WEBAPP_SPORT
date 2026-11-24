@@ -6,7 +6,7 @@ Web quản trị cho Quản lý và Nhân viên (ASP.NET Core MVC, .NET 10). Chu
 
 | Menu | Làm được gì |
 |---|---|
-| Tổng quan | Doanh thu, số đơn hôm nay, phản hồi chưa trả lời, lịch hẹn, đơn gần nhất |
+| Tổng quan | Doanh thu, số đơn hôm nay, phản hồi chưa trả lời, lịch hẹn, đơn gần nhất; báo cáo thống kê theo khoảng ngày, tạo, lưu và tải báo cáo Excel, PDF |
 | Tài khoản & Phân quyền | Tạo, sửa, khóa, xóa mềm, khôi phục tài khoản |
 | Quản lý nhân viên | Hồ sơ nhân viên, cho nghỉ việc, khôi phục |
 | Quản lý khách hàng | Hồ sơ, nhóm khách theo tiêu chí, ghi chú chăm sóc, khóa, xóa mềm, khôi phục |
@@ -17,7 +17,6 @@ Web quản trị cho Quản lý và Nhân viên (ASP.NET Core MVC, .NET 10). Chu
 | Quản lý hóa đơn | Danh sách kèm khung chi tiết, xuất Excel |
 | Phản hồi khách hàng, Khảo sát | Trả lời, ẩn hiện phản hồi; tạo, gửi, đóng và xem kết quả khảo sát |
 | Thống kê doanh thu | Thu, chi, lợi nhuận theo kỳ, nhân viên, khách, sản phẩm; xuất Excel, PDF |
-| Báo cáo thống kê | Chỉ số theo khoảng ngày; tạo, lưu và tải báo cáo Excel, PDF |
 
 **Phân quyền:**
 - Chỉ nhân viên và quản lý đăng nhập được, tài khoản khách bị chặn.
@@ -57,7 +56,7 @@ SportShop.Admin/
 ├── Controllers/                # Một controller cho mỗi nhóm menu
 │   ├── AccountController.cs    # Đăng nhập, đăng xuất, tài khoản
 │   ├── CrudController.cs       # Mở form, lưu, xóa, thao tác riêng của mọi đối tượng
-│   ├── ReportsController.cs    # Báo cáo thống kê, tạo và tải báo cáo
+│   ├── HomeController.cs       # Tổng quan, báo cáo thống kê, tạo và tải báo cáo
 │   ├── StatsController.cs      # Thống kê doanh thu, xuất Excel và PDF
 │   └── LayoutDataFilter.cs     # Dữ liệu chung của khung trang
 ├── Models/
@@ -66,6 +65,7 @@ SportShop.Admin/
 │   ├── CrudDefs.cs             # Khai báo trường của các form
 │   ├── DataCache.cs            # Bộ nhớ đệm 2 hoặc 10 phút
 │   ├── Domain.cs, ViewModels.cs, TablePage.cs # Kiểu dữ liệu và bảng hiển thị
+│   ├── ReportBuilder.cs        # Tính số liệu báo cáo ở Tổng quan
 │   ├── ReportStore.cs          # Lưu các báo cáo đã tạo
 │   ├── StatsPdf.cs             # Dựng PDF doanh thu
 │   ├── Catalog.cs, MemberTier.cs # Quy tắc loại lưu trữ, voucher, hạng thành viên
@@ -79,5 +79,6 @@ SportShop.Admin/
     └── js/
         ├── admin.js            # Form, bảng, khung xem nhanh, thông báo
         ├── search-kit.js       # Tìm kiếm và bộ lọc nâng cao
+        ├── stats-chart.js      # Biểu đồ trang Thống kê doanh thu
         └── tab-session.js      # Mã tab cho phiên đăng nhập
 ```

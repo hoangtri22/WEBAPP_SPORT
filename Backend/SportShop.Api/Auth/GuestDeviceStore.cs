@@ -19,6 +19,12 @@ public class GuestDeviceStore(MySqlConnectionFactory connections)
             """, device, cancellationToken: cancellationToken));
     }
 
+    // Hồ sơ khách của thiết bị còn dùng được; hồ sơ đã gắn tài khoản hoặc đã xóa thì bỏ qua, để thiết bị chưa đăng nhập không xem được dữ liệu của tài khoản.
+    const string ActiveMapping = """
+        SELECT g.customer_id FROM MOBILE_GUEST_CUSTOMER g JOIN KHACH_HANG kh ON kh.ma_khach_hang = g.customer_id
+        WHERE g.device_key = @deviceKey AND kh.ma_tai_khoan IS NULL AND kh.da_xoa = 0
+        """;
+
     // Ánh xạ device_key của khách vãng lai sang một ma_khach_hang (ma_tai_khoan = NULL) trong KHACH_HANG để dùng chung luồng Giỏ hàng - Thanh toán - Đơn hàng.
     public virtual async Task<int?> ResolveOrCreateGuestCustomerAsync(string deviceKey, CancellationToken cancellationToken)
     {
@@ -37,14 +43,14 @@ public class GuestDeviceStore(MySqlConnectionFactory connections)
             """, cancellationToken: cancellationToken));
 
         var existingId = await c.ExecuteScalarAsync<int?>(new CommandDefinition(
-            "SELECT customer_id FROM MOBILE_GUEST_CUSTOMER WHERE device_key = @deviceKey",
+            ActiveMapping,
             new { deviceKey }, cancellationToken: cancellationToken));
         if (existingId is int id && id > 0)
             return id;
 
         await using var tx = await c.BeginTransactionAsync(cancellationToken);
         var lockedId = await c.ExecuteScalarAsync<int?>(new CommandDefinition(
-            "SELECT customer_id FROM MOBILE_GUEST_CUSTOMER WHERE device_key = @deviceKey FOR UPDATE",
+            ActiveMapping + " FOR UPDATE",
             new { deviceKey }, tx, cancellationToken: cancellationToken));
         if (lockedId is int foundId && foundId > 0)
         {
@@ -59,7 +65,7 @@ public class GuestDeviceStore(MySqlConnectionFactory connections)
             """, transaction: tx, cancellationToken: cancellationToken));
 
         await c.ExecuteAsync(new CommandDefinition("""
-            INSERT INTO MOBILE_GUEST_CUSTOMER (device_key, customer_id)
+            REPLACE INTO MOBILE_GUEST_CUSTOMER (device_key, customer_id)
             VALUES (@deviceKey, @newCustomerId)
             """, new { deviceKey, newCustomerId }, tx, cancellationToken: cancellationToken));
 

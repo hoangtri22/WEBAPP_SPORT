@@ -1,8 +1,8 @@
-﻿namespace SportShop.Admin.Models;
+namespace SportShop.Admin.Models;
 
 // Dữ liệu trang Tổng quan.
 public record HomeVm(decimal RevToday, decimal RevYesterday, int OrdToday, int OrdYesterday, int StaffTotal, int StaffWorking,
-    int Customers, int CustomersActive, int Unanswered, int FollowToday, List<Order> Recent, Dictionary<int, string> CustomerNames);
+    int Customers, int CustomersActive, int Unanswered, int FollowToday, List<Order> Recent, Dictionary<int, string> CustomerNames, ReportsVm Report);
 
 // Dữ liệu trang Phản hồi khách hàng.
 public record FeedbackVm(List<FeedbackItem> Items, Dictionary<int, Customer> Customers, Dictionary<int, string> EmployeeNames);

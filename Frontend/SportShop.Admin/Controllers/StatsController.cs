@@ -7,8 +7,8 @@ namespace SportShop.Admin.Controllers;
 // Một cột của bảng thống kê; Money cho biết cột là số tiền.
 public record StatCol(string Name, bool Money = true);
 
-// Một dòng của bảng thống kê.
-public record StatRow(string Label, decimal[] Values);
+// Một dòng của bảng thống kê; At là thời điểm của dòng (bảng theo khoảng ngày) để biểu đồ gộp theo thời gian.
+public record StatRow(string Label, decimal[] Values, DateTime? At = null);
 
 // Total rỗng nghĩa là bảng không có dòng Tổng cộng ở cuối (bảng thu - chi - lợi nhuận đã có cột Tổng cộng bên phải).
 public record StatTable(string Key, string Title, string First, List<StatCol> Cols, List<StatRow> Rows, decimal[] Total);
@@ -52,7 +52,7 @@ public class StatsController(ShopData db) : Controller
         return File(ExcelBytes(vm), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"thong-ke-{vm.Kind}-{DateTime.Today:yyyyMMdd}.xlsx");
     }
 
-    // Dựng file Excel (mỗi bảng một sheet) từ dữ liệu thống kê; dùng chung cho nút Xuất Excel và việc tạo báo cáo ở trang Báo cáo thống kê (ReportsController.Create).
+    // Dựng file Excel (mỗi bảng một sheet) từ dữ liệu thống kê; dùng chung cho nút Xuất Excel và việc tạo báo cáo ở trang Tổng quan (HomeController.CreateReport).
     internal static byte[] ExcelBytes(StatsVm vm)
     {
         using var book = new XLWorkbook();
@@ -149,7 +149,7 @@ public class StatsController(ShopData db) : Controller
 
         if (Want("range"))
             tables.Add(new StatTable("range", "Hóa đơn theo khoảng ngày", "Hóa đơn", [new("Tổng tiền")],
-                inv.Select(i => new StatRow($"{i.Number} · {i.Date:dd/MM/yyyy HH:mm} · {i.Customer}", [i.Total])).ToList(), [inv.Sum(i => i.Total)]));
+                inv.Select(i => new StatRow($"{i.Number} · {i.Date:dd/MM/yyyy HH:mm} · {i.Customer}", [i.Total], i.Date)).ToList(), [inv.Sum(i => i.Total)]));
 
         if (Want("period"))
         {

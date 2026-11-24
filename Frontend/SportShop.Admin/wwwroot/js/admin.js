@@ -388,6 +388,24 @@ document.querySelectorAll('.dtable').forEach(function (card) {
 });
 pagePlainTables(document);
 
+// Giữ vị trí cuộn: lưu vị trí menu trái và nội dung lúc rời trang; tải lại đúng trang đó (đổi tab, lọc, lưu) thì nội dung nằm yên, sang trang khác thì bắt đầu từ đầu trang.
+(function () {
+    var NAV = 'sportshop.admin.nav', PAGE = 'sportshop.admin.page', nav = document.querySelector('.sidebar .nav');
+    window.addEventListener('pagehide', function () {
+        try {
+            if (nav) sessionStorage.setItem(NAV, nav.scrollTop);
+            sessionStorage.setItem(PAGE, JSON.stringify({ path: location.pathname, y: window.scrollY }));
+        } catch (e) { }
+    });
+    // Cuộn lại sau khi mọi script đã dựng xong bảng và biểu đồ để trang đủ chiều cao.
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            var last = JSON.parse(sessionStorage.getItem(PAGE) || 'null');
+            if (last && last.path === location.pathname && !location.hash) window.scrollTo(0, last.y);
+        } catch (e) { }
+    });
+})();
+
 // Ctrl + K: đưa con trỏ vào ô tìm kiếm của trang.
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {

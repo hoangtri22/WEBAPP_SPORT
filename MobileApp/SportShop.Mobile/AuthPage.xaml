@@ -57,6 +57,7 @@
                             <Entry Grid.Column="1" Text="{Binding Phone}" Placeholder="Số điện thoại" Style="{StaticResource FieldEntry}" Keyboard="Telephone" MaxLength="10" AutomationId="Phone" />
                         </Grid>
                     </Border>
+                    <Label IsVisible="{Binding IsRegister}" Text="Đã từng mua hàng bằng số này? Đơn hàng và địa chỉ sẽ tự đồng bộ vào tài khoản." Style="{StaticResource SmallMuted}" Margin="4,-6,4,0" />
                     <Border Style="{StaticResource FieldBox}">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                             <Image Source="ic_lock_muted.png" Style="{StaticResource FieldIcon}" />

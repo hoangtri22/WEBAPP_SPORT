@@ -52,6 +52,7 @@
                 <label class="@(Err("phone") != "" ? "has-error" : "")">Số điện thoại
                     <div>@Icons.Svg("headphones", 18)<input name="phone" inputmode="numeric" placeholder="09xx xxx xxx" value="@Model.Phone" autocomplete="tel" /></div>
                     @if (Err("phone") != "") { <small>@Err("phone")</small> }
+                    else { <span class="field-hint">Đã từng mua hàng bằng số này? Đơn hàng và địa chỉ sẽ tự đồng bộ vào tài khoản.</span> }
                 </label>
             }
 

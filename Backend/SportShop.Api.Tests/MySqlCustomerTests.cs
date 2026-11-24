@@ -196,6 +196,36 @@ public sealed class MySqlCustomerTests
         Assert.Equal(0, empty.GetProperty("totalItems").GetInt32());
     }
 
+    // Kiểm tra đăng ký gộp đơn mua không đăng nhập của số điện thoại từ nhiều hồ sơ, đặt địa chỉ mặc định và không lấy đơn số khác của cùng thiết bị.
+    [MySqlFact]
+    public async Task Register_SyncsGuestOrdersAndDefaultAddressByPhone()
+    {
+        using var factory = new CustomerApiFactory();
+        using var client = factory.CreateClient();
+        string phone = "09" + Random.Shared.Next(10000000, 99999999), other = "08" + phone[2..], key = "test-" + Guid.NewGuid().ToString("N");
+        client.DefaultRequestHeaders.Add("X-Guest-Device-Key", key);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/cart")).StatusCode);
+        await using var c = await factory.OpenAsync();
+        int device = await c.ExecuteScalarAsync<int>("SELECT customer_id FROM MOBILE_GUEST_CUSTOMER WHERE device_key=@key", new { key });
+        int web = await c.ExecuteScalarAsync<int>("INSERT INTO KHACH_HANG(ma_tai_khoan,ho_lot,ten,so_dien_thoai,tong_chi_tieu,diem_tich_luy) VALUES(NULL,'Trần','Web',@phone,2500000,250); SELECT LAST_INSERT_ID();", new { phone });
+        await c.ExecuteAsync("UPDATE KHACH_HANG SET so_dien_thoai=@other WHERE ma_khach_hang=@device", new { other, device });
+        int pay = await c.ExecuteScalarAsync<int>("SELECT MIN(ma_phuong_thuc_thanh_toan) FROM PHUONG_THUC_THANH_TOAN");
+        foreach (var (owner, number, address) in new[] { (web, phone, "1 Đường Web"), (device, phone, "2 Đường App"), (device, other, "3 Đường Khác") })
+            await c.ExecuteAsync("INSERT INTO DON_HANG(ma_khach_hang,ten_nguoi_nhan,sdt_nguoi_nhan,dia_chi_giao_hang,ma_phuong_thuc_thanh_toan) VALUES(@owner,'Trần Khách',@number,@address,@pay)", new { owner, number, address, pay });
+
+        var token = await RegisterAsync(client, Registration(Username()) with { Phone = phone });
+        client.DefaultRequestHeaders.Remove("X-Guest-Device-Key");
+        Authenticate(client, token);
+        var me = await client.GetFromJsonAsync<JsonElement>("/api/v1/me");
+        int id = me.GetProperty("customerId").GetInt32();
+        Assert.Equal(web, id);
+        Assert.Equal(2, await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@id AND sdt_nguoi_nhan=@phone", new { id, phone }));
+        Assert.Equal(2, await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@id", new { id }));
+        Assert.Equal("2 Đường App", await c.ExecuteScalarAsync<string>("SELECT dia_chi_chi_tiet FROM SO_DIA_CHI WHERE ma_khach_hang=@id AND la_mac_dinh=1", new { id }));
+        Assert.Equal("bac", await c.ExecuteScalarAsync<string>("SELECT hang_thanh_vien FROM KHACH_HANG WHERE ma_khach_hang=@id", new { id }));
+        Assert.Equal(1, await c.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM DON_HANG WHERE ma_khach_hang=@device AND sdt_nguoi_nhan=@other", new { device, other }));
+    }
+
     // Tạo tên đăng nhập thử không trùng.
     static string Username() => "apitest_" + Guid.NewGuid().ToString("N")[..18];
     // Tạo yêu cầu đăng ký thử.

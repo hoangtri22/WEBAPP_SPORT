@@ -119,8 +119,9 @@ Cần Visual Studio 2026 có hai workload **ASP.NET and web development** và **
 
 ### 3. Chạy web và app cùng lúc
 
-Làm bước 1, 2 của mục 2. Trong **Configure Startup Projects**, đặt **Start** cho `SportShop.Api` (để đầu danh sách), `SportShop.Admin`, `SportShop.CustomerWeb` (Debug Target **http**)
-và `SportShop.Mobile` (Debug Target là máy ảo hoặc điện thoại), rồi bấm **F5**.
+Làm bước 1, 2 của mục 2, và chọn máy ảo hoặc điện thoại cho `SportShop.Mobile` một lần theo bước 4, 5 của mục 2 (Visual Studio ghi nhớ thiết bị này).
+Sau đó vào **Configure Startup Projects**, đặt **Start** cho `SportShop.Api` (để đầu danh sách), `SportShop.Admin`, `SportShop.CustomerWeb` với Debug Target **http**,
+và `SportShop.Mobile` với Debug Target **SportShop.Mobile**, rồi bấm **F5**.
 
 **Dừng:** bấm **Shift + F5**. Project mở bằng Ctrl + F5 hoặc Start Without Debugging thì đóng cửa sổ console của nó.
 

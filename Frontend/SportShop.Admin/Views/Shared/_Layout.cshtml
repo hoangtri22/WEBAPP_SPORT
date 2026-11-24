@@ -29,7 +29,6 @@
         ("feedback", "Phản hồi khách hàng", "Feedback", "Index", "message-square"),
         ("surveys", "Khảo sát", "Feedback", "Surveys", "clipboard-list"),
         ("stats", "Thống kê doanh thu", "Stats", "Index", "trending-up"),
-        ("reports", "Báo cáo thống kê", "Reports", "Index", "bar-chart"),
     ];
 }
 <!DOCTYPE html>
@@ -75,6 +74,17 @@ else
             <div><div class="help-title">Cần hỗ trợ?</div><div class="help-mail">support@sportshop.vn</div></div>
         </div>
     </aside>
+    <script>
+        // Menu trái giữ nguyên vị trí cuộn khi đổi trang (admin.js lưu lúc rời trang); mục đang chọn bị khuất thì cuộn vừa đủ để thấy.
+        (function () {
+            var nav = document.querySelector('.sidebar .nav'), item = nav.querySelector('.active');
+            try { nav.scrollTop = +sessionStorage.getItem('sportshop.admin.nav') || 0; } catch (e) { }
+            if (!item) return;
+            var a = item.getBoundingClientRect(), n = nav.getBoundingClientRect();
+            if (a.top < n.top) nav.scrollTop -= n.top - a.top + 8;
+            else if (a.bottom > n.bottom) nav.scrollTop += a.bottom - n.bottom + 8;
+        })();
+    </script>
 
     <div class="main">
         <header class="topbar">

@@ -3,7 +3,7 @@ using MySqlConnector;
 
 namespace SportShop.CustomerWeb.Services;
 
-// Khách mua không cần tài khoản: một dòng KHACH_HANG có ma_tai_khoan = NULL, nhận diện bằng số điện thoại; đăng ký cùng số (CustomerStore.Register()) thì giữ nguyên giỏ và đơn đã mua.
+// Khách mua không cần tài khoản: một dòng KHACH_HANG có ma_tai_khoan = NULL, nhận diện bằng số điện thoại; đăng ký cùng số (CustomerStore.Register()) thì giỏ, đơn đã mua và địa chỉ được đồng bộ vào tài khoản.
 public class GuestStore(IConfiguration config)
 {
     readonly string _cs = config.GetConnectionString("Default") ?? "";
@@ -40,7 +40,7 @@ public class GuestStore(IConfiguration config)
         return c.Query<int>("SELECT ma_khach_hang FROM KHACH_HANG WHERE ma_tai_khoan IS NULL AND da_xoa=0 AND so_dien_thoai=@phone ORDER BY ma_khach_hang", new { phone }).ToList();
     }
 
-    // Số điện thoại đã thuộc về một tài khoản đăng ký (khách phải đăng nhập để mua).
+    // Số điện thoại đã thuộc về một tài khoản đăng ký (phải đăng nhập để xem đơn của số này).
     public bool PhoneHasAccount(string phone)
     {
         using var c = Open();
@@ -92,7 +92,7 @@ public class GuestStore(IConfiguration config)
     }
 
     // Tách họ tên thành họ lót và tên (từ cuối), cắt theo độ dài cột.
-    static (string Last, string First) SplitName(string? fullName)
+    internal static (string Last, string First) SplitName(string? fullName)
     {
         var words = (fullName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0) return ("", "Khách");

@@ -1,57 +1,19 @@
 @using SportShop.Admin.Controllers
 @model ReportsVm
 @{
-    ViewData["Title"] = "Báo cáo thống kê";
     const double circ = 2 * Math.PI * 54;
     double offset = 0;
     // Định dạng số cho tọa độ biểu đồ SVG.
     string Num(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 }
-<div class="page-head">
+<div class="page-head report-sec" id="report">
     <div>
-        <div class="eyebrow">SPORTSHOP ADMIN</div>
-        <h1 class="page-title">Báo cáo thống kê</h1>
-        <p class="page-sub">Phân tích hiệu quả kinh doanh</p>
+        <h2 class="page-title sm">Báo cáo thống kê</h2>
+        <p class="page-sub">Phân tích hiệu quả kinh doanh theo kỳ</p>
     </div>
 </div>
 
-<partial name="_Section" model="Model.History" view-data='new ViewDataDictionary(ViewData) { { "id", "tblReports" }, { "hint", "báo cáo" } }' />
-
-<dialog class="report-dlg" id="reportDlg">
-    <form method="post" id="reportForm">
-        @Html.AntiForgeryToken()
-        <h3>Tạo báo cáo</h3>
-        <label>Loại báo cáo
-            <select name="kind">
-                @foreach (var k in ReportsController.TypeLabels) { <option value="@k.Key">@k.Value</option> }
-            </select>
-        </label>
-        <label>Nhóm theo
-            <select name="group">
-                <option value="month">Tháng</option>
-                <option value="quarter">Quý</option>
-                <option value="year">Năm</option>
-            </select>
-        </label>
-        <div class="dlg-row">
-            <label>Từ ngày <input type="date" name="from" /></label>
-            <label>Đến ngày <input type="date" name="to" /></label>
-        </div>
-        <label>Định dạng
-            <select name="format">
-                <option value="Excel">Excel (.xlsx)</option>
-                <option value="PDF">PDF</option>
-            </select>
-        </label>
-        <p class="dlg-err" id="reportErr" hidden></p>
-        <div class="dlg-actions">
-            <button type="button" class="btn-outline" id="reportCancel">Hủy</button>
-            <button type="submit" class="btn-primary">Tạo báo cáo</button>
-        </div>
-    </form>
-</dialog>
-
-<form class="card range" method="get" asp-controller="Reports" asp-action="Index" id="rangeForm">
+<form class="card range" method="get" asp-controller="Home" asp-action="Index" id="rangeForm">
     <div class="range-input">
         @Icons.Svg("calendar", 20)
         <input type="date" name="from" id="fromDate" value="@Model.From.ToString("yyyy-MM-dd")" aria-label="Từ ngày" />
@@ -233,40 +195,38 @@
         @if (Model.Interests.Count == 0) { <div class="empty">Chưa có khách nào chọn sở thích</div> }</div>
 </section>
 
-@section Scripts {
-    <script>
-        // Hộp thoại "Tạo báo cáo": gửi form đến ReportsController.Create, thành công thì tải lại trang để báo cáo mới hiện trong danh sách.
-        (function () {
-            var dlg = document.getElementById('reportDlg'), openBtn = document.getElementById('newReport'), form = document.getElementById('reportForm');
-            if (!dlg || !openBtn) return;
-            var err = document.getElementById('reportErr');
-            openBtn.addEventListener('click', function () { err.hidden = true; dlg.showModal(); });
-            document.getElementById('reportCancel').addEventListener('click', function () { dlg.close(); });
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var btn = form.querySelector('[type=submit]');
-                btn.disabled = true;
-                postForm('/Reports/Create', new FormData(form)).then(function (res) {
-                    btn.disabled = false;
-                    handleResult(res, function (m) { err.textContent = m; err.hidden = false; });
-                });
-            });
-        })();
+<partial name="_Section" model="Model.History" view-data='new ViewDataDictionary(ViewData) { { "id", "tblReports" }, { "hint", "báo cáo" } }' />
 
-        // Chọn nhanh kỳ báo cáo: điền ngày from/to rồi gửi form GET đến ReportsController.Index.
-        document.getElementById('period').addEventListener('change', function () {
-            var v = this.value; if (!v) return;
-            var end = new Date(), start = new Date();
-            if (v === '7') start.setDate(end.getDate() - 6);
-            else if (v === '30') start.setDate(end.getDate() - 29);
-            else if (v === 'month') start = new Date(end.getFullYear(), end.getMonth(), 1);
-            else if (v === 'quarter') start = new Date(end.getFullYear(), Math.floor(end.getMonth() / 3) * 3, 1);
-            else if (v === 'year') start = new Date(end.getFullYear(), 0, 1);
-            // Đổi ngày theo giờ máy sang yyyy-MM-dd cho ô ngày, tránh toISOString() vì lệch múi giờ.
-            function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-            document.getElementById('fromDate').value = iso(start);
-            document.getElementById('toDate').value = iso(end);
-            document.getElementById('rangeForm').submit();
-        });
-    </script>
-}
+<dialog class="report-dlg" id="reportDlg">
+    <form method="post" id="reportForm">
+        @Html.AntiForgeryToken()
+        <h3>Tạo báo cáo</h3>
+        <label>Loại báo cáo
+            <select name="kind">
+                @foreach (var k in HomeController.ReportTypes) { <option value="@k.Key">@k.Value</option> }
+            </select>
+        </label>
+        <label>Nhóm theo
+            <select name="group">
+                <option value="month">Tháng</option>
+                <option value="quarter">Quý</option>
+                <option value="year">Năm</option>
+            </select>
+        </label>
+        <div class="dlg-row">
+            <label>Từ ngày <input type="date" name="from" /></label>
+            <label>Đến ngày <input type="date" name="to" /></label>
+        </div>
+        <label>Định dạng
+            <select name="format">
+                <option value="Excel">Excel (.xlsx)</option>
+                <option value="PDF">PDF</option>
+            </select>
+        </label>
+        <p class="dlg-err" id="reportErr" hidden></p>
+        <div class="dlg-actions">
+            <button type="button" class="btn-outline" id="reportCancel">Hủy</button>
+            <button type="submit" class="btn-primary">Tạo báo cáo</button>
+        </div>
+    </form>
+</dialog>

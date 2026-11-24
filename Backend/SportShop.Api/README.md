@@ -35,7 +35,7 @@ Cột `BIEN_THE_SP.hinh_anh` ghi dạng `/images/ten-anh.jpg`, file đặt trong
 ## Xác thực
 
 - **Khách có tài khoản:** gửi `Authorization: Bearer <accessToken>`. Access token sống 15 phút, phiên làm mới tối đa 30 ngày. Token là chuỗi ngẫu nhiên (không phải JWT), CSDL chỉ lưu hash. Mỗi lần làm mới đổi cả hai token; dùng lại token làm mới cũ thì phiên bị thu hồi.
-- **Khách vãng lai:** gửi `X-Guest-Device-Key`, chỉ dùng được `/api/v1/cart`, `/api/v1/checkout`, `/api/v1/orders`.
+- **Khách vãng lai:** gửi `X-Guest-Device-Key`, chỉ dùng được `/api/v1/cart`, `/api/v1/checkout`, `/api/v1/orders`. Đơn lưu theo số điện thoại; đăng ký bằng số đó thì đơn và địa chỉ được gộp vào tài khoản (`GuestHistory` của web khách).
 - **Quên mật khẩu:** mã OTP sống 10 phút, sai 5 lần thì hủy, gửi lại sau 60 giây.
 - **Google:** app mở `/api/v1/auth/google/start`, Google quay về `/api/v1/auth/google/callback`, app đổi vé (2 phút, dùng một lần) ở `/api/v1/auth/google/exchange`.
 - Đăng nhập sai 5 lần khóa 5 phút. Tài khoản nhân viên không đăng nhập được API.

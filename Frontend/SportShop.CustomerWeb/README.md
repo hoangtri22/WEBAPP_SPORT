@@ -15,7 +15,8 @@ Web mua hàng cho khách (ASP.NET Core MVC, .NET 10). Chuẩn bị CSDL và các
 
 **Hai cách mua hàng:**
 - **Có tài khoản:** dùng được voucher, xem đơn ở "Đơn hàng của tôi".
-- **Không có tài khoản:** nhận diện bằng số điện thoại, không dùng voucher, tra cứu đơn ở `/Track`. Số đã thuộc tài khoản thì phải đăng nhập. Đăng ký bằng số này sẽ gắn tài khoản vào hồ sơ và đơn đã mua. Đăng nhập thì giỏ của khách được gộp vào giỏ tài khoản.
+- **Không có tài khoản:** không cần đăng nhập hay đăng ký, đơn lưu theo số điện thoại, không dùng voucher, tra cứu đơn ở `/Track` (số đã thuộc tài khoản thì đăng nhập để xem). Đăng nhập thì giỏ của khách được gộp vào giỏ tài khoản.
+- **Đồng bộ khi đăng ký (web và app):** `GuestHistory` gộp mọi đơn đã mua bằng số đó trên web, app, tại quầy cùng chi tiêu, điểm, hạng vào tài khoản; địa chỉ của đơn giao gần nhất thành địa chỉ mặc định. Đơn mua không đăng nhập sau này bằng số của tài khoản được gộp ở lần đăng nhập kế tiếp. Tài khoản Google đồng bộ khi nhập số lần đầu.
 
 **Quy tắc chính:**
 - Phí giao hàng 30.000đ, miễn phí từ 500.000đ.
@@ -68,6 +69,7 @@ SportShop.CustomerWeb/
 │   ├── CustomerStore.cs        # Tài khoản, hồ sơ, phản hồi, khảo sát
 │   ├── CartStore.cs            # Giỏ hàng trong MySQL
 │   ├── GuestStore.cs           # Khách mua không cần tài khoản
+│   ├── GuestHistory.cs         # Đồng bộ lịch sử mua theo số điện thoại vào tài khoản
 │   ├── CatalogCache.cs         # Bộ nhớ đệm danh mục
 │   ├── ProductReviewStore.cs   # Đánh giá công khai cho API
 │   ├── LoginThrottle.cs        # Giới hạn đăng nhập sai

@@ -18,13 +18,13 @@ public class CustomerStore(IConfiguration config)
     static bool SamePassword(string stored, string entered) => PasswordStorage.Verify(stored, entered);
 
 
-    // Đăng nhập: tìm TAI_KHOAN theo tên đăng nhập hoặc email (JOIN VAI_TRO, KHACH_HANG), so mật khẩu bằng SamePassword(); chỉ nhận tài khoản khách đang hoạt động.
+    // Đăng nhập: tìm TAI_KHOAN theo tên đăng nhập hoặc email (JOIN VAI_TRO, KHACH_HANG), so mật khẩu bằng SamePassword(); chỉ nhận tài khoản khách đang hoạt động, rồi gộp đơn mua không đăng nhập bằng số của tài khoản.
     public (int? CustomerId, string? Error) Login(string username, string password)
     {
         using var c = Open();
         var r = c.QueryFirstOrDefault<LoginRow>("""
             SELECT tk.mat_khau AS Password, tk.trang_thai AS AccountStatus, vt.ten_vai_tro AS Role,
-                   kh.ma_khach_hang AS CustomerId, kh.da_xoa AS Deleted
+                   kh.ma_khach_hang AS CustomerId, kh.da_xoa AS Deleted, tk.so_dien_thoai AS Phone
             FROM TAI_KHOAN tk
             JOIN VAI_TRO vt ON vt.ma_vai_tro = tk.ma_vai_tro
             LEFT JOIN KHACH_HANG kh ON kh.ma_tai_khoan = tk.ma_tai_khoan
@@ -43,10 +43,24 @@ public class CustomerStore(IConfiguration config)
         if (!PasswordStorage.IsEncoded(r.Password))
             c.Execute("UPDATE TAI_KHOAN tk JOIN KHACH_HANG kh ON kh.ma_tai_khoan=tk.ma_tai_khoan SET tk.mat_khau=@encoded WHERE kh.ma_khach_hang=@id AND tk.mat_khau=@previous",
                 new { encoded = PasswordStorage.Hash(password), id = r.CustomerId.Value, previous = r.Password });
+        SyncGuestOrders(c, r.CustomerId.Value, r.Phone);
         return (r.CustomerId, null);
     }
 
-    // Đăng ký: kiểm tra trùng tên đăng nhập / email trong TAI_KHOAN, rồi trong một transaction thêm TAI_KHOAN (vai trò "Khách hàng") và KHACH_HANG.
+    // Gộp đơn mua không đăng nhập bằng số của tài khoản qua GuestHistory.Sync(); CSDL đang khóa thì bỏ qua, lần đăng nhập sau gộp tiếp.
+    static void SyncGuestOrders(MySqlConnection c, int customerId, string? phone)
+    {
+        try
+        {
+            if (c.State != System.Data.ConnectionState.Open) c.Open();
+            using var tx = c.BeginTransaction();
+            GuestHistory.Sync(c, tx, customerId, phone, newAccount: false);
+            tx.Commit();
+        }
+        catch (MySqlException e) when (e.ErrorCode is MySqlErrorCode.LockDeadlock or MySqlErrorCode.LockWaitTimeout) { }
+    }
+
+    // Đăng ký: kiểm tra trùng tên đăng nhập / email trong TAI_KHOAN, rồi trong một transaction thêm TAI_KHOAN (vai trò "Khách hàng"), KHACH_HANG và đồng bộ lịch sử mua hàng, địa chỉ của số điện thoại qua GuestHistory.Sync().
     public Dictionary<string, string> Register(string username, string email, string phone, string password)
     {
         username = username.Trim(); email = email.Trim(); phone = phone.Trim();
@@ -66,10 +80,11 @@ public class CustomerStore(IConfiguration config)
                     (SELECT ma_vai_tro FROM VAI_TRO WHERE ten_vai_tro = 'Khách hàng'), 'hoat_dong');
             SELECT LAST_INSERT_ID();
             """, new { username, email, phone, password = PasswordStorage.Hash(password) }, tx);
-        // Số điện thoại đã từng mua hàng không cần tài khoản (hoặc khách tại quầy): gắn tài khoản mới vào hồ sơ khách đó để giữ đơn đã mua, đã hủy, giỏ hàng, điểm và hạng thành viên.
-        var guest = c.QueryFirstOrDefault<GuestRow>("""
-            SELECT ma_khach_hang AS Id, ho_lot AS LastName, ten AS FirstName FROM KHACH_HANG
-            WHERE ma_tai_khoan IS NULL AND da_xoa = 0 AND so_dien_thoai = @phone ORDER BY ma_khach_hang LIMIT 1 FOR UPDATE
+        // Số điện thoại đã từng mua hàng (web, tại quầy): gắn tài khoản mới vào hồ sơ khách đó; các hồ sơ còn lại cùng số, kể cả thiết bị app, được gộp bằng GuestHistory.Sync().
+        string device = GuestHistory.DeviceSql(c, tx);
+        var guest = c.QueryFirstOrDefault<GuestRow>($"""
+            SELECT kh.ma_khach_hang AS Id, kh.ho_lot AS LastName, kh.ten AS FirstName FROM KHACH_HANG kh
+            WHERE kh.ma_tai_khoan IS NULL AND kh.da_xoa = 0 AND kh.so_dien_thoai = @phone AND {device} = 0 ORDER BY kh.ma_khach_hang LIMIT 1 FOR UPDATE
             """, new { phone }, tx);
         if (guest != null)
         {
@@ -81,6 +96,14 @@ public class CustomerStore(IConfiguration config)
             c.Execute("""
                 INSERT INTO KHACH_HANG (ma_tai_khoan, ho_lot, ten, so_dien_thoai) VALUES (@accountId, '', @username, @phone)
                 """, new { accountId, username, phone }, tx);
+        int customerId = c.ExecuteScalar<int>("SELECT ma_khach_hang FROM KHACH_HANG WHERE ma_tai_khoan = @accountId", new { accountId }, tx);
+        GuestHistory.Sync(c, tx, customerId, phone, newAccount: true);
+        // Hồ sơ mới lấy tên người nhận của lịch sử vừa đồng bộ thay cho tên đăng nhập.
+        if (guest == null && c.ExecuteScalar<string?>("SELECT ten_nguoi_nhan FROM SO_DIA_CHI WHERE ma_khach_hang = @customerId AND la_mac_dinh = 1 LIMIT 1", new { customerId }, tx) is string receiver)
+        {
+            var (last, first) = GuestStore.SplitName(receiver);
+            c.Execute("UPDATE KHACH_HANG SET ho_lot = @last, ten = @first WHERE ma_khach_hang = @customerId", new { last, first, customerId }, tx);
+        }
         tx.Commit();
         return errors;
     }
@@ -160,6 +183,7 @@ public class CustomerStore(IConfiguration config)
         using var c = Open();
         c.Open();
         int accountId = c.ExecuteScalar<int>("SELECT ma_tai_khoan FROM KHACH_HANG WHERE ma_khach_hang = @customerId", new { customerId });
+        bool firstPhone = string.IsNullOrEmpty(c.ExecuteScalar<string?>("SELECT so_dien_thoai FROM TAI_KHOAN WHERE ma_tai_khoan = @accountId", new { accountId }));
         if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM TAI_KHOAN WHERE email = @email AND ma_tai_khoan <> @accountId", new { email, accountId }) > 0)
             return "Email đã được tài khoản khác sử dụng.";
 
@@ -176,6 +200,8 @@ public class CustomerStore(IConfiguration config)
                 INSERT INTO KHACH_HANG_SO_THICH (ma_khach_hang, ma_so_thich)
                 SELECT @customerId, ma_so_thich FROM SO_THICH WHERE ten_so_thich = @name
                 """, new { customerId, name }, tx);
+        // Tài khoản Google chưa có số: lần đầu nhập số thì đồng bộ lịch sử mua hàng như lúc đăng ký.
+        if (firstPhone) GuestHistory.Sync(c, tx, customerId, phone, newAccount: false);
         tx.Commit();
         return null;
     }
@@ -422,7 +448,7 @@ public class CustomerStore(IConfiguration config)
     // Dòng mật khẩu tài khoản đọc bằng Dapper.
     class PasswordRow { public int AccountId { get; set; } public string Password { get; set; } = ""; }
     // Dòng thông tin đăng nhập đọc bằng Dapper.
-    class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } public bool Deleted { get; set; } }
+    class LoginRow { public string Password { get; set; } = ""; public string AccountStatus { get; set; } = ""; public string Role { get; set; } = ""; public int? CustomerId { get; set; } public bool Deleted { get; set; } public string? Phone { get; set; } }
     // Dòng hồ sơ khách đọc bằng Dapper.
     class ProfileRow { public string LastName { get; set; } = ""; public string FirstName { get; set; } = ""; public string? Username { get; set; } public string? Email { get; set; } public string? Phone { get; set; } public DateTime? Birth { get; set; } public string? Gender { get; set; } public string? Tier { get; set; } public decimal Spent { get; set; } public int Points { get; set; } public long Orders { get; set; } }
     // Dòng phản hồi đọc bằng Dapper.

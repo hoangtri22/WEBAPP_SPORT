@@ -10,6 +10,7 @@
         <div class="checkout-main">
             <div class="card pad">
                 <h3>Thông tin nhận hàng</h3>
+                @if (Model.IsGuest) { <p class="muted guest-note">Mua hàng không cần đăng nhập hay đăng ký. Đơn được lưu theo số điện thoại bên dưới; khi đăng ký tài khoản bằng số này, lịch sử mua hàng và địa chỉ giao hàng sẽ tự đồng bộ vào tài khoản.</p> }
                 <div class="form-grid">
                     <label>Họ và tên<input name="name" value="@Model.To.Name" required /></label>
                     <label>Số điện thoại<input name="phone" value="@Model.To.Phone" required placeholder="10 chữ số" /></label>

@@ -222,6 +222,8 @@ h1, h2, h3, p { margin: 0; }
 .customer-auth-form input { flex: 1; border: 0; outline: 0; min-width: 0; font-size: 14px; color: var(--ink); }
 .customer-auth-form label button { border: 0; background: transparent; color: #94a3b8; }
 .customer-auth-form label > small { display: block; color: #dc2626; font-size: 12px; margin-top: 5px; font-weight: 500; }
+.guest-note { margin: 6px 0 14px; font-size: 13px; line-height: 1.6; }
+.customer-auth-form .field-hint { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .customer-auth-form .has-error > div { border-color: #ef9a9a; background: #fffafa; }
 .customer-submit { width: 100%; height: 50px; margin-top: 6px; }
 .auth-switch { display: flex; justify-content: center; gap: 6px; color: var(--muted); font-size: 13.5px; margin-top: 20px; }

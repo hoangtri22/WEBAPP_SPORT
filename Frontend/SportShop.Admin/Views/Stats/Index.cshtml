@@ -7,6 +7,12 @@
     string? linkFrom = Model.DatesChosen ? query.from : null, linkTo = Model.DatesChosen ? query.to : null;
     // Định dạng ô bảng: cột tiền dùng Fmt.Money(), cột khác dùng số thường.
     string Cell(decimal v, StatCol c) => c.Money ? Fmt.Money(v) : v.ToString("N0");
+    // Giá trị gốc của ô cho wwwroot/js/stats-chart.js vẽ biểu đồ từ chính bảng này.
+    string Raw(decimal v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    // Kiểu biểu đồ theo bảng: hóa đơn gộp theo thời gian, thu - chi theo kỳ là đường, còn lại là thanh xếp hạng.
+    string ChartOf(string key) => key switch { "range" => "time", "period" => "lines", _ => "bars" };
+    // Tiêu đề biểu đồ của từng bảng.
+    string ChartTitle(StatTable t) => t.Key switch { "range" => "Doanh thu theo thời gian", "period" => "Xu hướng thu, chi và lợi nhuận", "employee" => "Doanh thu theo nhân viên", "customer" => "Khách hàng mua nhiều nhất", _ => "Sản phẩm doanh thu cao nhất" };
 }
 <div class="page-head">
     <div>
@@ -14,7 +20,7 @@
         <h1 class="page-title">Thống kê doanh thu</h1>
         <p class="page-sub">Tổng tiền hóa đơn theo thời gian, nhân viên, khách hàng và sản phẩm</p>
     </div>
-    <div class="head-actions">
+    <div class="head-actions stat-actions">
         <a class="btn-outline" asp-action="Export" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Xuất Excel</a>
         <a class="btn-outline" asp-action="Pdf" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-kind="@Model.Kind" asp-route-group="@Model.Group">@Icons.Svg("download", 18) Tải PDF</a>
         <button type="button" class="btn-primary" onclick="window.print()">@Icons.Svg("printer", 18) In / Lưu PDF</button>
@@ -27,72 +33,91 @@
     <p>Ngày lập: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
 </div>
 
-<form class="card range" method="get" asp-action="Index" onsubmit="this.querySelectorAll('input[data-auto=&quot;1&quot;]').forEach(function (i) { if (i.value === i.defaultValue) i.disabled = true; })">
-    <input type="hidden" name="kind" value="@Model.Kind" />
-    <div class="range-input">
-        @Icons.Svg("calendar", 20)
-        <input type="date" name="from" value="@query.from" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Từ ngày" />
-        <span>–</span>
-        <input type="date" name="to" value="@query.to" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Đến ngày" />
-    </div>
-    <div class="select-wrap plain">
-        <select name="group" aria-label="Nhóm theo (bảng theo kỳ và theo khách hàng)">
-            <option value="month" selected="@(Model.Group == "month")">Nhóm theo tháng</option>
-            <option value="quarter" selected="@(Model.Group == "quarter")">Nhóm theo quý</option>
-            <option value="year" selected="@(Model.Group == "year")">Nhóm theo năm</option>
-        </select>
-    </div>
-    <button type="submit" class="btn-primary">Xem thống kê</button>
-</form>
-
-<div class="stat-tabs">
-    @foreach (var k in StatsController.KindList)
-    {
-        <a class="@(k.Key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@k.Key" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-group="@Model.Group">@k.Text</a>
-    }
-</div>
-
 <div class="kpis kpis-3">
     <div class="kpi"><small>Số hóa đơn</small><div class="kpi-num">@Model.Invoices.ToString("N0")</div></div>
     <div class="kpi"><small>Tổng tiền hóa đơn</small><div class="kpi-num">@Fmt.Money(Model.Total)</div></div>
     <div class="kpi"><small>Giá trị trung bình</small><div class="kpi-num">@Fmt.Money(Model.Invoices == 0 ? 0 : Model.Total / Model.Invoices)</div></div>
 </div>
 
-@foreach (var t in Model.Tables)
+@for (int n = 0; n < Model.Tables.Count; n++)
 {
-    <div class="card stat-card">
-        <div class="card-title">@t.Title</div>
-        <div class="table-scroll">
-            <table class="tbl stat-tbl">
-                <thead>
-                    <tr>
-                        <th>@t.First</th>
-                        @foreach (var c in t.Cols) { <th class="num">@c.Name</th> }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in t.Rows)
+    var t = Model.Tables[n];
+    <section class="stat-pair">
+        <div class="stat-left">
+            @if (n == 0)
+            {
+                <form class="card range" method="get" asp-action="Index" onsubmit="this.querySelectorAll('input[data-auto=&quot;1&quot;]').forEach(function (i) { if (i.value === i.defaultValue) i.disabled = true; })">
+                    <input type="hidden" name="kind" value="@Model.Kind" />
+                    <div class="range-input">
+                        @Icons.Svg("calendar", 20)
+                        <input type="date" name="from" value="@query.from" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Từ ngày" />
+                        <span>–</span>
+                        <input type="date" name="to" value="@query.to" data-auto="@(Model.DatesChosen ? null : "1")" aria-label="Đến ngày" />
+                    </div>
+                    <div class="select-wrap plain">
+                        <select name="group" aria-label="Nhóm theo (bảng theo kỳ và theo khách hàng)">
+                            <option value="month" selected="@(Model.Group == "month")">Nhóm theo tháng</option>
+                            <option value="quarter" selected="@(Model.Group == "quarter")">Nhóm theo quý</option>
+                            <option value="year" selected="@(Model.Group == "year")">Nhóm theo năm</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Xem thống kê</button>
+                </form>
+
+                <div class="stat-tabs">
+                    @foreach (var k in StatsController.KindList)
                     {
-                        <tr>
-                            <td>@r.Label</td>
-                            @for (int i = 0; i < t.Cols.Count; i++) { <td class="num">@Cell(r.Values[i], t.Cols[i])</td> }
-                        </tr>
+                        <a class="@(k.Key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@k.Key" asp-route-from="@linkFrom" asp-route-to="@linkTo" asp-route-group="@Model.Group">@k.Text</a>
                     }
-                    @if (t.Rows.Count == 0)
-                    {
-                        <tr><td colspan="@(t.Cols.Count + 1)" class="muted">Không có hóa đơn trong khoảng thời gian này.</td></tr>
-                    }
-                </tbody>
-                @if (t.Rows.Count > 0 && t.Total.Length > 0)
-                {
-                    <tfoot>
-                        <tr>
-                            <td>Tổng cộng</td>
-                            @for (int i = 0; i < t.Cols.Count; i++) { <td class="num">@Cell(t.Total[i], t.Cols[i])</td> }
-                        </tr>
-                    </tfoot>
-                }
-            </table>
+                </div>
+            }
+            <div class="card stat-card">
+                <div class="card-title">@t.Title</div>
+                <div class="table-scroll">
+                    <table class="tbl stat-tbl" data-chart="@ChartOf(t.Key)" data-from="@query.from" data-to="@query.to">
+                        <thead>
+                            <tr>
+                                <th>@t.First</th>
+                                @foreach (var c in t.Cols) { <th class="num">@c.Name</th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in t.Rows)
+                            {
+                                <tr data-at="@r.At?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                    <td>@r.Label</td>
+                                    @for (int i = 0; i < t.Cols.Count; i++) { <td class="num" data-v="@Raw(r.Values[i])">@Cell(r.Values[i], t.Cols[i])</td> }
+                                </tr>
+                            }
+                            @if (t.Rows.Count == 0)
+                            {
+                                <tr><td colspan="@(t.Cols.Count + 1)" class="muted">Không có hóa đơn trong khoảng thời gian này.</td></tr>
+                            }
+                        </tbody>
+                        @if (t.Rows.Count > 0 && t.Total.Length > 0)
+                        {
+                            <tfoot>
+                                <tr>
+                                    <td>Tổng cộng</td>
+                                    @for (int i = 0; i < t.Cols.Count; i++) { <td class="num" data-v="@Raw(t.Total[i])">@Cell(t.Total[i], t.Cols[i])</td> }
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            </div>
         </div>
-    </div>
+        <div class="stat-right">
+            <section class="card pad stat-chart" aria-label="Biểu đồ: @t.Title">
+                <div class="chart-head"><div><h3>@ChartTitle(t)</h3><p class="sc-sub"></p></div></div>
+                <div class="sc-legend" hidden></div>
+                <div class="sc-plot"></div>
+                <div class="empty" hidden>Không có dữ liệu để vẽ biểu đồ trong khoảng thời gian này.</div>
+            </section>
+        </div>
+    </section>
+}
+
+@section Scripts {
+    <script src="~/js/stats-chart.js" asp-append-version="true"></script>
 }

@@ -27,6 +27,8 @@
                         StrokeShape="RoundRectangle 18" Padding="16">
                     <VerticalStackLayout Spacing="12">
                         <Label Text="Thông tin nhận hàng" FontFamily="OpenSansSemibold" FontSize="16" TextColor="#102C46" />
+                        <Label IsVisible="{Binding IsGuest}" FontSize="12" TextColor="#475569"
+                               Text="Mua hàng không cần đăng nhập hay đăng ký. Đơn được lưu theo số điện thoại bên dưới; khi đăng ký tài khoản bằng số này, lịch sử mua hàng và địa chỉ sẽ tự đồng bộ." />
 
                         <VerticalStackLayout Spacing="4">
                             <Label Text="Họ và tên" FontFamily="OpenSansSemibold" FontSize="12" TextColor="#475569" />

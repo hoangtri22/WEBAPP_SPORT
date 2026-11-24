@@ -69,6 +69,21 @@ public class GuestStore(IConfiguration config)
             new { last, first, phone });
     }
 
+    // Chuyển các dòng giỏ của hồ sơ from sang hồ sơ to (cộng dồn số lượng, tối đa 999) rồi xóa giỏ của from.
+    public void MoveCart(int from, int to)
+    {
+        using var c = Open();
+        c.Open();
+        using var tx = c.BeginTransaction();
+        c.Execute("""
+            INSERT INTO CUSTOMER_CART_ITEM (customer_id, variant_id, quantity)
+            SELECT @to, g.variant_id, g.quantity FROM CUSTOMER_CART_ITEM g WHERE g.customer_id = @from
+            ON DUPLICATE KEY UPDATE quantity = LEAST(CUSTOMER_CART_ITEM.quantity + VALUES(quantity), 999)
+            """, new { from, to }, tx);
+        c.Execute("DELETE FROM CUSTOMER_CART_ITEM WHERE customer_id = @from", new { from }, tx);
+        tx.Commit();
+    }
+
     // Xóa hồ sơ tạm không còn dùng (chưa số điện thoại, chưa có đơn): xóa dòng giỏ rồi dòng khách; hồ sơ thật hoặc bị ràng buộc khác thì giữ nguyên.
     public void DiscardPlaceholder(int customerId)
     {

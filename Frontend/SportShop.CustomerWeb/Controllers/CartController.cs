@@ -146,12 +146,13 @@ public class CartController(DbStatus db, ShopStore shop, GuestStore guests) : Co
             return (null, "Vui lòng nhập họ tên (tối đa 100 ký tự) và địa chỉ (tối đa 255 ký tự).");
         if (!Regex.IsMatch(phone, @"^0\d{9}$")) return (null, "Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 0.");
         int owner = guests.Resolve(GuestId, to.Name, phone);
-        var (orderId, error) = shop.PlaceGuestOrder(GuestId, owner, to, payMethod);
-        if (orderId == null) return (null, error);
         int previous = GuestId;
+        var (orderId, error) = shop.PlaceGuestOrder(previous, owner, to, payMethod);
+        // Đã để lại số điện thoại mà đặt chưa được (ví dụ hết hàng): giỏ chuyển sang hồ sơ của số này để giữ lại, sau này đăng ký bằng số đó vẫn còn.
+        if (orderId == null && previous != owner) guests.MoveCart(previous, owner);
         HttpContext.Session.SetInt32("guest_id", owner);
         if (previous != owner) guests.DiscardPlaceholder(previous);
-        return (orderId, null);
+        return (orderId, orderId == null ? error : null);
     }
 
     // Lưu thông báo vào TempData["LoginNotice"] rồi chuyển sang Account/Login.

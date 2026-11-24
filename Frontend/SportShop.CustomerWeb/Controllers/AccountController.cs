@@ -12,9 +12,8 @@ public class AccountController : Controller
     readonly CustomerStore _store;
     readonly LoginThrottle _throttle;
     readonly GuestStore _guests;
-    readonly ShopStore _shop;
-    // Nhận DbStatus, CustomerStore, LoginThrottle, GuestStore và ShopStore.
-    public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle, GuestStore guests, ShopStore shop) { _db = db; _store = store; _throttle = throttle; _guests = guests; _shop = shop; }
+    // Nhận DbStatus, CustomerStore, LoginThrottle và GuestStore.
+    public AccountController(DbStatus db, CustomerStore store, LoginThrottle throttle, GuestStore guests) { _db = db; _store = store; _throttle = throttle; _guests = guests; }
 
     // Hiển thị trang đăng nhập (Views/Account/Auth.cshtml); nhận thông báo từ TempData["LoginNotice"] do CartController.LoginRequired() gửi sang.
     [HttpGet]
@@ -57,7 +56,7 @@ public class AccountController : Controller
             }
             _throttle.Reset(username!, ip);
             HttpContext.Session.SetInt32("customer_id", customerId.Value);
-            MergeGuestCart(customerId.Value);
+            DropGuestCart();
         }
 
         HttpContext.Session.SetString("customer", username!.Trim());
@@ -89,14 +88,11 @@ public class AccountController : Controller
         return View("Auth", new AuthVm { IsRegister = false, Username = username!.Trim(), Notice = "Đăng ký thành công! Lịch sử mua hàng của số điện thoại này (nếu có) đã được đồng bộ, bạn có thể đăng nhập ngay." });
     }
 
-    // Đăng nhập xong: chuyển giỏ của hồ sơ khách mua không tài khoản (guest_id) sang giỏ tài khoản, cộng dồn số lượng và giới hạn theo tồn kho, rồi bỏ hồ sơ tạm.
-    void MergeGuestCart(int customerId)
+    // Đăng nhập xong: giỏ của khách chưa để lại số điện thoại (hồ sơ tạm guest_id) không được chuyển vào giỏ tài khoản, giỏ tài khoản giữ nguyên; bỏ hồ sơ tạm cùng giỏ đó. Hồ sơ đã có số điện thoại thì giữ lại, chỉ bỏ liên kết với phiên.
+    void DropGuestCart()
     {
         if (HttpContext.Session.GetInt32("guest_id") is not int guest) return;
         HttpContext.Session.Remove("guest_id");
-        if (guest == customerId || !_guests.IsActive(guest)) return;
-        foreach (var (variant, qty) in _shop.GetCart(guest)) _shop.AddToCart(customerId, variant, qty);
-        _shop.ClearCart(guest);
         _guests.DiscardPlaceholder(guest);
     }
 

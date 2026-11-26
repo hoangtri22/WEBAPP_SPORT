@@ -1,54 +1,46 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
-<ResourceDictionary 
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
+    <!-- Bảng màu theo biến :root của Frontend/SportShop.CustomerWeb/wwwroot/css/shop.css. -->
+    <Color x:Key="Teal">#0F766E</Color>
+    <Color x:Key="TealDark">#0B5651</Color>
+    <Color x:Key="TealSoft">#E6F1EF</Color>
+    <Color x:Key="TealTint">#F1F8F7</Color>
+    <Color x:Key="Orange">#F97316</Color>
+    <Color x:Key="OrangeSoft">#FFF1E6</Color>
+    <Color x:Key="Ink">#0F172A</Color>
+    <Color x:Key="InkSoft">#334155</Color>
+    <Color x:Key="Muted">#64748B</Color>
+    <Color x:Key="Line">#E2E8F0</Color>
+    <Color x:Key="Bg">#F4F7F6</Color>
+    <Color x:Key="Danger">#DC2626</Color>
+    <Color x:Key="DangerSoft">#FEF2F2</Color>
+    <Color x:Key="DangerLine">#FECACA</Color>
+    <Color x:Key="Success">#0B7A5A</Color>
+    <Color x:Key="SuccessSoft">#DCF5EC</Color>
+    <Color x:Key="Warning">#B7791F</Color>
+    <Color x:Key="WarningSoft">#FFF1D6</Color>
+    <Color x:Key="Info">#2563B8</Color>
+    <Color x:Key="InfoSoft">#E3EFFF</Color>
 
     <Color x:Key="Primary">#0F766E</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
-
-    <!-- Bảng màu tương ứng Frontend/SportShop.Admin/wwwroot/css/admin.css. -->
-    <Color x:Key="Teal">#0F766E</Color>
-    <Color x:Key="TealDark">#0B5F58</Color>
-    <Color x:Key="TealSoft">#E4F3F0</Color>
-    <Color x:Key="Orange">#F97316</Color>
-    <Color x:Key="Ink">#17222C</Color>
-    <Color x:Key="Muted">#6B7A88</Color>
-    <Color x:Key="Line">#E7ECF0</Color>
-    <Color x:Key="Bg">#F5F7F9</Color>
-    <Color x:Key="Danger">#E04848</Color>
-
+    <Color x:Key="PrimaryDark">#0B5651</Color>
+    <Color x:Key="PrimaryDarkText">#FFFFFF</Color>
+    <Color x:Key="Secondary">#E6F1EF</Color>
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
 
-    <Color x:Key="Gray100">#E1E1E1</Color>
-    <Color x:Key="Gray200">#C8C8C8</Color>
-    <Color x:Key="Gray300">#ACACAC</Color>
-    <Color x:Key="Gray400">#919191</Color>
-    <Color x:Key="Gray500">#6E6E6E</Color>
-    <Color x:Key="Gray600">#404040</Color>
-    <Color x:Key="Gray900">#212121</Color>
-    <Color x:Key="Gray950">#141414</Color>
+    <Color x:Key="Gray100">#F1F5F9</Color>
+    <Color x:Key="Gray200">#E2E8F0</Color>
+    <Color x:Key="Gray300">#CBD5E1</Color>
+    <Color x:Key="Gray400">#94A3B8</Color>
+    <Color x:Key="Gray500">#64748B</Color>
+    <Color x:Key="Gray600">#475569</Color>
+    <Color x:Key="Gray900">#0F172A</Color>
+    <Color x:Key="Gray950">#020617</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
-    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
-    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
     <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
-    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
-
-    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
-    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
-    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
-    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
-    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
-    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
-    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
-    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 </ResourceDictionary>

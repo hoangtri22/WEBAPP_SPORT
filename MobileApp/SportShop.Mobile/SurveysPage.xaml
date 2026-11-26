@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Danh sách khảo sát khách hàng, tương ứng Views/Customer/Surveys.cshtml của web khách. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
+             x:Class="SportShop.Mobile.SurveysPage" x:DataType="vm:SurveysViewModel"
+             Title="Khảo sát khách hàng">
+    <RefreshView Refreshing="OnRefreshing" IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,14,16,28" Spacing="14">
+                <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="16" BackgroundColor="{StaticResource TealSoft}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 12" WidthRequest="44" HeightRequest="44" Padding="11">
+                            <Image Source="ic_clipboard_check_teal.png" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding PendingText}" FontFamily="OpenSansSemibold" FontSize="15" TextColor="{StaticResource TealDark}" />
+                            <Label Text="{Binding DoneText, StringFormat='{0} · mỗi khảo sát mất khoảng 3–5 phút'}" FontSize="12" TextColor="{StaticResource InkSoft}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" />
+                </Border>
+                <controls:EmptyState IsVisible="{Binding ShowEmpty}" Icon="ic_clipboard_list_teal.png" Title="Chưa có khảo sát"
+                                     Message="Hiện chưa có khảo sát nào được gửi đến tài khoản của bạn." />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Surveys}" Spacing="12">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SurveyCard">
+                            <Border Style="{StaticResource SectionCard}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding CanAnswer}" Value="True">
+                                        <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <VerticalStackLayout Spacing="10">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <Border BackgroundColor="{StaticResource TealSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 12" WidthRequest="44" HeightRequest="44" Padding="11" VerticalOptions="Start">
+                                            <Image Source="{Binding Icon}" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Label Text="{Binding StateText}" Style="{StaticResource Eyebrow}" FontSize="10" />
+                                                <Label Grid.Column="1" Text="{Binding DateText}" Style="{StaticResource SmallMuted}" FontSize="11" />
+                                            </Grid>
+                                            <Label Text="{Binding Title}" Style="{StaticResource CardTitle}" />
+                                            <Label Text="{Binding Description}" Style="{StaticResource BodyText}" FontSize="13" />
+                                            <Label Text="{Binding MetaText}" IsVisible="{Binding CanAnswer}" Style="{StaticResource SmallMuted}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Button IsVisible="{Binding CanAnswer}" Text="Thực hiện khảo sát" Clicked="OnAnswerClicked" CommandParameter="{Binding .}"
+                                            Style="{StaticResource PrimaryButton}" HeightRequest="46" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

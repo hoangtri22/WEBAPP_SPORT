@@ -3,7 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang giỏ hàng, dùng CartViewModel.
+// Tab Giỏ hàng giống Views/Cart/Index.cshtml: sửa số lượng theo tồn kho, gợi ý mua thêm, tóm tắt và nút thanh toán cố định; dùng CartViewModel.
 public partial class CartPage : ContentPage
 {
     private readonly CartViewModel _vm;
@@ -50,7 +50,7 @@ public partial class CartPage : ContentPage
         await _auth.LeaveAsync();
     }
 
-    // Quay về trang sản phẩm MainPage.
+    // Quay về tab Sản phẩm.
     private async void OnContinueShoppingClicked(object? sender, EventArgs e)
     {
         await AppNavigation.OpenCatalogAsync(Navigation, _services);
@@ -87,6 +87,12 @@ public partial class CartPage : ContentPage
             EmptyCartCard.IsVisible = _vm.IsEmpty;
             CartContentSection.IsVisible = _vm.HasItems;
         }
+    }
+
+    // Bấm ảnh sản phẩm trong giỏ: mở ProductDetailPage của sản phẩm đó.
+    private async void OnCartItemTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is int productId) await OpenProductDetailAsync(productId);
     }
 
     // Nhấn ảnh/tên sản phẩm gợi ý mua thêm (upsell): mở trang chi tiết sản phẩm ProductDetailPage.
@@ -131,37 +137,10 @@ public partial class CartPage : ContentPage
         await Navigation.PushAsync(checkoutPage);
     }
 
-    // Mở trang đơn hàng.
+    // Chuyển sang tab Đơn hàng.
     private async void OnOpenOrdersClicked(object? sender, EventArgs e)
     {
-        var ordersPage = _services.GetRequiredService<OrdersPage>();
-        await Navigation.PushAsync(ordersPage);
-    }
-
-    // Thanh điều hướng: về Trang chủ.
-    private async void OnHomeNavClicked(object? sender, EventArgs e)
-    {
-        if (Navigation.NavigationStack.Count > 1)
-            await Navigation.PopToRootAsync();
-    }
-
-    // Thanh điều hướng: mở trang sản phẩm.
-    private async void OnCatalogNavClicked(object? sender, EventArgs e)
-    {
-        await AppNavigation.OpenCatalogAsync(Navigation, _services);
-    }
-
-    // Thanh điều hướng: tải lại giỏ hàng.
-    private async void OnCartNavClicked(object? sender, EventArgs e)
-    {
-        await RefreshCartStateAsync();
-    }
-
-    // Thanh điều hướng: đã đăng nhập thì mở hồ sơ, khách thì mời đăng nhập.
-    private async void OnAccountNavClicked(object? sender, EventArgs e)
-    {
-        if (_auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
-        else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
-            await _auth.LeaveAsync();
+        if (!await AppNavigation.OpenTabAsync(AppTab.Orders))
+            await Navigation.PushAsync(_services.GetRequiredService<OrdersPage>());
     }
 }

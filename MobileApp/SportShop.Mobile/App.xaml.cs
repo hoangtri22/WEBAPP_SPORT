@@ -3,18 +3,18 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Ứng dụng MAUI: giao diện sáng và điều hướng gốc giữa AuthPage và HomePage.
+// Ứng dụng MAUI: giao diện sáng và điều hướng gốc giữa AuthPage và MainTabsPage.
 public partial class App : Application
 {
     private readonly IServiceProvider _services;
 
-    // Điều hướng gốc: AuthViewModel.Entered mở HomePage, AuthViewModel.Left quay lại AuthPage.
+    // Điều hướng gốc: AuthViewModel.Entered mở MainTabsPage (thanh tab đáy), AuthViewModel.Left quay lại AuthPage.
     public App(IServiceProvider services, AuthViewModel auth)
     {
         InitializeComponent();
         UserAppTheme = AppTheme.Light;
         _services = services;
-        auth.Entered += () => Show(new NavigationPage(_services.GetRequiredService<HomePage>()));
+        auth.Entered += () => Show(_services.GetRequiredService<MainTabsPage>());
         // Rời phiên thì xóa cache để tài khoản sau không thấy đơn hàng của tài khoản trước.
         auth.Left += () =>
         {

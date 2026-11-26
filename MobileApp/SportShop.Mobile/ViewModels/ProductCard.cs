@@ -11,6 +11,7 @@ public sealed class ProductCard(ProductSummaryDto product)
     public string CategoryName => product.CategoryName;
     public string? ImageUrl => product.ImageUrl;
     public bool InStock => product.InStock;
+    public bool IsSoldOut => !product.InStock;
     public string StockText => product.InStock ? "Còn hàng" : "Tạm hết hàng";
     public string AccessibilityDescription => $"{Name}, {PriceText}, {StockText}";
     public string PriceText => product.MinPrice is { } price

@@ -26,6 +26,8 @@ public interface ICatalogApi
         => Task.FromResult<IReadOnlyList<ProductSummaryDto>>([]);
     Task<ProductDetailDto> GetProductAsync(int productId, CancellationToken cancellationToken = default)
         => Task.FromException<ProductDetailDto>(new CatalogException("Không tìm thấy sản phẩm."));
+    Task<IReadOnlyList<InterestDto>> GetInterestsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<InterestDto>>([]);
 }
 
 // Cài đặt ICatalogApi bằng HttpClient.
@@ -86,6 +88,15 @@ public sealed class CatalogApi(HttpClient http) : ICatalogApi
         var result = await GetAsync<CategoryDto[]>("api/v1/categories", cancellationToken);
         if (result.Any(category => category is null || category.Id <= 0))
             throw new CatalogException("Dữ liệu danh mục chưa hợp lệ. Vui lòng thử lại.");
+        return result;
+    }
+
+    // Đọc danh sách sở thích thể thao (api/v1/interests) để khách chọn trong hồ sơ như Views/Customer/Profile.cshtml.
+    public async Task<IReadOnlyList<InterestDto>> GetInterestsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await GetAsync<InterestDto[]>("api/v1/interests", cancellationToken);
+        if (result.Any(interest => interest is null || string.IsNullOrWhiteSpace(interest.Name)))
+            throw new CatalogException("Dữ liệu sở thích chưa hợp lệ. Vui lòng thử lại.");
         return result;
     }
 

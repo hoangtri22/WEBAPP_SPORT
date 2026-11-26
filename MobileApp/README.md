@@ -8,14 +8,17 @@ App mua hàng cho khách, viết bằng .NET MAUI (`net10.0-android`, Android 7.
 |---|---|---|
 | Đăng nhập, đăng ký | `AuthPage` | Đăng nhập, đăng ký, Google, dùng với tư cách khách |
 | Quên mật khẩu | `ForgotPasswordPage` | Nhận mã OTP qua email, đặt mật khẩu mới |
-| Trang chủ | `HomePage` | Danh mục, sản phẩm mới, khuyến mãi, thông tin |
-| Sản phẩm | `MainPage`, `CatalogFiltersPage` | Tìm, lọc, sắp xếp, tải thêm, thêm giỏ và mua nhanh |
+| Khung chính | `MainTabsPage` | Thanh tab đáy: Trang chủ, Sản phẩm, Giỏ hàng (có số lượng), Đơn hàng, Tài khoản |
+| Trang chủ | `HomePage` | Ô tìm kiếm, banner, lợi ích, danh mục kèm số sản phẩm, sản phẩm mới, ưu đãi, hỗ trợ |
+| Sản phẩm | `MainPage`, `CatalogFiltersPage` | Tìm, chip danh mục, lọc nâng cao, sắp xếp, tải thêm, thêm giỏ và mua nhanh |
 | Mua nhanh | `QuickPurchasePage` | Chọn biến thể và số lượng ngay từ danh sách |
 | Chi tiết sản phẩm | `ProductDetailPage` | Ảnh, biến thể, tồn kho, sản phẩm cùng loại |
 | Đánh giá | `ReviewsPage` | Xem đánh giá, gửi đánh giá khi đã nhận hàng |
 | Giỏ hàng, thanh toán | `CartPage`, `CheckoutPage` | Gợi ý mua thêm, voucher, đặt đơn |
-| Đơn hàng | `OrdersPage` | Danh sách, tìm, lọc, hủy đơn chờ chưa thanh toán |
-| Tài khoản | `ProfilePage`, `ChangePasswordPage` | Sửa hồ sơ, đổi mật khẩu, đăng xuất |
+| Đơn hàng | `OrdersPage` | Danh sách, tìm, lọc, theo dõi trạng thái, hủy đơn chờ chưa thanh toán, đánh giá đơn đã giao |
+| Tài khoản | `AccountPage`, `ProfilePage`, `ChangePasswordPage` | Hạng, điểm, số đơn; sửa hồ sơ và sở thích thể thao; đổi mật khẩu; đăng xuất |
+| Phản hồi | `FeedbackPage` | Gửi phản hồi sản phẩm đã nhận, xem phản hồi đã gửi và trả lời của cửa hàng |
+| Khảo sát | `SurveysPage`, `SurveyFormPage` | Danh sách khảo sát, trả lời từng câu và nộp |
 | Khuyến mãi, thông tin | `PromotionsPage`, `InfoPagesPage` | Mã giảm giá, chính sách và hướng dẫn |
 
 **Cách hoạt động:**
@@ -70,7 +73,9 @@ MobileApp/
 │   ├── App.xaml(.cs)           # Chuyển giữa màn hình đăng nhập và Trang chủ
 │   ├── MauiProgram.cs          # Đăng ký service, ViewModel, trang
 │   ├── AppNavigation.cs        # Điều hướng danh sách sản phẩm, tránh mở chồng
+│   ├── MainTabsPage.cs         # Thanh tab đáy, số lượng giỏ trên tab Giỏ hàng
 │   ├── *Page.xaml(.cs)         # Các màn hình ở bảng trên
+│   ├── Controls/               # BrandLogo (logo như web), EmptyState (trạng thái trống, lỗi)
 │   ├── Services/
 │   │   ├── AuthApi.cs, GoogleSignIn.cs, PasswordResetApi.cs # Đăng nhập, Google, quên mật khẩu
 │   │   ├── AccountApi.cs       # Hồ sơ, đổi mật khẩu
@@ -83,6 +88,6 @@ MobileApp/
 │   │   └── ApiSettings.cs      # Địa chỉ API
 │   ├── ViewModels/             # Trạng thái và thao tác của từng màn hình
 │   ├── Platforms/Android/      # Manifest, MainActivity, cấu hình mạng
-│   └── Resources/              # Icon, ảnh, font, màu và style
+│   └── Resources/              # Icon Lucide như web, ảnh, font, màu và style theo shop.css của web
 └── SportShop.Mobile.Tests/     # Test Services và ViewModels
 ```

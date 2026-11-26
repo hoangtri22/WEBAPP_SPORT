@@ -40,7 +40,7 @@
                            TextColor="{StaticResource Ink}" SemanticProperties.HeadingLevel="Level1" />
                     <Label Text="Kết hợp các lựa chọn rồi nhấn Áp dụng để xem kết quả." Style="{StaticResource FilterHint}" />
                     <Label Text="Một số bộ lọc chưa tải được. Nhấn Áp dụng để thử lại."
-                           IsVisible="{Binding HasFilterError}" TextColor="#9A3412" FontSize="12" />
+                           IsVisible="{Binding HasFilterError}" TextColor="{StaticResource Warning}" FontSize="12" />
                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsPreparingFilters}">
                         <ActivityIndicator IsRunning="{Binding IsPreparingFilters}" Color="{StaticResource Teal}" HeightRequest="20" WidthRequest="20" />
                         <Label Text="Đang tải lựa chọn…" Style="{StaticResource FilterHint}" VerticalOptions="Center" />
@@ -170,8 +170,8 @@
 
         <Border Grid.Row="1" BackgroundColor="White" Stroke="{StaticResource Line}" Padding="18,12">
             <VerticalStackLayout Spacing="8">
-                <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="#9A3412" FontSize="12" />
-                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#9A3412" FontSize="12" />
+                <Label Text="{Binding ValidationError}" IsVisible="{Binding HasValidationError}" TextColor="{StaticResource Warning}" FontSize="12" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource Warning}" FontSize="12" />
                 <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsBusy}" HorizontalOptions="Center">
                     <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Teal}" HeightRequest="20" WidthRequest="20" />
                     <Label Text="Đang tìm sản phẩm…" Style="{StaticResource FilterHint}" VerticalOptions="Center" />

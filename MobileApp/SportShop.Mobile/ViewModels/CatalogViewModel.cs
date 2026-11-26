@@ -53,7 +53,11 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    // Trang chủ yêu cầu đặt con trỏ vào ô tìm kiếm của MainPage.
+    public event Action? SearchFocusRequested;
     public ObservableCollection<ProductCard> Products { get; } = [];
+    // Chip danh mục cuộn ngang trên MainPage, chip đang chọn theo danh mục của bộ lọc đã áp dụng.
+    public ObservableCollection<CategoryChip> CategoryChips { get; } = [];
     public ObservableCollection<CategoryOption> Categories { get; } = [];
     public ObservableCollection<CatalogFilterOption> Sizes { get; } = [];
     public ObservableCollection<CatalogFilterOption> Colors { get; } = [];
@@ -259,6 +263,9 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         return true;
     }
 
+    // Báo MainPage đặt con trỏ vào ô tìm kiếm (ô tìm ở Trang chủ chuyển sang đây).
+    public void RequestSearchFocus() => SearchFocusRequested?.Invoke();
+
     // Mở một danh mục từ Trang chủ và bắt đầu lại từ trang đầu.
     public async Task OpenCategoryAsync(int? categoryId, CancellationToken cancellationToken = default)
     {
@@ -281,6 +288,9 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             Categories.Clear();
             Categories.Add(new CategoryOption(null, "Tất cả danh mục"));
             foreach (var category in categories) Categories.Add(new CategoryOption(category.Id, category.Name));
+            CategoryChips.Clear();
+            foreach (var category in Categories) CategoryChips.Add(new CategoryChip(category.Id, category.Id is null ? "Tất cả" : category.Name));
+            SyncCategoryChips();
             SelectedCategory = Categories.FirstOrDefault(category => category.Id == selectedId) ?? Categories[0];
             _categoriesLoaded = true;
             _filterError = null;
@@ -318,11 +328,19 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
                      nameof(ErrorMessage), nameof(HasMore), nameof(HasProducts), nameof(ShowEmpty), nameof(ResultSummary),
                      nameof(AppliedFilterSummary), nameof(AppliedSortName), nameof(HasRefinements),
                      nameof(IsInitialLoading) }) Notify(name);
+        SyncCategoryChips();
         SearchCommand.NotifyCanExecuteChanged();
         RefreshCommand.NotifyCanExecuteChanged();
         RetryCommand.NotifyCanExecuteChanged();
         LoadMoreCommand.NotifyCanExecuteChanged();
         ResetCommand.NotifyCanExecuteChanged();
+    }
+
+    // Đánh dấu chip của danh mục đang áp dụng.
+    private void SyncCategoryChips()
+    {
+        var active = _activeFilter?.CategoryId ?? SelectedCategory?.Id;
+        foreach (var chip in CategoryChips) chip.IsSelected = chip.Id == active;
     }
 
     // Báo giao diện cập nhật thuộc tính.
@@ -332,6 +350,20 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
 
 // Lựa chọn lọc/sắp xếp có nhãn tiếng Việt, chỉ mã được gửi lên API.
 public sealed record CategoryOption(int? Id, string Name);
+
+// Một chip danh mục trên MainPage; Id = null là tất cả danh mục.
+public sealed class CategoryChip(int? id, string name) : INotifyPropertyChanged
+{
+    private bool _isSelected;
+    public event PropertyChangedEventHandler? PropertyChanged;
+    public int? Id => id;
+    public string Name => name;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { if (_isSelected == value) return; _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
+    }
+}
 // Cách sắp xếp và mã gửi lên API.
 public sealed record CatalogSortOption(string Code, string Name)
 {

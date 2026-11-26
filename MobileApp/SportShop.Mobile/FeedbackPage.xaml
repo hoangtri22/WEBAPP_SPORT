@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Gửi phản hồi về sản phẩm, tương ứng Views/Customer/Feedback.cshtml và khối đánh giá đơn đã giao của Views/Customer/Orders.cshtml. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:customer="clr-namespace:SportShop.Contracts.Customer;assembly=SportShop.Contracts"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
+             x:Class="SportShop.Mobile.FeedbackPage" x:DataType="vm:FeedbackViewModel"
+             Title="Gửi phản hồi">
+    <RefreshView Refreshing="OnRefreshing" IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,14,16,28" Spacing="14">
+                <Border Style="{StaticResource SectionCard}">
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Border BackgroundColor="{StaticResource TealSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 12" WidthRequest="44" HeightRequest="44" Padding="11">
+                                <Image Source="ic_message_square_teal.png" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Heading}" Style="{StaticResource CardTitle}" />
+                                <Label Text="Mỗi phản hồi đều được đội ngũ SPORTSHOP đọc và xử lý." Style="{StaticResource SmallMuted}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                            <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" AutomationId="FeedbackError" />
+                        </Border>
+                        <Border IsVisible="{Binding HasStatus}" Style="{StaticResource AlertSuccess}">
+                            <Label Text="{Binding StatusMessage}" Style="{StaticResource AlertSuccessText}" AutomationId="FeedbackStatus" />
+                        </Border>
+                        <Border IsVisible="{Binding NoProducts}" Style="{StaticResource AlertInfo}">
+                            <Label Text="Bạn chưa có sản phẩm nào đã mua và nhận hàng. Phản hồi được gửi sau khi đơn hàng giao thành công."
+                                   Style="{StaticResource AlertInfoText}" />
+                        </Border>
+
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding HasProducts}">
+                            <Label Text="Chọn sản phẩm" Style="{StaticResource FieldLabel}" />
+                            <Border Style="{StaticResource FieldBox}">
+                                <Picker Title="Chọn sản phẩm đã mua" ItemsSource="{Binding Products}" ItemDisplayBinding="{Binding Name, x:DataType=customer:EligibleProductResponse}"
+                                        SelectedItem="{Binding SelectedProduct}" AutomationId="FeedbackProduct" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding HasProducts}">
+                            <Label Text="Đánh giá sản phẩm" Style="{StaticResource FieldLabel}" />
+                            <HorizontalStackLayout x:Name="StarRow" Spacing="2" />
+                            <Label Text="{Binding StarsText}" Style="{StaticResource Caption}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding HasProducts}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Nội dung phản hồi" Style="{StaticResource FieldLabel}" />
+                                <Label Grid.Column="1" Text="{Binding ContentCounter}" Style="{StaticResource SmallMuted}" FontSize="11" />
+                            </Grid>
+                            <Border Style="{StaticResource FieldBox}" Padding="10,4">
+                                <Editor Text="{Binding Content}" Placeholder="Hãy chia sẻ điều bạn thích hoặc góp ý để sản phẩm tốt hơn…" MaxLength="1000"
+                                        HeightRequest="120" AutomationId="FeedbackContent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Button Text="Gửi phản hồi" ImageSource="ic_send_white.png" ContentLayout="Left,8" Clicked="OnSendClicked" IsEnabled="{Binding CanSend}"
+                                IsVisible="{Binding HasProducts}" Style="{StaticResource PrimaryButton}" AutomationId="FeedbackSend" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout x:Name="HistorySection" Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Phản hồi đã gửi" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Text="Theo dõi trạng thái xử lý phản hồi của bạn" Style="{StaticResource SmallMuted}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="{Binding HistoryCount}" Style="{StaticResource Caption}" VerticalOptions="Center" />
+                    </Grid>
+                    <controls:EmptyState IsVisible="{Binding ShowHistoryEmpty}" Icon="ic_message_square_teal.png" Title="Chưa có phản hồi" Message="Bạn chưa gửi phản hồi nào." Padding="16,16" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding History}" Spacing="10">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FeedbackCard">
+                                <Border Style="{StaticResource SectionCard}" Padding="14">
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding ProductName}" FontFamily="OpenSansSemibold" FontSize="14" />
+                                                <Label Text="{Binding SentAt}" Style="{StaticResource SmallMuted}" FontSize="11" />
+                                            </VerticalStackLayout>
+                                            <Border Grid.Column="1" Style="{StaticResource PillWarning}" VerticalOptions="Start">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding IsAnswered}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{StaticResource SuccessSoft}" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Label Text="{Binding StatusText}" Style="{StaticResource PillText}" TextColor="{StaticResource Warning}">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsAnswered}" Value="True">
+                                                            <Setter Property="TextColor" Value="{StaticResource Success}" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Border>
+                                        </Grid>
+                                        <Label Text="{Binding Stars}" IsVisible="{Binding HasStars}" TextColor="{StaticResource Orange}" FontSize="15" />
+                                        <Label Text="{Binding Content}" Style="{StaticResource BodyText}" FontSize="13" />
+                                        <Border IsVisible="{Binding HasReply}" Style="{StaticResource AlertInfo}">
+                                            <VerticalStackLayout Spacing="4">
+                                                <HorizontalStackLayout Spacing="6">
+                                                    <Image Source="ic_check_circle_teal.png" WidthRequest="16" HeightRequest="16" />
+                                                    <Label Text="Phản hồi từ SPORTSHOP" FontFamily="OpenSansSemibold" FontSize="12" TextColor="{StaticResource TealDark}" />
+                                                </HorizontalStackLayout>
+                                                <Label Text="{Binding Reply}" Style="{StaticResource AlertInfoText}" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                    <Button Text="Xem thêm phản hồi" Clicked="OnLoadMoreClicked" IsVisible="{Binding HasMore}" Style="{StaticResource SecondaryButton}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

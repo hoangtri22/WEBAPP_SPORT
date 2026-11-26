@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Tab Tài khoản, gom menu tài khoản của Views/Shared/_SiteHeader.cshtml (hồ sơ, đơn hàng, phản hồi, khảo sát, đăng xuất) và liên kết chân trang. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             x:Class="SportShop.Mobile.AccountPage" x:DataType="vm:ProfileViewModel"
+             NavigationPage.HasNavigationBar="False" Title="Tài khoản">
+    <ContentPage.Resources>
+        <Style x:Key="MenuRow" TargetType="Grid">
+            <Setter Property="ColumnDefinitions" Value="Auto,*,Auto" />
+            <Setter Property="ColumnSpacing" Value="14" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="MinimumHeightRequest" Value="56" />
+        </Style>
+        <Style x:Key="MenuIcon" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="{StaticResource TealSoft}" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+            <Setter Property="WidthRequest" Value="36" />
+            <Setter Property="HeightRequest" Value="36" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
+        <Style x:Key="MenuText" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
+        <Style x:Key="MenuChevron" TargetType="Image">
+            <Setter Property="Source" Value="ic_chevron_right_muted.png" />
+            <Setter Property="WidthRequest" Value="18" />
+            <Setter Property="HeightRequest" Value="18" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="0,0,0,28">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 0,0,24,24" Padding="20,20,20,24">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="{StaticResource Teal}" Offset="0" />
+                        <GradientStop Color="{StaticResource TealDark}" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="Tài khoản" FontFamily="OpenSansSemibold" FontSize="24" TextColor="White" />
+
+                    <Grid x:Name="SignedInHeader" ColumnDefinitions="Auto,*" ColumnSpacing="14" IsVisible="False">
+                        <Border WidthRequest="60" HeightRequest="60" BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 30">
+                            <Label Text="{Binding Initials}" TextColor="{StaticResource Teal}" FontFamily="OpenSansSemibold" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding DisplayName}" FontFamily="OpenSansSemibold" FontSize="18" TextColor="White" MaxLines="1" LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding TierText}" FontSize="13" TextColor="{StaticResource TealSoft}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Grid x:Name="SignedInStats" ColumnDefinitions="*,*" ColumnSpacing="10" IsVisible="False">
+                        <Border BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="14,10">
+                            <VerticalStackLayout Spacing="0">
+                                <Label Text="{Binding OrdersText}" FontFamily="OpenSansSemibold" FontSize="20" TextColor="White" />
+                                <Label Text="Đơn hàng" FontSize="12" TextColor="{StaticResource TealSoft}" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="14,10">
+                            <VerticalStackLayout Spacing="0">
+                                <Label Text="{Binding PointsText}" FontFamily="OpenSansSemibold" FontSize="20" TextColor="White" />
+                                <Label Text="Điểm thưởng" FontSize="12" TextColor="{StaticResource TealSoft}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="GuestHeader" Spacing="12" IsVisible="False">
+                        <Label Text="Bạn đang mua hàng không cần tài khoản" FontFamily="OpenSansSemibold" FontSize="16" TextColor="White" />
+                        <Label Text="Đăng nhập hoặc đăng ký để dùng mã giảm giá thành viên, tích điểm, gửi phản hồi và làm khảo sát. Đăng ký bằng số đã đặt hàng thì đơn cũ tự vào tài khoản."
+                               FontSize="13" TextColor="{StaticResource TealSoft}" />
+                        <Button Text="Đăng nhập / Đăng ký" Clicked="OnSignInClicked" BackgroundColor="White" TextColor="{StaticResource Teal}" CornerRadius="14" HeightRequest="48" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="ProfileError" IsVisible="False" Style="{StaticResource AlertError}" Margin="16,0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" VerticalOptions="Center" />
+                    <Button Grid.Column="1" Text="Thử lại" Command="{Binding LoadCommand}" Style="{StaticResource GhostButton}" />
+                </Grid>
+            </Border>
+
+            <VerticalStackLayout x:Name="MemberMenu" IsVisible="False" Spacing="8">
+                <Label Text="TÀI KHOẢN CỦA TÔI" Style="{StaticResource Eyebrow}" Margin="20,0" />
+                <Border Style="{StaticResource Card}" Margin="16,0">
+                    <VerticalStackLayout Spacing="0">
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProfileTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_user_teal.png" /></Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                <Label Text="Chỉnh sửa thông tin" Style="{StaticResource MenuText}" />
+                                <Label Text="{Binding CompletionText}" Style="{StaticResource SmallMuted}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                        <BoxView Style="{StaticResource Divider}" Margin="66,0,0,0" />
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnChangePasswordTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_lock_teal.png" /></Border>
+                            <Label Grid.Column="1" Text="Đổi mật khẩu" Style="{StaticResource MenuText}" />
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                        <BoxView Style="{StaticResource Divider}" Margin="66,0,0,0" />
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnFeedbackTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_message_square_teal.png" /></Border>
+                            <Label Grid.Column="1" Text="Gửi phản hồi về sản phẩm" Style="{StaticResource MenuText}" />
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                        <BoxView Style="{StaticResource Divider}" Margin="66,0,0,0" />
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnSurveysTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_clipboard_list_teal.png" /></Border>
+                            <Label Grid.Column="1" Text="Khảo sát khách hàng" Style="{StaticResource MenuText}" />
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="MUA SẮM" Style="{StaticResource Eyebrow}" Margin="20,0" />
+                <Border Style="{StaticResource Card}" Margin="16,0">
+                    <VerticalStackLayout Spacing="0">
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnOrdersTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_package_teal.png" /></Border>
+                            <Label Grid.Column="1" Text="Đơn hàng của tôi" Style="{StaticResource MenuText}" />
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                        <BoxView Style="{StaticResource Divider}" Margin="66,0,0,0" />
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnPromotionsTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_tag_teal.png" /></Border>
+                            <Label Grid.Column="1" Text="Khuyến mãi" Style="{StaticResource MenuText}" />
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="HỖ TRỢ" Style="{StaticResource Eyebrow}" Margin="20,0" />
+                <Border Style="{StaticResource Card}" Margin="16,0">
+                    <VerticalStackLayout Spacing="0">
+                        <Grid Style="{StaticResource MenuRow}">
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnInfoTapped" /></Grid.GestureRecognizers>
+                            <Border Style="{StaticResource MenuIcon}"><Image Source="ic_info_teal.png" /></Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                <Label Text="Chính sách và hướng dẫn" Style="{StaticResource MenuText}" />
+                                <Label Text="Đổi trả, giao hàng, chọn size, liên hệ" Style="{StaticResource SmallMuted}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" Style="{StaticResource MenuChevron}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <Button x:Name="LogoutButton" IsVisible="False" Text="Đăng xuất" ImageSource="ic_log_out_danger.png" ContentLayout="Left,8"
+                    Clicked="OnLogoutClicked" Style="{StaticResource DangerButton}" Margin="16,4" HeightRequest="50" AutomationId="ProfileLogout" />
+            <Label Text="SPORTSHOP · 128 Nguyễn Trãi, Quận 1, TP.HCM" Style="{StaticResource SmallMuted}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

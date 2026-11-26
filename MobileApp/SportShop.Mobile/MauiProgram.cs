@@ -18,9 +18,21 @@ public static class MauiProgram
             fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
         });
 #if ANDROID
-        // Bỏ gạch chân mặc định của Android; ô nhập đã có khung Border riêng.
+        // Bỏ gạch chân mặc định của Android cho Entry, Editor, Picker, DatePicker; ô nhập đã có khung Border riêng.
         EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
             handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        EditorHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+            handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        PickerHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+            handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        DatePickerHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+            handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        // Bỏ gạch chân của ô tìm kiếm (search_plate của SearchView); ô đã nằm trong khung bo góc.
+        SearchBarHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
+        {
+            var plateId = handler.PlatformView.Context?.Resources?.GetIdentifier("search_plate", "id", handler.PlatformView.Context.PackageName) ?? 0;
+            handler.PlatformView.FindViewById(plateId)?.SetBackgroundColor(Android.Graphics.Color.Transparent);
+        });
 #endif
 #if DEBUG
         builder.Logging.AddDebug();
@@ -78,10 +90,19 @@ public static class MauiProgram
         builder.Services.AddSingleton<IGoogleSignIn, GoogleSignIn>();
         builder.Services.AddTransient<ForgotPasswordViewModel>();
         builder.Services.AddTransient<ForgotPasswordPage>();
-        builder.Services.AddTransient<ProfileViewModel>();
+        builder.Services.AddTransient(services => new ProfileViewModel(
+            services.GetRequiredService<IAccountApi>(), services.GetRequiredService<ICatalogApi>()));
         builder.Services.AddTransient<ChangePasswordViewModel>();
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ChangePasswordPage>();
+        builder.Services.AddTransient<FeedbackViewModel>();
+        builder.Services.AddTransient<SurveysViewModel>();
+        builder.Services.AddTransient<SurveyFormViewModel>();
+        builder.Services.AddTransient<AccountPage>();
+        builder.Services.AddTransient<FeedbackPage>();
+        builder.Services.AddTransient<SurveysPage>();
+        builder.Services.AddTransient<SurveyFormPage>();
+        builder.Services.AddTransient<MainTabsPage>();
         return builder.Build();
     }
 }

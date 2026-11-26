@@ -29,6 +29,7 @@ Script gốc `Backend/Database/sports_shop.sql` tạo schema `sports_shop` gồm
 | `006_google_login.sql` | Liên kết tài khoản Google |
 | `007_remove_vip_tier.sql` | Bỏ hạng VIP, hạng cao nhất là Vàng |
 | `008_walkin_customer_orders.sql` | Đơn mua tại quầy cho khách chưa có tài khoản |
+| `009_payment_methods_cleanup.sql` | Chỉ giữ 5 phương thức thanh toán: COD, trả góp qua thẻ, chuyển khoản ngân hàng, ví điện tử, thẻ ATM / Visa / Mastercard |
 
 Cột `BIEN_THE_SP.hinh_anh` ghi dạng `/images/ten-anh.jpg`, file đặt trong `Backend/Images`.
 
@@ -109,7 +110,7 @@ Kết quả và CSDL tạm nằm trong `.test-artifacts` (git bỏ qua). Không 
 Backend/
 ├── Database/
 │   ├── sports_shop.sql         # Tạo CSDL và dữ liệu demo
-│   └── Migrations/             # 001 đến 008
+│   └── Migrations/             # 001 đến 009
 ├── Images/                     # Ảnh sản phẩm
 ├── SportShop.Api/
 │   ├── Program.cs              # Khởi tạo và đăng ký dịch vụ

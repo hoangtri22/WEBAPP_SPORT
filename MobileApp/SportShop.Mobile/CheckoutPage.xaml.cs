@@ -2,7 +2,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang thanh toán, dùng CartViewModel.
+// Trang thanh toán giống Views/Cart/Checkout.cshtml, đặt xong hiện kết quả như Views/Cart/Done.cshtml; dùng CartViewModel.
 public partial class CheckoutPage : ContentPage
 {
     private readonly CartViewModel _vm;
@@ -43,22 +43,19 @@ public partial class CheckoutPage : ContentPage
         await _vm.PlaceOrderAsync();
     }
 
-    // Quay lại giỏ hàng.
-    private async void OnBackToCartClicked(object? sender, EventArgs e)
-    {
-        await Navigation.PopAsync();
-    }
-
-    // Mở trang đơn hàng sau khi đặt xong.
+    // Đặt xong: đưa tab Giỏ hàng về gốc rồi chuyển sang tab Đơn hàng.
     private async void OnViewMyOrdersClicked(object? sender, EventArgs e)
     {
-        var ordersPage = _services.GetRequiredService<OrdersPage>();
-        await Navigation.PushAsync(ordersPage);
+        if (await AppNavigation.OpenTabAsync(AppTab.Orders))
+            await Navigation.PopToRootAsync(false);
+        else
+            await Navigation.PushAsync(_services.GetRequiredService<OrdersPage>());
     }
 
-    // Tiếp tục mua sắm sau khi đặt xong.
+    // Tiếp tục mua sắm sau khi đặt xong: đưa tab Giỏ hàng về gốc rồi mở tab Sản phẩm.
     private async void OnContinueShoppingFromDoneClicked(object? sender, EventArgs e)
     {
         await AppNavigation.OpenCatalogAsync(Navigation, _services);
+        if (Navigation.NavigationStack.Count > 1) await Navigation.PopToRootAsync(false);
     }
 }

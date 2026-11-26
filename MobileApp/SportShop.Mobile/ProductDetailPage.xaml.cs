@@ -2,7 +2,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang chi tiết transient; giỏ và checkout tiếp tục dùng các service/trang hiện có.
+// Chi tiết sản phẩm giống Views/Shop/Detail.cshtml: chọn biến thể, số lượng, thêm giỏ hoặc mua ngay; trang transient, giỏ và checkout dùng các trang hiện có.
 public partial class ProductDetailPage : ContentPage
 {
     private readonly ProductDetailViewModel _vm;
@@ -76,6 +76,15 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
+    // Bấm nút biến thể: chọn biến thể còn hàng, biến thể hết hàng không chọn được như nút disabled của web.
+    private void OnVariantTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is ProductVariantOption { IsAvailable: true } option && _vm.IsIdle) _vm.SelectedVariant = option;
+    }
+
+    // Chạm vùng tối quanh thông báo đã thêm thì đóng thông báo.
+    private void OnOverlayTapped(object? sender, TappedEventArgs e) => AddSuccessOverlay.IsVisible = false;
+
     private void OnDecreaseClicked(object? sender, EventArgs e) => _vm.Quantity--;
     private void OnIncreaseClicked(object? sender, EventArgs e) => _vm.Quantity++;
     // Thêm biến thể đang chọn vào giỏ, thành công thì hiện thông báo; _navigating chặn bấm nhiều lần.
@@ -124,18 +133,22 @@ public partial class ProductDetailPage : ContentPage
         finally { _navigating = false; }
     }
 
-    // Mở giỏ hàng.
+    // Mở giỏ hàng: chuyển sang tab Giỏ hàng, ngoài khung tab thì mở CartPage.
     private async void OnCartClicked(object? sender, EventArgs e)
     {
         if (_navigating || _vm.IsBusy) return;
         _navigating = true;
         AddSuccessOverlay.IsVisible = false;
-        try { await Navigation.PushAsync(_services.GetRequiredService<CartPage>()); }
+        try
+        {
+            if (!await AppNavigation.OpenTabAsync(AppTab.Cart))
+                await Navigation.PushAsync(_services.GetRequiredService<CartPage>());
+        }
         finally { _navigating = false; }
     }
 
     // Mở trang đánh giá của sản phẩm.
-    private async void OnReviewsClicked(object? sender, EventArgs e)
+    private async void OnReviewsTapped(object? sender, TappedEventArgs e)
     {
         if (_navigating || _vm.ProductId <= 0) return;
         _navigating = true;

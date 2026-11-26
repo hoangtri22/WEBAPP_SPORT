@@ -24,6 +24,14 @@ public interface IContentApi
     Task<IReadOnlyList<EligibleProductResponse>> GetEligibleProductsAsync(CancellationToken cancellationToken = default);
     Task<PagedResponse<FeedbackResponse>> GetMyFeedbackAsync(int productId, int page, CancellationToken cancellationToken = default);
     Task SendFeedbackAsync(FeedbackRequest request, CancellationToken cancellationToken = default);
+    Task<PagedResponse<FeedbackResponse>> GetFeedbackHistoryAsync(int page, CancellationToken cancellationToken = default)
+        => Task.FromResult(new PagedResponse<FeedbackResponse>([], page, 20, 0));
+    Task<IReadOnlyList<SurveyResponse>> GetSurveysAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<SurveyResponse>>([]);
+    Task<SurveyDetailResponse> GetSurveyAsync(int surveyId, CancellationToken cancellationToken = default)
+        => Task.FromException<SurveyDetailResponse>(new ContentException("Không tìm thấy khảo sát."));
+    Task SubmitSurveyAsync(int surveyId, SubmitSurveyRequest request, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 // Cài đặt IContentApi: nội dung công khai dùng publicHttp, dữ liệu cá nhân dùng authorizedHttp.
@@ -76,6 +84,36 @@ public sealed class ContentApi(HttpClient publicHttp, HttpClient authorizedHttp)
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw TimeoutError(); }
     }
 
+    // Lấy mọi phản hồi khách đã gửi kèm trả lời mới nhất (api/v1/me/feedback không lọc sản phẩm), giống bảng "Phản hồi đã gửi" của Views/Customer/Feedback.cshtml.
+    public async Task<PagedResponse<FeedbackResponse>> GetFeedbackHistoryAsync(int page, CancellationToken cancellationToken = default)
+        => Valid(await GetAsync<PagedResponse<FeedbackResponse>>(authorizedHttp, $"api/v1/me/feedback?page={page}&pageSize=20", cancellationToken),
+            result => result.Items is not null && result.Page == page && result.TotalItems >= 0
+                && result.Items.All(r => r is not null && r.Id > 0 && r.Content is not null && r.Status is not null));
+
+    // Lấy khảo sát đã giao cho khách (api/v1/me/surveys, tối đa 100 mục) như Views/Customer/Surveys.cshtml.
+    public async Task<IReadOnlyList<SurveyResponse>> GetSurveysAsync(CancellationToken cancellationToken = default)
+        => Valid(await GetAsync<PagedResponse<SurveyResponse>>(authorizedHttp, "api/v1/me/surveys?page=1&pageSize=100", cancellationToken),
+            result => result.Items is not null && result.Items.All(s => s is not null && s.Id > 0 && s.Title is not null)).Items;
+
+    // Lấy câu hỏi và lựa chọn của một khảo sát (api/v1/me/surveys/{id}).
+    public async Task<SurveyDetailResponse> GetSurveyAsync(int surveyId, CancellationToken cancellationToken = default)
+        => Valid(await GetAsync<SurveyDetailResponse>(authorizedHttp, $"api/v1/me/surveys/{surveyId}", cancellationToken),
+            detail => detail.Survey is not null && detail.Questions is not null
+                && detail.Questions.All(q => q is not null && q.Id > 0 && q.Title is not null && q.Options is not null));
+
+    // Nộp câu trả lời một lần (api/v1/me/surveys/{id}/responses); API kiểm tra hạn, câu bắt buộc và trả 409 nếu đã nộp.
+    public async Task SubmitSurveyAsync(int surveyId, SubmitSurveyRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await authorizedHttp.PostAsJsonAsync($"api/v1/me/surveys/{surveyId}/responses", request, cancellationToken);
+            if (!response.IsSuccessStatusCode) throw await FailureAsync(response, cancellationToken);
+        }
+        catch (HttpRequestException) { throw ConnectionError(); }
+        catch (AuthException ex) { throw new ContentException(ex.Message); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw TimeoutError(); }
+    }
+
     // Đổi lỗi mạng/JSON thành thông báo có thể thử lại; không xóa phiên đăng nhập.
     private static async Task<T> GetAsync<T>(HttpClient client, string path, CancellationToken cancellationToken)
     {
@@ -96,7 +134,7 @@ public sealed class ContentApi(HttpClient publicHttp, HttpClient authorizedHttp)
     private static async Task<ContentException> FailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response.StatusCode == HttpStatusCode.Unauthorized)
-            return new ContentException("Vui lòng đăng nhập để gửi hoặc xem đánh giá của bạn.");
+            return new ContentException("Vui lòng đăng nhập để tiếp tục.");
         if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
             return new ContentException("Cửa hàng tạm thời chưa sẵn sàng. Vui lòng thử lại sau.");
         try

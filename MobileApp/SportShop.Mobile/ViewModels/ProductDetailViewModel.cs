@@ -7,11 +7,21 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile.ViewModels;
 
-// Một lựa chọn size/màu tương ứng chính xác một biến thể của backend.
-public sealed class ProductVariantOption(ProductVariantDto variant)
+// Một lựa chọn size/màu tương ứng chính xác một biến thể của backend; hiện dạng nút chọn như .variant-list của Views/Shop/Detail.cshtml.
+public sealed class ProductVariantOption(ProductVariantDto variant) : INotifyPropertyChanged
 {
+    private bool _isSelected;
+    public event PropertyChangedEventHandler? PropertyChanged;
     public ProductVariantDto Variant => variant;
     public int Id => variant.Id;
+    public bool IsAvailable => variant.Stock > 0;
+    public string ChipTitle => string.Join(" · ", new[] { variant.Size, variant.Color }.Where(v => !string.IsNullOrWhiteSpace(v))) is { Length: > 0 } title ? title : "Mặc định";
+    public string ChipSubtitle => variant.Stock > 0 ? variant.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) + " ₫" : "Hết hàng";
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { if (_isSelected == value) return; _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
+    }
     public string Label => string.Join(" · ", new[]
     {
         string.IsNullOrWhiteSpace(variant.Size) ? null : "Size " + variant.Size,
@@ -75,6 +85,7 @@ public sealed class ProductDetailViewModel(ICatalogApi catalog, ICommerceApi com
         set
         {
             _selectedVariant = value is not null && Variants.Contains(value) ? value : null;
+            foreach (var option in Variants) option.IsSelected = option == _selectedVariant;
             _quantity = Math.Clamp(_quantity, 1, MaximumQuantity);
             _status = null;
             NotifyAll();
@@ -223,6 +234,7 @@ public sealed class ProductDetailViewModel(ICatalogApi catalog, ICommerceApi com
         foreach (var variant in product.Variants) Variants.Add(new ProductVariantOption(variant));
         _selectedVariant = Variants.FirstOrDefault(option => option.Id == previousId)
             ?? Variants.FirstOrDefault(option => option.Variant.Stock > 0) ?? Variants.FirstOrDefault();
+        if (_selectedVariant is not null) _selectedVariant.IsSelected = true;
         _quantity = Math.Clamp(previousQuantity, 1, MaximumQuantity);
     }
 

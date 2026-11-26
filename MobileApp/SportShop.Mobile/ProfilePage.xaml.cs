@@ -2,20 +2,16 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang tài khoản, dùng ProfileViewModel.
+// Trang Chỉnh sửa thông tin giống Views/Customer/Profile.cshtml: hồ sơ, sở thích thể thao và mức hoàn thiện; dùng ProfileViewModel.
 public partial class ProfilePage : ContentPage
 {
     private readonly ProfileViewModel _vm;
-    private readonly AuthViewModel _auth;
-    private readonly IServiceProvider _services;
 
-    // Nhận ProfileViewModel, AuthViewModel và bộ dịch vụ.
-    public ProfilePage(ProfileViewModel vm, AuthViewModel auth, IServiceProvider services)
+    // Nhận ProfileViewModel.
+    public ProfilePage(ProfileViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
-        _auth = auth;
-        _services = services;
     }
 
     // Tải hồ sơ khi mở trang lần đầu.
@@ -25,14 +21,9 @@ public partial class ProfilePage : ContentPage
         if (!_vm.IsLoaded) await _vm.LoadAsync();
     }
 
-    // Mở trang đổi mật khẩu.
-    private async void OnChangePasswordClicked(object? sender, EventArgs e)
-        => await Navigation.PushAsync(_services.GetRequiredService<ChangePasswordPage>());
-
-    // Hỏi xác nhận rồi đăng xuất qua AuthViewModel.LeaveAsync().
-    private async void OnLogoutClicked(object? sender, EventArgs e)
+    // Bấm chip sở thích: đổi trạng thái chọn qua ProfileViewModel.ToggleInterest(), lưu khi bấm Lưu thay đổi.
+    private void OnInterestTapped(object? sender, TappedEventArgs e)
     {
-        if (await DisplayAlertAsync("Đăng xuất", "Bạn muốn đăng xuất khỏi tài khoản này?", "Đăng xuất", "Hủy"))
-            await _auth.LeaveAsync();
+        if (e.Parameter is InterestChoice choice) _vm.ToggleInterest(choice);
     }
 }

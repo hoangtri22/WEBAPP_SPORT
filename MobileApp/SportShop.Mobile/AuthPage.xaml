@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Đăng nhập và đăng ký, tương ứng Views/Account/Auth.cshtml của web khách. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
              x:Class="SportShop.Mobile.AuthPage" x:DataType="vm:AuthViewModel"
-             BackgroundColor="{StaticResource Bg}" Title="SPORTSHOP">
+             Title="SPORTSHOP">
     <Grid>
-    <BoxView Color="{StaticResource TealDark}" HeightRequest="300" VerticalOptions="Start" />
+    <Border HeightRequest="340" VerticalOptions="Start" StrokeThickness="0">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="{StaticResource Teal}" Offset="0" />
+                <GradientStop Color="{StaticResource TealDark}" Offset="1" />
+            </LinearGradientBrush>
+        </Border.Background>
+    </Border>
     <ScrollView>
         <VerticalStackLayout>
-            <VerticalStackLayout Padding="24,44,24,34" Spacing="6">
-                <Border WidthRequest="56" HeightRequest="56" HorizontalOptions="Start" BackgroundColor="{StaticResource Orange}"
-                        StrokeThickness="0" StrokeShape="RoundRectangle 16">
-                    <Image Source="ic_shopping_bag_white.png" WidthRequest="28" HeightRequest="28" />
-                </Border>
-                <Label Text="SPORTSHOP" Margin="0,12,0,0" FontFamily="OpenSansSemibold" FontSize="28" CharacterSpacing="2" TextColor="White" />
-                <Label Text="Trang bị tốt hơn cho từng bước chạy." FontSize="14" TextColor="{StaticResource TealSoft}" />
+            <VerticalStackLayout Padding="24,40,24,30" Spacing="10">
+                <controls:BrandLogo Light="True" HorizontalOptions="Start" />
+                <Label Text="SỐNG KHỎE · CHƠI HẾT MÌNH" Margin="0,18,0,0" FontFamily="OpenSansSemibold" FontSize="11" CharacterSpacing="1.6" TextColor="#FDBA74" />
+                <Label Text="Chào mừng bạn trở lại đường đua." FontFamily="OpenSansSemibold" FontSize="24" TextColor="White" IsVisible="{Binding IsLogin}" />
+                <Label Text="Bắt đầu hành trình của riêng bạn." FontFamily="OpenSansSemibold" FontSize="24" TextColor="White" IsVisible="{Binding IsRegister}" />
+                <Label Text="Đăng nhập để quản lý đơn hàng, dùng ưu đãi thành viên và chia sẻ trải nghiệm cùng SPORTSHOP." FontSize="13" TextColor="{StaticResource TealSoft}" />
             </VerticalStackLayout>
             <Border BackgroundColor="{StaticResource Bg}" StrokeThickness="0" StrokeShape="RoundRectangle 26,26,0,0" Padding="20,22,20,30">
                 <VerticalStackLayout Spacing="14">
@@ -59,18 +67,20 @@
                     </Border>
                     <Label IsVisible="{Binding IsRegister}" Text="Đã từng mua hàng bằng số này? Đơn hàng và địa chỉ sẽ tự đồng bộ vào tài khoản." Style="{StaticResource SmallMuted}" Margin="4,-6,4,0" />
                     <Border Style="{StaticResource FieldBox}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                             <Image Source="ic_lock_muted.png" Style="{StaticResource FieldIcon}" />
-                            <Entry Grid.Column="1" Text="{Binding Password}" Placeholder="Mật khẩu" Style="{StaticResource FieldEntry}" IsPassword="True" MaxLength="128"
+                            <Entry x:Name="PasswordEntry" Grid.Column="1" Text="{Binding Password}" Placeholder="Mật khẩu (tối thiểu 6 ký tự)" Style="{StaticResource FieldEntry}" IsPassword="True" MaxLength="128"
                                    ReturnType="Go" ReturnCommand="{Binding SubmitCommand}" AutomationId="Password" />
+                            <ImageButton x:Name="PasswordToggle" Grid.Column="2" Source="ic_eye_muted.png" Clicked="OnTogglePasswordClicked" WidthRequest="40" HeightRequest="40" Padding="10"
+                                         SemanticProperties.Description="Hiện hoặc ẩn mật khẩu" />
                         </Grid>
                     </Border>
 
                     <Button Text="Quên mật khẩu?" Clicked="OnForgotPasswordClicked" IsVisible="{Binding IsLogin}" BackgroundColor="Transparent" TextColor="{StaticResource Teal}"
                             FontSize="13" Padding="0" HeightRequest="32" HorizontalOptions="End" Margin="0,-6,0,-6" AutomationId="ForgotPassword" />
 
-                    <Border IsVisible="{Binding HasError}" BackgroundColor="#FDECEC" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="14,10">
-                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="13" AutomationId="AuthError" />
+                    <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                        <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" AutomationId="AuthError" />
                     </Border>
 
                     <Grid>
@@ -85,8 +95,8 @@
                         <BoxView Grid.Column="2" HeightRequest="1" Color="{StaticResource Line}" VerticalOptions="Center" />
                     </Grid>
 
-                    <Button Text="Tiếp tục với Google" Command="{Binding GoogleCommand}" Style="{StaticResource OutlineButton}" AutomationId="GoogleLogin" />
-                    <Button Text="Dùng với tư cách khách" Command="{Binding GuestCommand}" Style="{StaticResource OutlineButton}" AutomationId="Guest" />
+                    <Button Text="Tiếp tục với Google" Command="{Binding GoogleCommand}" Style="{StaticResource SecondaryButton}" HeightRequest="50" AutomationId="GoogleLogin" />
+                    <Button Text="Mua hàng không cần tài khoản" Command="{Binding GuestCommand}" Style="{StaticResource OutlineButton}" AutomationId="Guest" />
                     <Label Text="Không cần tài khoản. Tên thiết bị sẽ được gửi lên hệ thống của cửa hàng."
                            FontSize="12" TextColor="{StaticResource Muted}" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>

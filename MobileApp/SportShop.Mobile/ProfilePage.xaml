@@ -1,80 +1,140 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Chỉnh sửa thông tin, tương ứng Views/Customer/Profile.cshtml của web khách. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
              x:Class="SportShop.Mobile.ProfilePage" x:DataType="vm:ProfileViewModel"
-             BackgroundColor="{StaticResource Bg}" Title="Tài khoản">
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="14">
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Teal}" />
+             Title="Chỉnh sửa thông tin">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,14,16,24" Spacing="14">
+                <VerticalStackLayout IsVisible="{Binding IsBusy}" Spacing="8" Padding="0,8">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" />
+                </VerticalStackLayout>
+                <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" AutomationId="ProfileError" />
+                </Border>
+                <Border IsVisible="{Binding HasStatus}" Style="{StaticResource AlertSuccess}">
+                    <Label Text="{Binding StatusMessage}" Style="{StaticResource AlertSuccessText}" AutomationId="ProfileStatus" />
+                </Border>
+                <controls:EmptyState IsVisible="{Binding CanRetry}" IsError="True" Icon="ic_wifi_off_muted.png" Title="Chưa tải được hồ sơ"
+                                     ActionText="Thử lại" ActionCommand="{Binding LoadCommand}" AutomationId="ProfileRetry" />
 
-            <Border IsVisible="{Binding HasError}" BackgroundColor="#FDECEC" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="14,10">
-                <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="13" AutomationId="ProfileError" />
-            </Border>
-            <Border IsVisible="{Binding HasStatus}" BackgroundColor="{StaticResource TealSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="14,10">
-                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Teal}" FontSize="13" AutomationId="ProfileStatus" />
-            </Border>
-            <Button Text="Thử lại" Command="{Binding LoadCommand}" IsVisible="{Binding CanRetry}" Style="{StaticResource OutlineButton}" AutomationId="ProfileRetry" />
-
-            <VerticalStackLayout IsVisible="{Binding IsLoaded}" Spacing="14">
-                <Border Style="{StaticResource Card}" Padding="16">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-                        <Border WidthRequest="56" HeightRequest="56" BackgroundColor="{StaticResource Teal}" StrokeThickness="0" StrokeShape="RoundRectangle 28">
-                            <Label Text="{Binding Initials}" TextColor="White" FontFamily="OpenSansSemibold" FontSize="20"
-                                   HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Border>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="{Binding Username}" FontFamily="OpenSansSemibold" FontSize="16" TextColor="{StaticResource Ink}" AutomationId="ProfileUsername" />
-                            <Label Text="{Binding SummaryText}" Style="{StaticResource SmallMuted}" />
+                <VerticalStackLayout IsVisible="{Binding IsLoaded}" Spacing="14">
+                    <Border Style="{StaticResource SectionCard}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                                <Border WidthRequest="56" HeightRequest="56" BackgroundColor="{StaticResource Teal}" StrokeThickness="0" StrokeShape="RoundRectangle 28">
+                                    <Label Text="{Binding Initials}" TextColor="White" FontFamily="OpenSansSemibold" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="{Binding DisplayName}" Style="{StaticResource CardTitle}" FontSize="16" />
+                                    <Label Text="{Binding SummaryText}" Style="{StaticResource SmallMuted}" AutomationId="ProfileUsername" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding CompletionText}" Style="{StaticResource Caption}" />
+                                <ProgressBar Progress="{Binding CompletionProgress}" ProgressColor="{StaticResource Teal}" BackgroundColor="{StaticResource TealSoft}" HeightRequest="6" />
+                            </VerticalStackLayout>
                         </VerticalStackLayout>
-                    </Grid>
-                </Border>
+                    </Border>
 
-                <Label Text="Họ và tên" Style="{StaticResource SmallMuted}" Margin="4,0,0,-8" />
-                <Border Style="{StaticResource FieldBox}">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <Image Source="ic_user_muted.png" Style="{StaticResource FieldIcon}" />
-                        <Entry Grid.Column="1" Text="{Binding FullName}" Placeholder="Họ và tên" Style="{StaticResource FieldEntry}" MaxLength="101" AutomationId="ProfileFullName" />
-                    </Grid>
-                </Border>
+                    <Border Style="{StaticResource SectionCard}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Thông tin cá nhân" Style="{StaticResource CardTitle}" />
+                                    <Label Text="Dùng để chăm sóc và gửi ưu đãi phù hợp cho bạn." Style="{StaticResource SmallMuted}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="1" Source="ic_shield_check_teal.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Start" />
+                            </Grid>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Họ và tên" Style="{StaticResource FieldLabel}" />
+                                <Border Style="{StaticResource FieldBox}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Image Source="ic_user_muted.png" Style="{StaticResource FieldIcon}" />
+                                        <Entry Grid.Column="1" Text="{Binding FullName}" Placeholder="Họ và tên" Style="{StaticResource FieldEntry}" MaxLength="101" AutomationId="ProfileFullName" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Tên đăng nhập" Style="{StaticResource FieldLabel}" />
+                                <Border Style="{StaticResource FieldBox}" BackgroundColor="{StaticResource Gray100}">
+                                    <Label Text="{Binding Username}" TextColor="{StaticResource Muted}" VerticalOptions="Center" Padding="0,14" />
+                                </Border>
+                                <Label Text="Tên đăng nhập không thể thay đổi" Style="{StaticResource SmallMuted}" FontSize="11" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Email" Style="{StaticResource FieldLabel}" />
+                                <Border Style="{StaticResource FieldBox}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Image Source="ic_mail_muted.png" Style="{StaticResource FieldIcon}" />
+                                        <Entry Grid.Column="1" Text="{Binding Email}" Placeholder="Email" Style="{StaticResource FieldEntry}" Keyboard="Email" MaxLength="100" AutomationId="ProfileEmail" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Số điện thoại" Style="{StaticResource FieldLabel}" />
+                                <Border Style="{StaticResource FieldBox}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Image Source="ic_phone_muted.png" Style="{StaticResource FieldIcon}" />
+                                        <Entry Grid.Column="1" Text="{Binding Phone}" Placeholder="Số điện thoại" Style="{StaticResource FieldEntry}" Keyboard="Telephone" MaxLength="10" AutomationId="ProfilePhone" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Ngày sinh" Style="{StaticResource FieldLabel}" />
+                                    <Border Style="{StaticResource FieldBox}">
+                                        <DatePicker Date="{Binding Birth}" MaximumDate="{Binding Today}" Format="dd/MM/yyyy" AutomationId="ProfileBirth" />
+                                    </Border>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                    <Label Text="Giới tính" Style="{StaticResource FieldLabel}" />
+                                    <Border Style="{StaticResource FieldBox}">
+                                        <Picker ItemsSource="{Binding Genders}" SelectedItem="{Binding Gender}" Title="Chọn" AutomationId="ProfileGender" />
+                                    </Border>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
 
-                <Label Text="Email" Style="{StaticResource SmallMuted}" Margin="4,0,0,-8" />
-                <Border Style="{StaticResource FieldBox}">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <Image Source="ic_mail_muted.png" Style="{StaticResource FieldIcon}" />
-                        <Entry Grid.Column="1" Text="{Binding Email}" Placeholder="Email" Style="{StaticResource FieldEntry}" Keyboard="Email" MaxLength="100" AutomationId="ProfileEmail" />
-                    </Grid>
-                </Border>
-
-                <Label Text="Số điện thoại" Style="{StaticResource SmallMuted}" Margin="4,0,0,-8" />
-                <Border Style="{StaticResource FieldBox}">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <Image Source="ic_phone_muted.png" Style="{StaticResource FieldIcon}" />
-                        <Entry Grid.Column="1" Text="{Binding Phone}" Placeholder="Số điện thoại" Style="{StaticResource FieldEntry}" Keyboard="Telephone" MaxLength="10" AutomationId="ProfilePhone" />
-                    </Grid>
-                </Border>
-
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Ngày sinh" Style="{StaticResource SmallMuted}" Margin="4,0,0,0" />
-                        <Border Style="{StaticResource FieldBox}">
-                            <DatePicker Date="{Binding Birth}" MaximumDate="{Binding Today}" Format="dd/MM/yyyy" TextColor="{StaticResource Ink}" AutomationId="ProfileBirth" />
-                        </Border>
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" Spacing="6">
-                        <Label Text="Giới tính" Style="{StaticResource SmallMuted}" Margin="4,0,0,0" />
-                        <Border Style="{StaticResource FieldBox}">
-                            <Picker ItemsSource="{Binding Genders}" SelectedItem="{Binding Gender}" Title="Chọn" TextColor="{StaticResource Ink}" AutomationId="ProfileGender" />
-                        </Border>
-                    </VerticalStackLayout>
-                </Grid>
-
-                <Button Text="Lưu hồ sơ" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" AutomationId="ProfileSave" />
-                <Button Text="Đổi mật khẩu" Clicked="OnChangePasswordClicked" Style="{StaticResource OutlineButton}" AutomationId="ProfileChangePassword" />
+                    <Border Style="{StaticResource SectionCard}" IsVisible="{Binding HasInterests}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Sở thích thể thao" Style="{StaticResource CardTitle}" />
+                            <Label Text="Chọn các môn bạn quan tâm để nhận gợi ý phù hợp." Style="{StaticResource SmallMuted}" />
+                            <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Interests}" AutomationId="ProfileInterests">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:InterestChoice">
+                                        <Border Style="{StaticResource Chip}" Margin="0,0,8,8">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="OnInterestTapped" CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource Teal}" />
+                                                    <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Label Text="{Binding Name}" FontSize="13" FontFamily="OpenSansSemibold" VerticalOptions="Center" TextColor="{StaticResource InkSoft}">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="TextColor" Value="White" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </FlexLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
             </VerticalStackLayout>
-
-            <Button Text="Đăng xuất" Clicked="OnLogoutClicked" BackgroundColor="Transparent" TextColor="{StaticResource Danger}"
-                    FontFamily="OpenSansSemibold" AutomationId="ProfileLogout" />
-        </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+        <Border Grid.Row="1" IsVisible="{Binding IsLoaded}" Style="{StaticResource BottomBar}">
+            <Button Text="Lưu thay đổi" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" AutomationId="ProfileSave" />
+        </Border>
+    </Grid>
 </ContentPage>

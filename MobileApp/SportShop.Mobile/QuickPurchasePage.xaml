@@ -57,7 +57,7 @@
                                     Padding="0" AutomationId="QuickPurchaseIncrease" />
                         </Grid>
                         <Label Text="{Binding QuantityValidationMessage}" IsVisible="{Binding HasQuantityError}"
-                               FontSize="12" TextColor="#9A3412" AutomationId="QuickPurchaseQuantityError" />
+                               FontSize="12" TextColor="{StaticResource Warning}" AutomationId="QuickPurchaseQuantityError" />
                     </VerticalStackLayout>
                 </Border>
                 <Button Text="Tải lại sản phẩm" Clicked="OnRetryClicked" IsVisible="{Binding CanRetry}"
@@ -67,7 +67,7 @@
         </ScrollView>
         <Border Grid.Row="2" BackgroundColor="White" Stroke="{StaticResource Line}" Padding="18,12">
             <VerticalStackLayout Spacing="10">
-                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#9A3412"
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource Warning}"
                        FontSize="13" AutomationId="QuickPurchaseError" />
                 <HorizontalStackLayout IsVisible="{Binding IsSubmitting}" HorizontalOptions="Center" Spacing="8">
                     <ActivityIndicator IsRunning="{Binding IsSubmitting}" Color="{StaticResource Teal}" WidthRequest="20" HeightRequest="20" />

@@ -1,98 +1,154 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Chi tiết sản phẩm, tương ứng Views/Shop/Detail.cshtml của web khách. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
              x:Class="SportShop.Mobile.ProductDetailPage" x:DataType="vm:ProductDetailViewModel"
-             Title="Chi tiết sản phẩm" BackgroundColor="#F5F7FA">
+             Title="Chi tiết sản phẩm">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Giỏ hàng" Clicked="OnCartClicked" />
+        <ToolbarItem Text="Giỏ hàng" IconImageSource="ic_shopping_bag_ink.png" Clicked="OnCartClicked" />
     </ContentPage.ToolbarItems>
     <Grid RowDefinitions="*,Auto">
         <ScrollView>
-            <VerticalStackLayout Padding="18" Spacing="16">
-                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#0F766E" />
-                <Border IsVisible="{Binding HasError}" BackgroundColor="#FFF0E8" Stroke="#F1C8B2"
-                        StrokeShape="RoundRectangle 12" Padding="14" AutomationId="ProductDetailError">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="{Binding ErrorMessage}" TextColor="#8B3D1A" />
-                        <Button Text="Tải lại sản phẩm" Clicked="OnRetryClicked" IsEnabled="{Binding IsIdle}"
-                                BackgroundColor="#102C46" TextColor="White" />
+            <VerticalStackLayout Spacing="0" Padding="0,0,0,24">
+                <VerticalStackLayout IsVisible="{Binding IsBusy}" Padding="0,40" Spacing="10">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" />
+                    <Label Text="Đang tải sản phẩm…" Style="{StaticResource Caption}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+                <controls:EmptyState IsVisible="{Binding HasError}" IsError="True" Icon="ic_wifi_off_muted.png" Title="Chưa tải được sản phẩm"
+                                     Message="{Binding ErrorMessage}" ActionText="Tải lại" ActionClicked="OnRetryClicked" AutomationId="ProductDetailError" />
+
+                <VerticalStackLayout IsVisible="{Binding HasProduct}" Spacing="14">
+                    <Grid HeightRequest="320" BackgroundColor="White">
+                        <Image Source="ic_activity_teal.png" WidthRequest="40" HeightRequest="40" Opacity="0.15" HorizontalOptions="Center" VerticalOptions="Center" />
+                        <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="20" SemanticProperties.Description="{Binding Name}" />
+                    </Grid>
+
+                    <VerticalStackLayout Padding="16,0" Spacing="6">
+                        <Label Text="{Binding CategoryName}" Style="{StaticResource Eyebrow}" />
+                        <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="22" />
+                        <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="24" TextColor="{StaticResource Teal}" AutomationId="VariantPrice" />
                     </VerticalStackLayout>
-                </Border>
-                <VerticalStackLayout IsVisible="{Binding HasProduct}" Spacing="16">
-                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 16" BackgroundColor="White">
-                        <Grid HeightRequest="270">
-                            <Label Text="SPORTSHOP" TextColor="#8B9AA9" HorizontalOptions="Center" VerticalOptions="Center" />
-                            <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="14" SemanticProperties.Description="{Binding Name}" />
-                        </Grid>
-                    </Border>
-                    <Label Text="{Binding CategoryName}" TextColor="#607487" FontSize="12" />
-                    <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="23" TextColor="#102C46" />
-                    <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="24" TextColor="#B64D1B" AutomationId="VariantPrice" />
-                    <Border BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 14" Padding="14">
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="Chọn size / màu" FontFamily="OpenSansSemibold" TextColor="#102C46" />
-                            <Picker Title="Size và màu sắc" ItemsSource="{Binding Variants}" ItemDisplayBinding="{Binding Label}"
-                                    SelectedItem="{Binding SelectedVariant}" IsEnabled="{Binding IsIdle}" AutomationId="ProductVariant" />
-                            <Label Text="{Binding StockText}" TextColor="#607487" FontSize="12" AutomationId="VariantStock" />
-                            <Button Text="Hướng dẫn chọn size" Clicked="OnSizeGuideClicked" BackgroundColor="Transparent"
-                                    TextColor="#0F766E" HorizontalOptions="Start" Padding="0" />
-                            <Grid ColumnDefinitions="*,Auto,70,Auto" ColumnSpacing="6">
-                                <Label Text="Số lượng" TextColor="#102C46" VerticalOptions="Center" />
-                                <Button Grid.Column="1" Text="−" Clicked="OnDecreaseClicked" IsEnabled="{Binding CanDecrease}"
-                                        WidthRequest="42" BackgroundColor="#E6EEF2" TextColor="#102C46" />
-                                <Entry Grid.Column="2" Text="{Binding QuantityText}" Keyboard="Numeric" MaxLength="3"
-                                       HorizontalTextAlignment="Center" IsEnabled="{Binding CanBuy}" AutomationId="ProductQuantity" />
-                                <Button Grid.Column="3" Text="+" Clicked="OnIncreaseClicked" IsEnabled="{Binding CanIncrease}"
-                                        WidthRequest="42" BackgroundColor="#E6EEF2" TextColor="#102C46" />
+
+                    <Border Style="{StaticResource SectionCard}" Margin="16,0">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Chọn phiên bản (size / màu)" Style="{StaticResource CardTitle}" FontSize="14" VerticalOptions="Center" />
+                                <Button Grid.Column="1" Text="Hướng dẫn chọn size" Clicked="OnSizeGuideClicked" Style="{StaticResource GhostButton}" FontSize="12" />
+                            </Grid>
+                            <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Variants}" AutomationId="ProductVariant">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ProductVariantOption">
+                                        <Border Style="{StaticResource Chip}" StrokeShape="RoundRectangle 12" Padding="12,6" Margin="0,0,8,8" MinimumWidthRequest="72">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="OnVariantTapped" CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                                    <Setter Property="StrokeThickness" Value="2" />
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource TealTint}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="Opacity" Value="0.45" />
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource Gray100}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <VerticalStackLayout Spacing="0">
+                                                <Label Text="{Binding ChipTitle}" FontFamily="OpenSansSemibold" FontSize="13" HorizontalTextAlignment="Center" />
+                                                <Label Text="{Binding ChipSubtitle}" Style="{StaticResource SmallMuted}" FontSize="11" HorizontalTextAlignment="Center" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </FlexLayout>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                    <Label Text="Số lượng" Style="{StaticResource FieldLabel}" />
+                                    <Label Text="{Binding StockText}" Style="{StaticResource SmallMuted}" AutomationId="VariantStock" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 12" Padding="0" VerticalOptions="Center">
+                                    <Grid ColumnDefinitions="44,56,44">
+                                        <ImageButton Source="ic_minus_ink.png" Clicked="OnDecreaseClicked" IsEnabled="{Binding CanDecrease}" WidthRequest="44" HeightRequest="44" Padding="13"
+                                                     SemanticProperties.Description="Giảm số lượng" />
+                                        <Entry Grid.Column="1" Text="{Binding QuantityText}" Keyboard="Numeric" MaxLength="3" HorizontalTextAlignment="Center"
+                                               IsEnabled="{Binding CanBuy}" FontFamily="OpenSansSemibold" AutomationId="ProductQuantity" />
+                                        <ImageButton Grid.Column="2" Source="ic_plus_ink.png" Clicked="OnIncreaseClicked" IsEnabled="{Binding CanIncrease}" WidthRequest="44" HeightRequest="44" Padding="13"
+                                                     SemanticProperties.Description="Tăng số lượng" />
+                                    </Grid>
+                                </Border>
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
-                    <Label Text="{Binding StatusMessage}" IsVisible="{Binding HasStatus}" TextColor="#237044" AutomationId="ProductAdded" />
-                    <Button Text="Xem / gửi đánh giá sản phẩm" Clicked="OnReviewsClicked" BackgroundColor="White"
-                            TextColor="#0F766E" BorderColor="#0F766E" BorderWidth="1" CornerRadius="12" AutomationId="ProductReviews" />
-                    <Label Text="Thông tin sản phẩm" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#102C46" />
-                    <Label Text="{Binding Description}" TextColor="#40566B" FontSize="14" LineHeight="1.25" />
-                    <Label Text="Giá và tồn kho được xác nhận lại khi thêm giỏ và thanh toán." TextColor="#607487" FontSize="11" />
-                    <VerticalStackLayout Spacing="10" AutomationId="RelatedProductsSection">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Label Text="Sản phẩm cùng loại" FontFamily="OpenSansSemibold" FontSize="18" TextColor="#102C46" />
-                            <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsRelatedLoading}"
-                                               IsVisible="{Binding IsRelatedLoading}" Color="#0F766E" HeightRequest="24" />
-                        </Grid>
-                        <VerticalStackLayout IsVisible="{Binding HasRelatedError}" Spacing="6">
-                            <Label Text="{Binding RelatedErrorMessage}" TextColor="#8B3D1A" FontSize="12" />
-                            <Button Text="Tải lại sản phẩm cùng loại" Clicked="OnRetryRelatedClicked"
-                                    IsEnabled="{Binding CanRetryRelated}" BackgroundColor="#102C46" TextColor="White"
-                                    HorizontalOptions="Start" AutomationId="RetryRelatedProducts" />
+
+                    <Border IsVisible="{Binding HasStatus}" Style="{StaticResource AlertSuccess}" Margin="16,0">
+                        <Label Text="{Binding StatusMessage}" Style="{StaticResource AlertSuccessText}" AutomationId="ProductAdded" />
+                    </Border>
+
+                    <Border Style="{StaticResource SectionCard}" Margin="16,0" Padding="14,4">
+                        <VerticalStackLayout Spacing="0">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" MinimumHeightRequest="44">
+                                <Image Source="ic_truck_teal.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="Miễn phí giao hàng cho đơn từ 500.000₫" FontSize="13" VerticalOptions="Center" />
+                            </Grid>
+                            <BoxView Style="{StaticResource Divider}" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" MinimumHeightRequest="44">
+                                <Image Source="ic_shield_check_teal.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="Chính hãng, đổi trả trong 30 ngày" FontSize="13" VerticalOptions="Center" />
+                            </Grid>
+                            <BoxView Style="{StaticResource Divider}" />
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" MinimumHeightRequest="48" AutomationId="ProductReviews">
+                                <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnReviewsTapped" /></Grid.GestureRecognizers>
+                                <Image Source="ic_star_orange.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="Xem và gửi đánh giá sản phẩm" FontSize="13" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                <Image Grid.Column="2" Source="ic_chevron_right_muted.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            </Grid>
                         </VerticalStackLayout>
-                        <Label Text="Chưa có sản phẩm cùng loại còn hàng." IsVisible="{Binding ShowRelatedEmpty}"
-                               TextColor="#607487" FontSize="13" AutomationId="RelatedProductsEmpty" />
-                        <CollectionView ItemsSource="{Binding RelatedProducts}" SelectionMode="None" HeightRequest="286"
+                    </Border>
+
+                    <VerticalStackLayout Padding="16,0" Spacing="6">
+                        <Label Text="Thông tin sản phẩm" Style="{StaticResource SectionTitle}" FontSize="16" />
+                        <Label Text="{Binding Description}" Style="{StaticResource BodyText}" />
+                        <Label Text="Giá và tồn kho được xác nhận lại khi thêm giỏ và thanh toán." Style="{StaticResource SmallMuted}" FontSize="11" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="10" AutomationId="RelatedProductsSection">
+                        <Grid ColumnDefinitions="*,Auto" Padding="16,0">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="CÓ THỂ BẠN THÍCH" Style="{StaticResource Eyebrow}" />
+                                <Label Text="Sản phẩm cùng loại" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            </VerticalStackLayout>
+                            <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsRelatedLoading}" IsVisible="{Binding IsRelatedLoading}" HeightRequest="24" WidthRequest="24" />
+                        </Grid>
+                        <Border IsVisible="{Binding HasRelatedError}" Style="{StaticResource AlertError}" Margin="16,0">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Label Text="{Binding RelatedErrorMessage}" Style="{StaticResource AlertErrorText}" FontSize="12" VerticalOptions="Center" />
+                                <Button Grid.Column="1" Text="Thử lại" Clicked="OnRetryRelatedClicked" IsEnabled="{Binding CanRetryRelated}" Style="{StaticResource GhostButton}" AutomationId="RetryRelatedProducts" />
+                            </Grid>
+                        </Border>
+                        <Label Text="Chưa có sản phẩm cùng loại còn hàng." IsVisible="{Binding ShowRelatedEmpty}" Style="{StaticResource Caption}" Margin="16,0" AutomationId="RelatedProductsEmpty" />
+                        <CollectionView ItemsSource="{Binding RelatedProducts}" SelectionMode="None" HeightRequest="250"
                                         IsVisible="{Binding HasRelatedProducts}" AutomationId="RelatedProductList">
                             <CollectionView.ItemsLayout>
                                 <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
                             </CollectionView.ItemsLayout>
+                            <CollectionView.Header>
+                                <BoxView WidthRequest="6" Color="Transparent" />
+                            </CollectionView.Header>
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ProductCard">
-                                    <Border WidthRequest="164" BackgroundColor="White" Stroke="#E3E9EF" StrokeShape="RoundRectangle 16">
+                                    <Border WidthRequest="156" Style="{StaticResource Card}">
                                         <Border.GestureRecognizers>
                                             <TapGestureRecognizer Tapped="OnRelatedProductTapped" />
                                         </Border.GestureRecognizers>
                                         <VerticalStackLayout Spacing="0">
-                                            <Grid HeightRequest="142" BackgroundColor="#EDF1F5">
-                                                <Label Text="SPORTSHOP" FontSize="12" TextColor="#8B9AA9"
-                                                       HorizontalOptions="Center" VerticalOptions="Center" />
-                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="8"
-                                                       SemanticProperties.Description="{Binding Name}" />
+                                            <Grid HeightRequest="130" BackgroundColor="{StaticResource TealTint}">
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFit" Margin="8" SemanticProperties.Description="{Binding Name}" />
                                             </Grid>
-                                            <VerticalStackLayout Padding="12" Spacing="6">
-                                                <Label Text="{Binding CategoryName}" TextColor="#667D8F" FontSize="10"
-                                                       MaxLines="1" LineBreakMode="TailTruncation" />
-                                                <Label Text="{Binding Name}" TextColor="#102C46" FontFamily="OpenSansSemibold"
-                                                       FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="42" />
-                                                <Label Text="{Binding PriceText}" TextColor="#B64D1B" FontFamily="OpenSansSemibold" FontSize="15" />
-                                                <Label Text="{Binding StockText}" TextColor="#237044" FontSize="10" />
+                                            <VerticalStackLayout Padding="10" Spacing="4">
+                                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" HeightRequest="38" />
+                                                <Label Text="{Binding PriceText}" Style="{StaticResource PriceText}" FontSize="14" />
                                             </VerticalStackLayout>
                                         </VerticalStackLayout>
                                     </Border>
@@ -103,51 +159,42 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
-        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10" Padding="16,10" BackgroundColor="White"
-              IsVisible="{Binding HasProduct}">
-            <Button Text="Thêm vào giỏ" Clicked="OnAddClicked" IsEnabled="{Binding CanBuy}"
-                    BackgroundColor="#E5F3EF" TextColor="#0F766E" CornerRadius="12" AutomationId="AddProductToCart" />
-            <Button Grid.Column="1" Text="Mua ngay" Clicked="OnBuyNowClicked" IsEnabled="{Binding CanBuy}"
-                    BackgroundColor="#0F766E" TextColor="White" CornerRadius="12" AutomationId="BuyProductNow" />
-        </Grid>
-        <Grid x:Name="AddSuccessOverlay" Grid.RowSpan="2" ZIndex="10" IsVisible="False"
-              BackgroundColor="#80000000" Padding="18" AutomationId="ProductAddedDialog">
-            <ScrollView x:Name="SuccessDialogScroll">
-                <Grid RowDefinitions="*,Auto,*"
-                      MinimumHeightRequest="{Binding Height, Source={x:Reference SuccessDialogScroll}, x:DataType=ScrollView}">
-                    <Border Grid.Row="1" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 22"
-                            Padding="20" VerticalOptions="Center" HorizontalOptions="Fill" MaximumWidthRequest="440">
-                        <VerticalStackLayout Spacing="16">
-                            <Grid ColumnDefinitions="72,*,Auto" ColumnSpacing="12">
-                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{StaticResource Bg}">
-                                    <Image Source="{Binding ImageUrl}" HeightRequest="72" WidthRequest="72" Aspect="AspectFit"
-                                           Margin="6" SemanticProperties.Description="{Binding Name}" />
-                                </Border>
-                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="5">
-                                    <Label Text="ĐÃ THÊM VÀO GIỎ" TextColor="{StaticResource Teal}" FontSize="10"
-                                           CharacterSpacing="1" FontFamily="OpenSansSemibold" />
-                                    <Label Text="{Binding Name}" TextColor="{StaticResource Ink}" FontSize="14"
-                                           FontFamily="OpenSansSemibold" MaxLines="2" LineBreakMode="TailTruncation" />
-                                    <Label Text="{Binding PriceText}" TextColor="{StaticResource Teal}" FontSize="13" />
-                                </VerticalStackLayout>
-                                <Button Grid.Column="2" Text="×" Clicked="OnDismissAddedClicked" BackgroundColor="Transparent"
-                                        TextColor="{StaticResource Muted}" FontSize="24" Padding="0" WidthRequest="44"
-                                        HeightRequest="44" VerticalOptions="Start" SemanticProperties.Description="Đóng thông báo"
-                                        AutomationId="DismissProductAdded" />
-                            </Grid>
-                            <Label Text="Đã thêm sản phẩm vào giỏ hàng thành công!" TextColor="{StaticResource Ink}"
-                                   FontFamily="OpenSansSemibold" FontSize="19" SemanticProperties.HeadingLevel="Level1"
-                                   AutomationId="ProductAddedSuccessMessage" />
-                            <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked"
-                                    BackgroundColor="{StaticResource Teal}" TextColor="White" CornerRadius="12"
-                                    MinimumHeightRequest="48" AutomationId="ContinueShoppingAfterAdd" />
-                            <Button Text="Xem giỏ hàng" Clicked="OnCartClicked" BackgroundColor="White"
-                                    TextColor="{StaticResource Teal}" BorderColor="{StaticResource Teal}" BorderWidth="1"
-                                    CornerRadius="12" MinimumHeightRequest="48" AutomationId="ViewCartAfterAdd" />
+
+        <Border Grid.Row="1" IsVisible="{Binding HasProduct}" Style="{StaticResource BottomBar}">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Text="Thêm vào giỏ" ImageSource="ic_shopping_bag_teal.png" ContentLayout="Left,6" Clicked="OnAddClicked" IsEnabled="{Binding CanBuy}"
+                        Style="{StaticResource OutlineButton}" AutomationId="AddProductToCart" />
+                <Button Grid.Column="1" Text="Mua ngay" Clicked="OnBuyNowClicked" IsEnabled="{Binding CanBuy}" Style="{StaticResource PrimaryButton}" AutomationId="BuyProductNow" />
+            </Grid>
+        </Border>
+
+        <Grid x:Name="AddSuccessOverlay" Grid.RowSpan="2" ZIndex="10" IsVisible="False" BackgroundColor="#80000000" AutomationId="ProductAddedDialog">
+            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnOverlayTapped" /></Grid.GestureRecognizers>
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 24,24,0,0" Padding="20,16,20,24" VerticalOptions="End">
+                <VerticalStackLayout Spacing="14">
+                    <BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" Color="{StaticResource Gray300}" HorizontalOptions="Center" />
+                    <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12">
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{StaticResource TealTint}">
+                            <Image Source="{Binding ImageUrl}" HeightRequest="64" WidthRequest="64" Aspect="AspectFit" Margin="6" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="3">
+                            <HorizontalStackLayout Spacing="6">
+                                <Image Source="ic_check_circle_teal.png" WidthRequest="16" HeightRequest="16" />
+                                <Label Text="ĐÃ THÊM VÀO GIỎ" Style="{StaticResource Eyebrow}" FontSize="10" />
+                            </HorizontalStackLayout>
+                            <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="14" MaxLines="2" LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding PriceText}" Style="{StaticResource PriceText}" FontSize="13" />
                         </VerticalStackLayout>
-                    </Border>
-                </Grid>
-            </ScrollView>
+                        <ImageButton Grid.Column="2" Source="ic_x_muted.png" Clicked="OnDismissAddedClicked" WidthRequest="40" HeightRequest="40" Padding="10"
+                                     VerticalOptions="Start" SemanticProperties.Description="Đóng thông báo" AutomationId="DismissProductAdded" />
+                    </Grid>
+                    <Label Text="Đã thêm sản phẩm vào giỏ hàng thành công!" FontFamily="OpenSansSemibold" FontSize="16" AutomationId="ProductAddedSuccessMessage" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Text="Tiếp tục mua sắm" Clicked="OnContinueShoppingClicked" Style="{StaticResource SecondaryButton}" HeightRequest="50" AutomationId="ContinueShoppingAfterAdd" />
+                        <Button Grid.Column="1" Text="Xem giỏ hàng" Clicked="OnCartClicked" Style="{StaticResource PrimaryButton}" HeightRequest="50" AutomationId="ViewCartAfterAdd" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
         </Grid>
     </Grid>
 </ContentPage>

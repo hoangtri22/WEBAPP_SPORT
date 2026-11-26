@@ -3,7 +3,7 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile;
 
-// Trang danh sách sản phẩm, dùng CatalogViewModel.
+// Tab Sản phẩm giống Views/Shop/Index.cshtml: tìm, chip danh mục, bộ lọc nâng cao, sắp xếp, thêm nhanh vào giỏ; dùng CatalogViewModel.
 public partial class MainPage : ContentPage
 {
     private readonly CatalogViewModel _viewModel;
@@ -14,7 +14,6 @@ public partial class MainPage : ContentPage
     private bool _openingProduct;
     private bool _openingFilters;
     private bool _openingSort;
-    private bool _navigatingTab;
     private bool _purchasing;
     private bool _isVisible;
     private int _firstVisibleIndex;
@@ -31,7 +30,7 @@ public partial class MainPage : ContentPage
         BindingContext = _viewModel = viewModel;
         _services = services;
         _commerce = services.GetRequiredService<ICommerceApi>();
-        CartCountBadge.BindingContext = services.GetRequiredService<CartBadgeState>();
+        _viewModel.SearchFocusRequested += () => Dispatcher.Dispatch(() => ProductSearchBar.Focus());
     }
 
     // Tải catalog qua CatalogViewModel.LoadAsync() khi mở trang; hủy request đầu tiên khi rời trang.
@@ -46,6 +45,8 @@ public partial class MainPage : ContentPage
             await _viewModel.LoadAsync(cancellationToken: token);
         if (token.IsCancellationRequested || !_isVisible) return;
         QueueScrollRestoration();
+        try { await _viewModel.PrepareFiltersAsync(token); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
         try { await _commerce.GetCartAsync(token); }
         catch (CommerceException) { /* Không để lỗi giỏ chặn xem catalog. */ }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
@@ -63,8 +64,13 @@ public partial class MainPage : ContentPage
         base.OnDisappearing();
     }
 
-    // Trang chủ có thể mở thẳng danh mục, vẫn dùng cùng bộ lọc và phân trang của catalog.
-    public Task OpenCategoryAsync(int? categoryId) => _viewModel.OpenCategoryAsync(categoryId);
+    // Bấm chip danh mục: tải lại danh sách theo danh mục qua CatalogViewModel.OpenCategoryAsync(), xóa từ khóa như khi mở từ Trang chủ.
+    private async void OnCategoryChipTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not CategoryChip chip || chip.IsSelected || _viewModel.IsBusy) return;
+        ProductSearchBar.Unfocus();
+        await _viewModel.OpenCategoryAsync(chip.Id);
+    }
 
     // Bộ lọc cuộn riêng để danh sách lựa chọn dài vẫn dùng được trên màn hình nhỏ.
     private async void OnAdvancedFiltersClicked(object? sender, EventArgs e)
@@ -122,7 +128,7 @@ public partial class MainPage : ContentPage
     // Nút Thêm vào giỏ hàng trên thẻ sản phẩm.
     private async void OnCardAddClicked(object? sender, EventArgs e)
     {
-        if (sender is Button { CommandParameter: ProductCard product }) await PurchaseFromCardAsync(product, false);
+        if (sender is ImageButton { CommandParameter: ProductCard product }) await PurchaseFromCardAsync(product, false);
     }
 
     // Nút Mua ngay trên thẻ sản phẩm.
@@ -272,33 +278,10 @@ public partial class MainPage : ContentPage
     }
 #endif
 
-    // Thanh tab giữ cách mở Trang chủ, Giỏ hàng và Tài khoản như các màn hình hiện có.
-    private async void OnHomeNavClicked(object? sender, EventArgs e)
-        => await NavigateTabAsync(async () =>
-        {
-            if (Navigation.NavigationStack.Count > 1) await Navigation.PopToRootAsync();
-        });
-
-    // Mở giỏ hàng từ thanh tab.
+    // Nút Xem giỏ trên thông báo thêm thành công: chuyển sang tab Giỏ hàng.
     private async void OnCartNavClicked(object? sender, EventArgs e)
-        => await NavigateTabAsync(() => Navigation.PushAsync(_services.GetRequiredService<CartPage>()));
-
-    // Mở hồ sơ nếu đã đăng nhập, chưa thì hỏi về màn hình đăng nhập.
-    private async void OnAccountNavClicked(object? sender, EventArgs e)
-        => await NavigateTabAsync(async () =>
-        {
-            var auth = _services.GetRequiredService<AuthViewModel>();
-            if (auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
-            else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
-                await auth.LeaveAsync();
-        });
-
-    // Chạy một lần chuyển tab; _navigatingTab chặn bấm nhiều lần.
-    private async Task NavigateTabAsync(Func<Task> navigate)
     {
-        if (_navigatingTab) return;
-        _navigatingTab = true;
-        try { await navigate(); }
-        finally { _navigatingTab = false; }
+        QuickAddSuccess.IsVisible = false;
+        await AppNavigation.OpenTabAsync(AppTab.Cart);
     }
 }

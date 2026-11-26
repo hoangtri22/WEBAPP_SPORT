@@ -3,7 +3,7 @@ using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang đơn hàng, dùng OrdersViewModel.
+// Tab Đơn hàng giống Views/Customer/Orders.cshtml: lọc, tìm, theo dõi trạng thái 8 giây một lần, hủy đơn chờ xác nhận, đánh giá đơn đã giao.
 public partial class OrdersPage : ContentPage
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(8);
@@ -152,6 +152,22 @@ public partial class OrdersPage : ContentPage
             _vm.SelectedStatusFilter = status;
         else if (sender is Button { CommandParameter: OrderStatusTabItem tab })
             _vm.SelectedStatusFilter = tab.Key;
+    }
+
+    // Đánh giá sản phẩm của đơn đã giao: khách cần đăng nhập vì API phản hồi chỉ dành cho tài khoản; mở FeedbackPage giới hạn theo đơn.
+    private async void OnReviewOrderClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button { CommandParameter: OrderMasterCard card } || !card.CanReview) return;
+        var auth = _services.GetRequiredService<AuthViewModel>();
+        if (!auth.IsSignedIn)
+        {
+            if (await DisplayAlertAsync("Cần đăng nhập", "Đăng nhập tài khoản có số điện thoại của đơn này để gửi đánh giá.", "Đăng nhập", "Để sau"))
+                await auth.LeaveAsync();
+            return;
+        }
+        var page = _services.GetRequiredService<FeedbackPage>();
+        page.UseOrder(card.Id, card.Code, card.Lines.Select(l => new SportShop.Contracts.Customer.EligibleProductResponse(l.ProductId, l.Name)));
+        await Navigation.PushAsync(page);
     }
 
     // Mở trang sản phẩm để mua hàng.

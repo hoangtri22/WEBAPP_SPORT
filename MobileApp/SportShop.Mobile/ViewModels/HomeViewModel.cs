@@ -6,13 +6,44 @@ using SportShop.Mobile.Services;
 
 namespace SportShop.Mobile.ViewModels;
 
-// Trang chủ đọc danh mục và sản phẩm thật từ cùng API với màn hình cửa hàng.
-public sealed class HomeViewModel(ICatalogApi api) : INotifyPropertyChanged
+// Thẻ danh mục trên Trang chủ; icon và màu xoay vòng như .shop-category (running, men, women, gear) của Views/Home/Index.cshtml.
+public sealed record HomeCategory(CategoryDto Category, int Index)
 {
+    private static readonly string[] Icons = ["ic_zap_teal.png", "ic_user_teal.png", "ic_sparkles_teal.png", "ic_activity_teal.png"];
+    private static readonly string[] Tints = ["#E6F1EF", "#E3EFFF", "#FFF1E6", "#F1F5F9"];
+    public int Id => Category.Id;
+    public string Name => Category.Name;
+    public string CountText => $"{Category.ProductCount} sản phẩm";
+    public string Icon => Icons[Index % Icons.Length];
+    public string Tint => Tints[Index % Tints.Length];
+}
+
+// Trang chủ đọc danh mục và sản phẩm thật từ cùng API với màn hình cửa hàng.
+public sealed class HomeViewModel : INotifyPropertyChanged
+{
+    private readonly ICatalogApi api;
     private bool _isBusy;
+    private bool _isRefreshing;
     private string? _error;
+
+    // Nhận ICatalogApi; RefreshCommand dùng cho kéo xuống làm mới.
+    public HomeViewModel(ICatalogApi api)
+    {
+        this.api = api;
+        RefreshCommand = new AsyncCommand(async () =>
+        {
+            _isRefreshing = true;
+            Notify(nameof(IsRefreshing));
+            try { await LoadAsync(); }
+            finally { _isRefreshing = false; Notify(nameof(IsRefreshing)); }
+        }, () => true);
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
-    public ObservableCollection<CategoryDto> Categories { get; } = [];
+    public AsyncCommand RefreshCommand { get; }
+    public bool IsRefreshing { get => _isRefreshing; set { _isRefreshing = value; Notify(); } }
+    public bool IsInitialLoading => _isBusy && !_isRefreshing && Products.Count == 0;
+    public ObservableCollection<HomeCategory> Categories { get; } = [];
     public ObservableCollection<ProductCard> Products { get; } = [];
     public bool IsBusy => _isBusy;
     public bool IsIdle => !_isBusy;
@@ -34,7 +65,7 @@ public sealed class HomeViewModel(ICatalogApi api) : INotifyPropertyChanged
             var products = await api.GetProductsAsync(null, 1, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             Categories.Clear();
-            foreach (var category in categories) Categories.Add(category);
+            foreach (var category in categories) Categories.Add(new HomeCategory(category, Categories.Count));
             Products.Clear();
             foreach (var product in products.Items.Take(8)) Products.Add(new ProductCard(product));
             HasLoaded = true;
@@ -47,7 +78,7 @@ public sealed class HomeViewModel(ICatalogApi api) : INotifyPropertyChanged
     // Báo trạng thái tải, rỗng và lỗi cho trang chủ.
     private void NotifyState()
     {
-        foreach (var property in new[] { nameof(IsBusy), nameof(IsIdle), nameof(HasLoaded), nameof(ErrorMessage), nameof(HasError), nameof(ShowEmpty) })
+        foreach (var property in new[] { nameof(IsBusy), nameof(IsIdle), nameof(HasLoaded), nameof(ErrorMessage), nameof(HasError), nameof(ShowEmpty), nameof(IsInitialLoading) })
             Notify(property);
     }
     private void Notify([CallerMemberName] string? property = null) => PropertyChanged?.Invoke(this, new(property));

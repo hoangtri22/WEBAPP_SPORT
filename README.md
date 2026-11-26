@@ -66,7 +66,7 @@ Yêu cầu: .NET 10 SDK và MySQL 8. Chạy app cần thêm workload .NET MAUI (
 
 1. **Tạo CSDL:** mở MySQL Workbench, kết nối tới server, chọn File → Open SQL Script → `Backend/Database/sports_shop.sql`, bấm ⚡
    (Ctrl + Shift + Enter, chạy cả script). Kết quả đúng là schema `sports_shop` có **35 bảng**.
-2. **Chạy migration:** nhấp đúp schema `sports_shop` để đặt làm mặc định, rồi chạy lần lượt các file `001` đến `008` trong `Backend/Database/Migrations`.
+2. **Chạy migration:** nhấp đúp schema `sports_shop` để đặt làm mặc định, rồi chạy lần lượt các file `001` đến `009` trong `Backend/Database/Migrations`.
    Kết quả đúng là **43 bảng**. Nếu file `007` báo `Error Code: 1175`, chạy `SET SQL_SAFE_UPDATES = 0;` rồi chạy lại file đó.
 3. **Cấu hình kết nối:** tạo file `appsettings.Local.json` đặt cạnh `appsettings.json` của `Frontend/SportShop.Admin`, `Frontend/SportShop.CustomerWeb` và `Backend/SportShop.Api`
    (API bắt buộc phải có file này thì app mới tải được dữ liệu). Git bỏ qua file này nên mật khẩu không bị đẩy lên GitHub:

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Trả lời khảo sát từng câu, tương ứng form survey-form và màn survey-thanks của Views/Customer/Surveys.cshtml. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
+             x:Class="SportShop.Mobile.SurveyFormPage" x:DataType="vm:SurveyFormViewModel"
+             Title="Khảo sát">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,14,16,24" Spacing="14">
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                <controls:EmptyState x:Name="LoadError" IsVisible="False" IsError="True" Icon="ic_alert_circle_orange.png" Title="Không mở được khảo sát"
+                                     Message="{Binding ErrorMessage}" ActionText="Quay lại danh sách" ActionClicked="OnBackToListClicked" />
+
+                <VerticalStackLayout IsVisible="{Binding ShowForm}" Spacing="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding Title}" Style="{StaticResource Eyebrow}" MaxLines="1" LineBreakMode="TailTruncation" />
+                                <Label Text="Hiểu bạn hơn, phục vụ tốt hơn" Style="{StaticResource SectionTitle}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding ProgressText}" FontFamily="OpenSansSemibold" FontSize="15" TextColor="{StaticResource Teal}" VerticalOptions="End" />
+                        </Grid>
+                        <ProgressBar Progress="{Binding Progress}" ProgressColor="{StaticResource Teal}" BackgroundColor="{StaticResource TealSoft}" HeightRequest="6" />
+                    </VerticalStackLayout>
+
+                    <Border Style="{StaticResource SectionCard}" BindingContext="{Binding Current}" x:DataType="vm:SurveyQuestionItem">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="{Binding StepText}" Style="{StaticResource Eyebrow}" FontSize="10" />
+                            <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="18" />
+                            <Label Text="{Binding Hint}" Style="{StaticResource Caption}" />
+                            <VerticalStackLayout IsVisible="{Binding IsChoice}" BindableLayout.ItemsSource="{Binding Options}" Spacing="8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SurveyOptionItem">
+                                        <Border Stroke="{StaticResource Line}" StrokeThickness="1.5" StrokeShape="RoundRectangle 12" Padding="14,0" MinimumHeightRequest="52" BackgroundColor="White">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="OnOptionTapped" CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource TealTint}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                                <Border WidthRequest="22" HeightRequest="22" StrokeShape="RoundRectangle 11" Stroke="{StaticResource Gray300}" StrokeThickness="2"
+                                                        BackgroundColor="White" VerticalOptions="Center" Padding="3">
+                                                    <Border.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsMultiple}" Value="True">
+                                                            <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource Teal}" />
+                                                            <Setter Property="BackgroundColor" Value="{StaticResource Teal}" />
+                                                        </DataTrigger>
+                                                    </Border.Triggers>
+                                                    <Image Source="ic_check_white.png" IsVisible="{Binding IsSelected}" />
+                                                </Border>
+                                                <Label Grid.Column="1" Text="{Binding Text}" FontSize="14" VerticalOptions="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Border IsVisible="{Binding IsText}" Style="{StaticResource FieldBox}" Padding="10,4">
+                                <Editor Text="{Binding Text}" Placeholder="Nhập câu trả lời của bạn…" MaxLength="500" HeightRequest="120" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                        <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding IsCompleted}" Spacing="14" Padding="0,32,0,0">
+                    <Border BackgroundColor="{StaticResource SuccessSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 40" WidthRequest="80" HeightRequest="80" Padding="20" HorizontalOptions="Center">
+                        <Image Source="ic_check_circle_teal.png" />
+                    </Border>
+                    <Label Text="HOÀN TẤT KHẢO SÁT" Style="{StaticResource Eyebrow}" HorizontalOptions="Center" />
+                    <Label Text="Cảm ơn bạn đã hoàn thành khảo sát!" Style="{StaticResource PageTitle}" FontSize="22" HorizontalTextAlignment="Center" />
+                    <Label Text="Ý kiến của bạn là dữ liệu quý giá để SPORTSHOP tạo nên trải nghiệm tốt hơn mỗi ngày." Style="{StaticResource BodyText}" HorizontalTextAlignment="Center" />
+                    <Button Text="Quay lại danh sách khảo sát" Clicked="OnBackToListClicked" Style="{StaticResource PrimaryButton}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" IsVisible="{Binding ShowForm}" Style="{StaticResource BottomBar}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <Button Text="Câu trước" Clicked="OnBackClicked" Style="{StaticResource SecondaryButton}" HeightRequest="52" Padding="18,0">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsFirst}" Value="True">
+                            <Setter Property="IsEnabled" Value="False" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="1" Text="{Binding NextText}" Clicked="OnNextClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource PrimaryButton}" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

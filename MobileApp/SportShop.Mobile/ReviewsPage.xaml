@@ -1,21 +1,36 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Đánh giá sản phẩm: danh sách công khai và form gửi đánh giá sản phẩm đã nhận, theo quy tắc của Views/Customer/Feedback.cshtml. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
              x:Class="SportShop.Mobile.ReviewsPage" x:DataType="vm:ReviewsViewModel"
-             Title="Đánh giá sản phẩm" BackgroundColor="{StaticResource Bg}">
+             Title="Đánh giá sản phẩm">
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="14">
-            <Label Text="{Binding ProductName}" FontSize="23" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
-            <Label Text="{Binding Summary}" FontSize="17" TextColor="{StaticResource Teal}" AutomationId="ReviewSummary" />
+        <VerticalStackLayout Padding="16,14,16,28" Spacing="14">
+            <Border Style="{StaticResource SectionCard}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Border BackgroundColor="{StaticResource OrangeSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 12" WidthRequest="48" HeightRequest="48" Padding="12">
+                        <Image Source="ic_star_fill_orange.png" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label Text="{Binding ProductName}" Style="{StaticResource CardTitle}" MaxLines="2" LineBreakMode="TailTruncation" />
+                        <Label Text="{Binding Summary}" FontFamily="OpenSansSemibold" FontSize="14" TextColor="{StaticResource Orange}" AutomationId="ReviewSummary" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource Danger}" AutomationId="ReviewsError" />
-            <Button Text="Tải lại đánh giá" Clicked="OnRefreshClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource OutlineButton}" />
-            <Label Text="Chưa có đánh giá công khai. Hãy chia sẻ trải nghiệm sau khi nhận hàng." IsVisible="{Binding ShowEmpty}" Style="{StaticResource SmallMuted}" />
+            <Border IsVisible="{Binding HasError}" Style="{StaticResource AlertError}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource AlertErrorText}" VerticalOptions="Center" AutomationId="ReviewsError" />
+                    <Button Grid.Column="1" Text="Tải lại" Clicked="OnRefreshClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource GhostButton}" />
+                </Grid>
+            </Border>
+            <controls:EmptyState IsVisible="{Binding ShowEmpty}" Icon="ic_star_orange.png" Title="Chưa có đánh giá" Message="Chưa có đánh giá công khai. Hãy chia sẻ trải nghiệm sau khi nhận hàng." Padding="16,12" />
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Reviews}" Spacing="12">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:ReviewCard">
-                        <Border Padding="16" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 12">
+                        <Border Style="{StaticResource SectionCard}" Padding="14">
                             <VerticalStackLayout Spacing="7">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{Binding Author}" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
@@ -23,7 +38,7 @@
                                 </Grid>
                                 <Label Text="{Binding SentAt}" Style="{StaticResource SmallMuted}" />
                                 <Label Text="{Binding Content}" TextColor="{StaticResource Ink}" />
-                                <VerticalStackLayout IsVisible="{Binding HasReply}" BackgroundColor="{StaticResource TealSoft}" Padding="12" Spacing="5">
+                                <VerticalStackLayout IsVisible="{Binding HasReply}" BackgroundColor="{StaticResource TealSoft}" Padding="12" Spacing="4">
                                     <Label Text="SPORTSHOP trả lời" TextColor="{StaticResource Teal}" FontFamily="OpenSansSemibold" />
                                     <Label Text="{Binding Reply}" TextColor="{StaticResource Ink}" />
                                 </VerticalStackLayout>
@@ -35,20 +50,24 @@
             <Button Text="Xem thêm đánh giá" Clicked="OnMoreClicked" IsVisible="{Binding HasMore}" IsEnabled="{Binding IsIdle}" Style="{StaticResource OutlineButton}" />
 
             <BoxView HeightRequest="1" Color="{StaticResource Line}" Margin="0,10" />
-            <Label Text="Đánh giá của bạn" FontSize="20" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
+            <Label Text="Đánh giá của bạn" Style="{StaticResource SectionTitle}" />
             <Label Text="{Binding EligibilityText}" Style="{StaticResource SmallMuted}" />
             <Button Text="Đăng nhập / Đăng ký" Clicked="OnLoginClicked" IsVisible="{Binding IsGuest}" Style="{StaticResource PrimaryButton}" />
-            <Label Text="{Binding AccountError}" IsVisible="{Binding HasAccountError}" TextColor="{StaticResource Danger}" />
+            <Border IsVisible="{Binding HasAccountError}" Style="{StaticResource AlertError}">
+                <Label Text="{Binding AccountError}" Style="{StaticResource AlertErrorText}" />
+            </Border>
             <VerticalStackLayout IsVisible="{Binding IsEligible}" Spacing="10">
                 <Label Text="Số sao" TextColor="{StaticResource Ink}" />
-                <Picker ItemsSource="{Binding StarOptions}" SelectedItem="{Binding Stars}" Title="Chọn từ 1 đến 5 sao" IsEnabled="{Binding CanSend}" TextColor="{StaticResource Ink}" AutomationId="ReviewStars" />
-                <Border Padding="10" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 10">
+                <Border Style="{StaticResource FieldBox}"><Picker ItemsSource="{Binding StarOptions}" SelectedItem="{Binding Stars}" Title="Chọn từ 1 đến 5 sao" IsEnabled="{Binding CanSend}" TextColor="{StaticResource Ink}" AutomationId="ReviewStars" /></Border>
+                <Border Style="{StaticResource FieldBox}" Padding="10,4">
                     <Editor Text="{Binding Content}" Placeholder="Chia sẻ trải nghiệm sản phẩm (tối đa 1000 ký tự)" MaxLength="1000"
                             AutoSize="TextChanges" MinimumHeightRequest="120" IsEnabled="{Binding CanSend}" TextColor="{StaticResource Ink}" AutomationId="ReviewContent" />
                 </Border>
                 <Button Text="Gửi đánh giá" Clicked="OnSendClicked" IsEnabled="{Binding CanSend}" Style="{StaticResource PrimaryButton}" AutomationId="SendProductReview" />
             </VerticalStackLayout>
-            <Label Text="{Binding StatusMessage}" IsVisible="{Binding HasStatus}" TextColor="{StaticResource Teal}" AutomationId="ReviewSent" />
+            <Border IsVisible="{Binding HasStatus}" Style="{StaticResource AlertSuccess}">
+                <Label Text="{Binding StatusMessage}" Style="{StaticResource AlertSuccessText}" AutomationId="ReviewSent" />
+            </Border>
             <VerticalStackLayout IsVisible="{Binding IsSignedIn}" Spacing="12">
                 <Label Text="Lịch sử đánh giá đã gửi" FontSize="18" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
                 <Label Text="Bạn vẫn xem được đánh giá của mình khi cửa hàng ẩn nội dung khỏi danh sách công khai." Style="{StaticResource SmallMuted}" />
@@ -56,13 +75,13 @@
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding MyReviews}" Spacing="12">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:MyReviewCard">
-                            <Border Padding="16" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 12">
+                            <Border Style="{StaticResource SectionCard}" Padding="14">
                                 <VerticalStackLayout Spacing="7">
                                     <Label Text="{Binding Stars}" TextColor="{StaticResource Orange}" />
                                     <Label Text="{Binding Status}" FontFamily="OpenSansSemibold" TextColor="{StaticResource Teal}" />
                                     <Label Text="{Binding SentAt}" Style="{StaticResource SmallMuted}" />
                                     <Label Text="{Binding Content}" TextColor="{StaticResource Ink}" />
-                                    <VerticalStackLayout IsVisible="{Binding HasReply}" BackgroundColor="{StaticResource TealSoft}" Padding="12" Spacing="5">
+                                    <VerticalStackLayout IsVisible="{Binding HasReply}" BackgroundColor="{StaticResource TealSoft}" Padding="12" Spacing="4">
                                         <Label Text="SPORTSHOP trả lời" FontFamily="OpenSansSemibold" TextColor="{StaticResource Teal}" />
                                         <Label Text="{Binding Reply}" TextColor="{StaticResource Ink}" />
                                     </VerticalStackLayout>

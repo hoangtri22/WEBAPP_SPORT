@@ -77,6 +77,10 @@ public sealed class OrderMasterCard : INotifyPropertyChanged
     public string ShippingFeeText => Dto.ShippingFee == 0 ? "Miễn phí" : Dto.ShippingFee.ToString("N0", Vi) + " ₫";
     public int ItemCount => Dto.Items.Sum(i => i.Quantity);
     public bool CanCancel => Dto.CanCancel;
+    // Đơn đã giao được đánh giá sản phẩm, như khối review-box của Views/Customer/Orders.cshtml.
+    public bool CanReview => Dto.Status == "da_giao";
+    public bool HasActions => CanCancel || CanReview;
+    public string ItemCountText => $"{ItemCount} sản phẩm";
 
     // 4 bước tiến trình như Views/Customer/Orders.cshtml: Chờ xác nhận, Đang chuẩn bị, Đang giao, Đã giao.
     public int Step => Dto.Status switch

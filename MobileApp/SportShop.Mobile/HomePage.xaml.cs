@@ -1,14 +1,10 @@
-using SportShop.Mobile.Services;
 using SportShop.Mobile.ViewModels;
 
 namespace SportShop.Mobile;
 
-// Trang chủ nối catalog, khuyến mãi, thông tin và các chức năng mua hàng hiện có.
+// Tab Trang chủ giống Views/Home/Index.cshtml: banner, lợi ích, danh mục, sản phẩm mới, ưu đãi và hỗ trợ; mở các tab khác qua AppNavigation.
 public partial class HomePage : ContentPage
 {
-    private readonly AuthViewModel _auth;
-    private readonly MainPage _catalog;
-    private readonly CartPage _cartPage;
     private readonly IServiceProvider _services;
     private readonly HomeViewModel _viewModel;
     private CancellationTokenSource? _lifetime;
@@ -16,19 +12,15 @@ public partial class HomePage : ContentPage
     private (double X, double Y)? _returnScroll;
     private bool _isVisible;
 
-    // Nhận AuthViewModel, các trang liên quan và bộ dịch vụ.
-    public HomePage(AuthViewModel auth, MainPage catalog, CartPage cartPage, IServiceProvider services, HomeViewModel viewModel)
+    // Nhận bộ dịch vụ để mở trang và HomeViewModel.
+    public HomePage(IServiceProvider services, HomeViewModel viewModel)
     {
         InitializeComponent();
-        NavigationPage.SetHasNavigationBar(this, false);
-        _auth = auth;
-        _catalog = catalog;
-        _cartPage = cartPage;
         _services = services;
         BindingContext = _viewModel = viewModel;
     }
 
-    // Tải dữ liệu thật khi mở trang; không ghi đè nội dung bằng dữ liệu mẫu khi mất mạng.
+    // Tải dữ liệu thật khi mở trang lần đầu; không ghi đè nội dung bằng dữ liệu mẫu khi mất mạng.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -51,20 +43,26 @@ public partial class HomePage : ContentPage
     private async void OnRefreshClicked(object? sender, EventArgs e)
         => await _viewModel.LoadAsync(_lifetime?.Token ?? default);
 
-    // Mở trang cửa hàng, giữ nguyên bộ lọc khi trở lại từ chi tiết.
+    // Chuyển sang tab Sản phẩm, giữ nguyên bộ lọc đang dùng.
     private async void OnCatalogClicked(object? sender, EventArgs e)
-    {
-        await NavigateAsync(async () => { if (_catalog.Parent is null) await Navigation.PushAsync(_catalog); });
-    }
+        => await NavigateAsync(() => AppNavigation.OpenCatalogAsync(Navigation, _services));
 
-    // Mở danh sách sản phẩm của danh mục đã bấm.
-    private async void OnCategoryClicked(object? sender, EventArgs e)
+    // Ô tìm kiếm: chuyển sang tab Sản phẩm và đặt con trỏ vào ô tìm như nút searchToggle của web.
+    private async void OnSearchTapped(object? sender, TappedEventArgs e)
+        => await NavigateAsync(async () =>
+        {
+            await AppNavigation.OpenCatalogAsync(Navigation, _services);
+            _services.GetRequiredService<CatalogViewModel>().RequestSearchFocus();
+        });
+
+    // Mở danh sách sản phẩm của danh mục đã bấm qua CatalogViewModel.OpenCategoryAsync().
+    private async void OnCategoryTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is not Button { CommandParameter: int categoryId }) return;
+        if (e.Parameter is not int categoryId) return;
         await NavigateAsync(async () =>
         {
-            await _catalog.OpenCategoryAsync(categoryId);
-            if (_catalog.Parent is null) await Navigation.PushAsync(_catalog);
+            await AppNavigation.OpenCatalogAsync(Navigation, _services);
+            await _services.GetRequiredService<CatalogViewModel>().OpenCategoryAsync(categoryId);
         });
     }
 
@@ -96,11 +94,11 @@ public partial class HomePage : ContentPage
         await HomeScroll.ScrollToAsync(point.X, point.Y, animated: false);
     }
 
-    // Mở trang khuyến mãi.
+    // Mở trang khuyến mãi (Views/Shop/Promotions.cshtml).
     private async void OnPromotionsClicked(object? sender, EventArgs e)
         => await NavigateAsync(() => Navigation.PushAsync(_services.GetRequiredService<PromotionsPage>()));
 
-    // Mở trang thông tin và hỗ trợ.
+    // Mở trang thông tin và hỗ trợ (Views/Info/Page.cshtml).
     private async void OnInfoClicked(object? sender, EventArgs e)
         => await NavigateAsync(async () =>
         {
@@ -108,23 +106,6 @@ public partial class HomePage : ContentPage
             await Navigation.PushAsync(page);
             await page.LoadAsync();
         });
-
-    // Tab Giỏ hàng: Mở trang Giỏ hàng & Đơn hàng (phần của Phan Văn Thiện).
-    private async void OnCartClicked(object? sender, EventArgs e)
-    {
-        await NavigateAsync(async () => { if (_cartPage.Parent is null) await Navigation.PushAsync(_cartPage); });
-    }
-
-    // Tab Tài khoản: đã đăng nhập thì mở hồ sơ; khách được mời đăng nhập hoặc đăng ký.
-    private async void OnAccountClicked(object? sender, EventArgs e)
-    {
-        await NavigateAsync(async () =>
-        {
-            if (_auth.IsSignedIn) await Navigation.PushAsync(_services.GetRequiredService<ProfilePage>());
-            else if (await DisplayActionSheetAsync("Tài khoản", "Đóng", null, "Đăng nhập / Đăng ký") == "Đăng nhập / Đăng ký")
-                await _auth.LeaveAsync();
-        });
-    }
 
     // Chặn chạm liên tiếp mở trùng trang trong lúc chuyển màn hình.
     private async Task NavigateAsync(Func<Task> navigate)

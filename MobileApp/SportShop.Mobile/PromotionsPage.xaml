@@ -1,34 +1,50 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Khuyến mãi, tương ứng Views/Shop/Promotions.cshtml của web khách. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SportShop.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:SportShop.Mobile.Controls"
              x:Class="SportShop.Mobile.PromotionsPage" x:DataType="vm:PromotionsViewModel"
-             Title="Khuyến mãi" BackgroundColor="{StaticResource Bg}">
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="14">
-            <Label Text="Ưu đãi đang diễn ra" FontSize="24" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
-            <Label Text="Sao chép mã và nhập ở bước thanh toán. Điều kiện áp dụng được cửa hàng kiểm tra theo tài khoản và đơn hàng của bạn." Style="{StaticResource SmallMuted}" />
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource Danger}" AutomationId="PromotionsError" />
-            <Button Text="Tải lại ưu đãi" Clicked="OnReloadClicked" IsEnabled="{Binding IsIdle}" Style="{StaticResource OutlineButton}" />
-            <Label Text="Hiện chưa có mã khuyến mãi đang hiệu lực." IsVisible="{Binding ShowEmpty}" Style="{StaticResource SmallMuted}" AutomationId="PromotionsEmpty" />
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Promotions}" Spacing="14">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PromotionCard">
-                        <Border Padding="18" BackgroundColor="White" Stroke="{StaticResource Line}" StrokeShape="RoundRectangle 14">
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="{Binding Code}" FontSize="20" FontFamily="OpenSansSemibold" TextColor="{StaticResource Teal}" />
-                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" TextColor="{StaticResource Ink}" />
-                                <Label Text="{Binding Discount}" TextColor="{StaticResource Ink}" />
-                                <Label Text="{Binding Conditions}" Style="{StaticResource SmallMuted}" />
-                                <Label Text="{Binding Limit}" Style="{StaticResource SmallMuted}" />
-                                <Label Text="{Binding Validity}" Style="{StaticResource SmallMuted}" />
-                                <Button Text="Sao chép mã" Clicked="OnCopyClicked" Style="{StaticResource OutlineButton}" AutomationId="CopyPromotionCode" />
-                            </VerticalStackLayout>
-                        </Border>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
+             Title="Khuyến mãi">
+    <RefreshView Refreshing="OnReloadClicked" IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,14,16,28" Spacing="14">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="ƯU ĐÃI ĐANG DIỄN RA" Style="{StaticResource Eyebrow}" />
+                    <Label Text="Mã giảm giá cho bạn" Style="{StaticResource PageTitle}" FontSize="22" />
+                    <Label Text="Sao chép mã và chọn ở bước thanh toán. Điều kiện áp dụng được cửa hàng kiểm tra theo tài khoản và đơn hàng của bạn." Style="{StaticResource Caption}" />
+                </VerticalStackLayout>
+                <controls:EmptyState IsVisible="{Binding HasError}" IsError="True" Icon="ic_wifi_off_muted.png" Title="Chưa tải được ưu đãi"
+                                     Message="{Binding ErrorMessage}" ActionText="Tải lại" ActionClicked="OnReloadClicked" AutomationId="PromotionsError" />
+                <controls:EmptyState IsVisible="{Binding ShowEmpty}" Icon="ic_tag_teal.png" Title="Chưa có mã khuyến mãi"
+                                     Message="Hiện chưa có mã khuyến mãi đang hiệu lực." AutomationId="PromotionsEmpty" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Promotions}" Spacing="12">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PromotionCard">
+                            <Border Style="{StaticResource Card}">
+                                <Grid ColumnDefinitions="96,*">
+                                    <Grid BackgroundColor="{StaticResource Teal}" Padding="8">
+                                        <VerticalStackLayout Spacing="4" VerticalOptions="Center">
+                                            <Image Source="ic_tag_white.png" WidthRequest="26" HeightRequest="26" />
+                                            <Label Text="{Binding Code}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="White" HorizontalTextAlignment="Center"
+                                                   LineBreakMode="CharacterWrap" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <VerticalStackLayout Grid.Column="1" Padding="14,12" Spacing="5">
+                                        <Label Text="{Binding Name}" Style="{StaticResource CardTitle}" FontSize="14" />
+                                        <Label Text="{Binding Discount}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="{StaticResource Orange}" />
+                                        <Label Text="{Binding Conditions}" Style="{StaticResource SmallMuted}" />
+                                        <Label Text="{Binding Limit}" Style="{StaticResource SmallMuted}" />
+                                        <Label Text="{Binding Validity}" Style="{StaticResource SmallMuted}" />
+                                        <Button Text="Sao chép mã" Clicked="OnCopyClicked" Style="{StaticResource SoftButton}" HeightRequest="40" FontSize="13"
+                                                HorizontalOptions="Start" Padding="16,0" Margin="0,4,0,0" AutomationId="CopyPromotionCode" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
             </VerticalStackLayout>
-        </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </RefreshView>
 </ContentPage>

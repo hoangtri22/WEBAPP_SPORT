@@ -14,6 +14,14 @@ public static class AppNavigation
         await OpenCatalogAsync(navigation, services);
     }
 
+    // Chuyển sang một tab của MainTabsPage; trả false khi chưa vào khung tab.
+    public static async Task<bool> OpenTabAsync(AppTab tab, bool popToRoot = true)
+    {
+        if (MainTabsPage.Current is not { } tabs) return false;
+        await tabs.SelectAsync(tab, popToRoot);
+        return true;
+    }
+
     // Quay về chính danh sách đã mở chi tiết, kể cả khi đang xem sản phẩm liên quan hoặc giỏ.
     public static async Task<bool> ReturnToSourceAsync(INavigation navigation, Page source)
     {
@@ -27,9 +35,14 @@ public static class AppNavigation
         return true;
     }
 
-    // Mở MainPage hoặc quay về MainPage đang có trong ngăn xếp; IsOpening chặn bấm nhiều lần để không mở chồng trang.
+    // Mở danh sách sản phẩm: trong MainTabsPage thì chuyển sang tab Sản phẩm, ngoài khung tab thì mở hoặc quay về MainPage; IsOpening chặn bấm nhiều lần.
     public static async Task OpenCatalogAsync(INavigation navigation, IServiceProvider services)
     {
+        if (MainTabsPage.Current is { } tabs)
+        {
+            await tabs.SelectAsync(AppTab.Catalog);
+            return;
+        }
         var state = CatalogStates.GetValue(navigation, static _ => new CatalogNavigationState());
         if (Interlocked.CompareExchange(ref state.IsOpening, 1, 0) != 0) return;
         try

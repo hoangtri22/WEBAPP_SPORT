@@ -187,12 +187,15 @@
                             break;
 
                         case "select":
+                            @* Sửa vai trò tài khoản: tài khoản nhân viên / quản lý chỉ chuyển giữa Nhân viên và Quản lý, tài khoản khách hàng chỉ giữ vai trò Khách hàng; lựa chọn còn lại bị làm mờ. *@
+                            bool roleLock = f.Name == "ma_vai_tro" && !creating;
+                            bool roleIsCustomer = roleLock && Model.Options(f.Options).Any(x => x.Value == val && x.Label == "Khách hàng");
                             <label for="f_@f.Name">@f.Label@if (f.Required) { <span class="req"> *</span> }</label>
                             <select id="f_@f.Name" name="@f.Name">
                                 @if (creating && f.Required) { <option value="">-- Chọn --</option> }
                                 @foreach (var o in Model.Options(f.Options))
                                 {
-                                    <option value="@o.Value" data-info="@o.Data" selected="@(val == o.Value)">@o.Label</option>
+                                    <option value="@o.Value" data-info="@o.Data" selected="@(val == o.Value)" disabled="@(roleLock && (o.Label == "Khách hàng") != roleIsCustomer)">@o.Label</option>
                                 }
                             </select>
                             @if (f.Name == "hinh_anh")

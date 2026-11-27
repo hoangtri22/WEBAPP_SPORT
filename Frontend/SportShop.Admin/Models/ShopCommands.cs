@@ -294,6 +294,10 @@ public class ShopCommands
         if (status is not ("hoat_dong" or "bi_khoa" or "da_xoa")) status = "hoat_dong";
         var username = c.ExecuteScalar<string>("SELECT ten_dang_nhap FROM TAI_KHOAN WHERE ma_tai_khoan=@id", new { id }, tx) ?? throw new UserError("Không tìm thấy tài khoản.");
         if (username == me.Username && status != "hoat_dong") throw new UserError("Không thể khóa hoặc xóa tài khoản đang đăng nhập.");
+        // Tài khoản khách hàng chỉ giữ vai trò Khách hàng; tài khoản nhân viên / quản lý không chuyển sang Khách hàng.
+        bool wasCustomer = c.ExecuteScalar<string>("SELECT vt.ten_vai_tro FROM TAI_KHOAN tk JOIN VAI_TRO vt ON vt.ma_vai_tro = tk.ma_vai_tro WHERE tk.ma_tai_khoan=@id", new { id }, tx) == "Khách hàng";
+        bool toCustomer = c.ExecuteScalar<string>("SELECT ten_vai_tro FROM VAI_TRO WHERE ma_vai_tro=@role", new { role }, tx) == "Khách hàng";
+        if (wasCustomer != toCustomer) throw new UserError(wasCustomer ? "Tài khoản khách hàng không chuyển được sang vai trò nhân viên hoặc quản lý." : "Tài khoản nhân viên hoặc quản lý chỉ chuyển giữa Nhân viên và Quản lý.");
         if (pw.Length > 0 && pw.Length < 6) throw new UserError("Mật khẩu mới cần có ít nhất 6 ký tự.");
         c.Execute("UPDATE TAI_KHOAN SET email=@email, so_dien_thoai=@phone, ma_vai_tro=@role, trang_thai=@status WHERE ma_tai_khoan=@id",
             new { email, phone = phone.NullIfEmpty(), role, status, id }, tx);
